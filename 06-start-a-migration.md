@@ -24,9 +24,17 @@ Add `--fallback-encoding cp1252` for older non-Unicode sources, `--extra-ext .ww
 
 The inspector is deliberately shallow: it extracts code blocks with their window/control path and raw event code, raw XDD metadata, a **parity seed** (one row per block, table and unresolved export), and secret locations. It never guesses meanings. See [scripts/README](scripts/README.md).
 
-## 4b. Capture runtime evidence
+## 4a. Extract the dossier (if one exists)
 
-Screenshots, control trees, tab order and a full data export come from one unattended session with the [Windows capture kit](scripts/windows/README.md): `plan_capture.py` classifies every route to every window from the code, and the crawler only follows routes that cannot write, stopping if any data file changes.
+```sh
+python3 scripts/dossier_extract.py legacy/docs/<project>_Documentation.pdf --out analysis-local/dossier
+```
+
+Per-element JSON (window title and type; each control's caption, tab order, input mask and size, button type, images; each query's SQL, parameters and conditions) plus each window's image as WINDEV draws it. Mapping notes and screen specs cite it as evidence (`dossier: WIN_X/BTN_Y`). It does not show runtime behavior: that comes from the code, and if needed from targeted runs of the capture kit.
+
+## 4b. Capture runtime evidence (optional)
+
+Use it for runtime behavior the dossier cannot show (what Esc does on a dialog, dynamic states), or when no dossier exists. Screenshots, control trees, tab order and a full data export come from one unattended session with the [Windows capture kit](scripts/windows/README.md): `plan_capture.py` classifies every route to every window from the code, and the crawler only follows routes that cannot write, stopping if any data file changes.
 
 ## 5. Map the legacy application (before coding)
 

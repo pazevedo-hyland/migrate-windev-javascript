@@ -44,6 +44,15 @@ python3 scripts/parity_check.py docs/parity/parity.csv [--seed analysis-local/in
 
 Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). With `--seed`, every seed row must still exist. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
 
+## `dossier_extract.py` — WINDEV's project documentation as data
+
+```sh
+pip install pypdf
+python3 scripts/dossier_extract.py legacy/docs/<project>_Documentation.pdf --out analysis-local/dossier [--no-images]
+```
+
+WINDEV's project technical documentation states what the text sources encrypt. The extractor writes one JSON per element (`windev-window/`, `report/`, `query/`, `analysis/`, `project/`) with the raw section text plus parsed fields — window `title` and `window_type`; per control `caption`, `tab_order`, `input_mask`, `input_size`, `image`, `background_image`, `anchoring`; per query `sql`, `parameters`, `conditions` — and each element's image under `images/`. On a real WINDEV 28 project (2,303 pages): 51 windows, 28 reports, 29 queries with SQL, 106 images, in about 15 seconds. Only images actually painted on a page are taken (every page shares a resource dictionary of ~150 images). Requires `pypdf`; the other scripts stay standard-library only.
+
 ## `event_legend.py` — event codes verified from the compile folder
 
 ```sh

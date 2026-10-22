@@ -5,7 +5,7 @@ description: Map one legacy WINDEV element (window, report, query, procedure set
 
 # Map one legacy element
 
-Input: one unit name. Paths are relative to the repository root. Read in full: the unit's source in `legacy/`, its extracted blocks in the inspector output (`<inspect dir>/code/…/<file>.json`), `docs/wlanguage-traps.md` and `docs/mapping/event-codes.md`. Never modify legacy files, never run anything from them, never copy credential values (locations only). Do not write application code.
+Input: one unit name. Paths are relative to the repository root. Read in full: the unit's dossier extract if present (`<dossier dir>/<kind>/<unit>.json`: captions, tab order, masks, query SQL — cite it as `dossier: <unit>/<control>`), the unit's source in `legacy/`, its extracted blocks in the inspector output (`<inspect dir>/code/…/<file>.json`), `docs/wlanguage-traps.md` and `docs/mapping/event-codes.md`. Never modify legacy files, never run anything from them, never copy credential values (locations only). Do not write application code.
 
 ## Scope
 
@@ -26,7 +26,7 @@ Controls go **only** in the screen spec, not in the note.
 
 ## Write `docs/screens/<unit>.md` (windows only)
 
-Follow `templates/window-spec.md`. Captions, masks, tab order, linked items and shortcuts are usually in encoded `internal_properties`: fill what readable text and code prove; otherwise write `unresolved (encoded)` once per column rather than guessing, and list the screenshots needed.
+Follow `templates/window-spec.md`. Captions, masks, tab order and button types come from the dossier extract when it exists; the text sources keep them in encrypted `internal_properties`. Without a dossier, fill what readable text and code prove, otherwise write `unresolved (encoded)` once per column rather than guessing, and list the evidence needed.
 
 ## Write `docs/parity/<unit>.csv`
 

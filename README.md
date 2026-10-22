@@ -33,6 +33,8 @@ Accounts, Git host (it replaces the WINDEV source manager), an isolated machine 
 Switch the WINDEV project to **text format**, generate the **SQL script** from the analysis, export queries and sanitized **CSV** data, take **screenshots named after each window**, keep sample **report PDFs** with their inputs → [00 §E](00-prerequisites.md#e-collect-the-legacy-material). Tip: WINDEV 2026's AI Companion `/init_projet` writes a project-context file — add it to `legacy/docs/`.
 
 ### Step 2 — Inspect and map *(before any code)*
+If the project folder has WINDEV's documentation PDF (`<project>_Documentation.pdf`), extract it first: `python3 scripts/dossier_extract.py <pdf> --out analysis-local/dossier`.
+
 ```sh
 python3 scripts/inspect_windev.py legacy/code --out analysis-local/inspect-1
 ```
@@ -87,7 +89,8 @@ Tested on a real WINDEV 28 project (51 windows, 17 tables):
 - **Inspector and capture planner:** run on the full project; two parser bugs found on real files and fixed.
 - **Mapping skill:** 3 windows mapped by parallel agents; an independent cross-review confirmed 14 of 15 key claims.
 - **Build loop:** the client list and form built in Tauri through 4 stages with independent reviews. The first pass over-claimed 8 of 18 `verified` rows; after the "No guessing" rules and one fix stage, the final audit found 2 of 17.
-- **Windows capture kit:** end-to-end CI on GitHub's Windows runners against a WinForms stand-in (login, menus, dialogs, data guard) and a real ODBC driver.
+- **Dossier extraction:** WINDEV's 2,303-page project documentation turned into per-element JSON (captions, tab order, masks, 29 queries' SQL) and 106 window/report images.
+- **Windows capture kit:** end-to-end CI against a WinForms stand-in; on the real app on a GitHub Windows runner it logged in through legacy-position matching but found no menu items exposed by WINDEV, so the dossier replaced it for static properties.
 - **Not yet:** the capture kit against a real WINDEV runtime, and golden scenarios recorded from the legacy app.
 
 ## Verification and limits

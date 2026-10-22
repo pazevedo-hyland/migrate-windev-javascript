@@ -24,6 +24,8 @@ Keep a Windows machine or VM with the **original WINDEV version** and an HFSQL e
 
 Reading a text-format window file does not require WINDEV; reproducing runtime behavior does.
 
+**Look for a dossier first.** If `<project>_Documentation.pdf` is in the project folder (or anyone with WINDEV can generate it), `scripts/dossier_extract.py` turns it into per-element JSON and images, and most of what is encrypted in the text sources is no longer missing.
+
 **No WINDEV machine?** Much of the migration still works from the project folder alone:
 
 - **Readable without WINDEV:** text-format sources (`.wdw`, `.wde`, `.wdp`) and the XDD schema. The HFSQL Classic data files are fixed-length records laid out by the XDD, so they can usually be decoded from the schema: verify every field type against counts, key and foreign-key consistency, and plausible values before trusting the result.
@@ -60,7 +62,7 @@ Create `legacy/` (ignored by Git) with a fixed layout. The quality of the analys
 | `legacy/screenshots/` | Every window and state, **named after the window**: `WIN_Order.png`, `WIN_Order--closed.png` | Screen captures |
 | `legacy/reports/` | A sample PDF of every report **with the input data used** | Print to PDF |
 | `legacy/golden/` | Recorded golden scenarios (before/after exports) | [10 — Parity](10-parity-and-verification.md) |
-| `legacy/docs/` | Manuals, WINDEV-generated documentation, `/init_projet` file, specs | — |
+| `legacy/docs/` | **The WINDEV project technical documentation ("dossier") as PDF** — the best single source: window titles, every control's caption, tab order, input mask and size, button type and images, window images, every query's SQL and parameters, analysis item types — plus manuals, the `/init_projet` file, specs | WINDEV's project documentation print option, to PDF, with windows, reports, queries, code and analysis included. Check the project folder first: it is often already there (`<project>_Documentation.pdf`) |
 
 Also record: WINDEV version, project language (WLanguage code may be written with **French or English keywords**), HFSQL mode (Classic or Client/Server), hardware (printers, scanners, label printers), INI/registry settings, scheduled tasks, and integrations.
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-22 — the dossier as primary evidence
+
+### Added
+- `scripts/dossier_extract.py`: WINDEV's project technical documentation PDF to per-element JSON and images (captions, tab order, masks, button types, images, query SQL/parameters/conditions). On the real project: 51 windows, 28 reports, 29 queries, 106 images.
+
+### Changed
+- The dossier is the first evidence source (00, 06, README, map-element skill); the capture kit becomes optional, for runtime behavior and data export, with the finding that WINDEV exposes no menu items to UI Automation.
+
 ## 2026-10-22 — build phase tested on a real WINDEV pilot
 
 ### Changed
