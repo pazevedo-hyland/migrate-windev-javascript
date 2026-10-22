@@ -1,6 +1,6 @@
 # Windows capture kit
 
-Collects the runtime evidence a migration needs — data, screenshots, control trees, tab order — from a running WINDEV application **without WINDEV and without clicking through it**. One unattended session on any Windows PC.
+Collects the runtime evidence a migration needs — data, screenshots, control trees, tab order — from a running WINDEV application **without WINDEV and without clicking through it**. One unattended session on any Windows PC. A coding agent on that PC can run all of it for you: paste [templates/windows-capture-prompt.md](../../templates/windows-capture-prompt.md).
 
 ## 0. What to bring
 
