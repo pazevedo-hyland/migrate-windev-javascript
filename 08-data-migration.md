@@ -53,7 +53,13 @@ The guide does not choose your database for you: decide with evidence and record
 
 ## Schema inspection is not data extraction
 
-XDD contains raw schema metadata, not customer records. The inspector keeps numeric WINDEV type/key codes raw instead of inventing SQL or TypeScript meanings: resolve them against WINDEV documentation, the **generated SQL script** and real exports. Review relationships, unique constraints, defaults and null behavior explicitly before writing a target schema.
+XDD contains raw schema metadata, not customer records. The inspector keeps numeric WINDEV type/key codes raw instead of inventing SQL or TypeScript meanings. Name them with evidence, then draft:
+
+```sh
+python3 scripts/schema_draft.py analysis-local --dossier analysis-local/dossier --out docs/schema/schema-draft.md
+```
+
+It pairs each XDD type code with the type name the dossier prints for the same item (a legend backed by WINDEV, as for events), takes structure, key type, size, default and null support from the XDD (complete, unlike PDF parsing), and writes a draft SQLite DDL (`.sql`, loadable as is) plus the **decisions** it cannot make for you: unsigned 64-bit integers, binary reals that may be money, exact decimals, WINDEV date/time text formats, memos, password items. A code the dossier never names stays `unresolved`. The draft is input for the database ADR; it declares no foreign keys unless the analysis has links — when it has none, relations live in code (`HReadSeek` on shared items) and the mapping notes must name them. Review key options (case/accent), relationships and null behavior before writing migrations.
 
 Read `.fic`/`.ndx`/`.mmo` only through supported HFSQL/WINDEV export tooling. Export explicit columns to CSV/JSON with a **manifest**: source version, export time, encoding (often Windows-1252), delimiter, decimal format, timezone/date rules and table counts. Preserve memo/blob data separately with checksums. Binary query definitions need SQL and parameter exports.
 

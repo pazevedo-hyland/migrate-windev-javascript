@@ -37,7 +37,9 @@ class DossierExtractTests(unittest.TestCase):
             'artigos file items\nCaption Type\nSize\nDefault value\n'
             'artigosID Identifier of artigos Automatic identifier (8 bytes)\n'
             'Codigo Código String 30\npreco Preço 8-byte real 0\nstock stock Decimal 0\n'
-            'Cliente Cliente Unsigned 8-byte integer\n 0\n'))]
+            'Cliente Cliente Unsigned 8-byte integer\n 0\n'
+            'inicio Data/hora inicio Date and Time \n(yyyymmddhhmmssccc)\nGB: Start\n'
+            'numeromecanico numero + mecanico Composite key: numero+mecanico 9\n'))]
         analysis = module.collect(pages)['Analysis']['C:\\App\\App.wda']
         artigos = analysis['files']['artigos']
         self.assertEqual(artigos['description'], 'Products')
@@ -46,6 +48,9 @@ class DossierExtractTests(unittest.TestCase):
         self.assertEqual((items['Codigo']['caption'], items['Codigo']['type'], items['Codigo']['size']), ('Código', 'String', 30))
         self.assertEqual((items['preco']['type'], items['preco']['size'], items['preco']['default']), ('8-byte real', None, '0'))
         self.assertEqual(items['stock']['type'], 'Decimal')
+        self.assertEqual(items['inicio']['type'], 'Date and Time (yyyymmddhhmmssccc)')  # type wrapped onto two lines
+        self.assertEqual((items['numeromecanico']['type'], items['numeromecanico']['components']),
+                         ('Composite key', ['numero', 'mecanico']))
         self.assertEqual(items['Cliente']['default'], '0')
 
     def test_supercontrol_children_rows_and_reports(self):

@@ -55,6 +55,15 @@ WINDEV's project technical documentation states what the text sources encrypt. T
 
 **Generic, with a check.** Positions are measured from each page's own left margin, not fixed for one project. Labels are those of an English-language WINDEV, in one place (`CONTROL_TABLE`, `KEY_TABLE`, `TEXT_COLUMNS`): a dossier printed in another UI language needs its words added there. Every run writes `coverage` to `index.json` (windows with flags, controls with captions and flags, analysis items with keys, queries with SQL) and warns on stderr when under half of a kind was recognised: then the layout or labels differ, and the missing fields are "not extracted", never false. Measured on one English WINDEV 28 dossier; other versions and languages are untested. On a real WINDEV 28 project (2,303 pages): 51 windows, 28 reports, 29 queries with SQL, 106 images, in about 15 seconds. Only images actually painted on a page are taken (every page shares a resource dictionary of ~150 images). Requires `pypdf`; the other scripts stay standard-library only.
 
+
+## `schema_draft.py` — draft schema and decisions from the analysis
+
+```sh
+python3 scripts/schema_draft.py analysis-local --dossier analysis-local/dossier --out docs/schema/schema-draft.md
+```
+
+XDD structure (items, raw type codes, key type, size, default, null support) + dossier type names and captions → a type-code legend, a draft SQLite DDL that loads as is, and a list of per-column decisions for the database ADR. On the real project: 17 tables, 135 columns, 14 type codes named, 35 decisions (unsigned 8-byte codes, 8-byte reals, decimals, date/time formats); the XDD also exposed items the PDF parser missed, now fixed.
+
 ## `evidence_report.py` — is the evidence complete?
 
 ```sh

@@ -131,8 +131,8 @@ def checkboxes(content, carry=None):
         text_columns = TEXT_COLUMNS | {t for _, left, right, t in columns for y, _ in candidates
                                        if any(left <= lx < right and abs(ly - y) < 2 and not numeric(lt) for lx, ly, lt in runs)}
         for y, name in candidates:
-            # A check mark is drawn just right of its column header's x.
-            values = {t: any(-3 <= tx - hx <= 8 and 2 <= ty - y <= 7 for tx, ty in marks)
+            # A check mark is drawn just right of its column header's x, centred on its row (lower when the row wraps).
+            values = {t: any(-3 <= tx - hx <= 8 and -4 <= ty - y <= 7 for tx, ty in marks)
                       for hx, _, right, t in columns if t not in text_columns and not COUNT_COLUMN.match(t)
                       and (kind == 'control' or right > anchor_x)}  # analysis: only the key columns
             if values:
@@ -189,23 +189,30 @@ def parse_details(lines):
 
 ITEM_TYPE = (r'Automatic identifier \(\d+ bytes\)|(?:Unsigned |Signed )?\d+-byte (?:integer|real)|Unicode String|String|'
              r'Text Memo|Binary Memo|Image Memo|Boolean|Date and Time \([^)]*\)|Date \([^)]*\)|Time \([^)]*\)|'
-             r'Duration(?: \([^)]*\))?|Currency|Decimal|Numeric|Composite key|Character|Password')
+             r'Duration(?: \([^)]*\))?|Currency|Decimal|Numeric|Composite key(?:: [\w+$]+)?|Character|Password')
 ITEM = re.compile(rf'^([A-Za-z_][\w$]*) (.*?) ?({ITEM_TYPE})(?: (\d+))?(?: (.*))?$')
 
 
 def parse_items(lines):
     """Analysis file items: name, caption, type (as WINDEV names it), size, default value."""
     items, previous = [], None
+    lines = [line.strip() for line in lines]
+    # A long type wraps: "… Date and Time" + "(yyyymmddhhmmssccc)".
+    for i in range(len(lines) - 1):
+        if lines[i + 1].startswith('(') and re.search(r'(?:Date|Time|Duration|Automatic identifier)$', lines[i]):
+            lines[i], lines[i + 1] = f'{lines[i]} {lines[i + 1]}', ''
     for line in lines:
-        line = line.strip()
         match = ITEM.match(line)
         if match and not line.startswith(('Name on disk', 'Caption Type')):
-            sized = match[3] in ('String', 'Unicode String', 'Character', 'Password')
+            sized = match[3] in ('String', 'Unicode String', 'Character', 'Password') or match[3].startswith('Composite key')
             number = int(match[4]) if match[4] else None
             # Only strings have a size; after other types the number is the default value.
             default = (match[5] or '').strip() or (None if sized or number is None else str(number))
-            previous = {'name': match[1], 'caption': match[2].strip(), 'type': match[3],
+            kind, _, components = match[3].partition(': ')
+            previous = {'name': match[1], 'caption': match[2].strip(), 'type': kind,
                         'size': number if sized else None, 'default': default}
+            if components:
+                previous['components'] = components.split('+')
             items.append(previous)
         elif previous and re.fullmatch(r'-?\d+(?:\.\d+)?', line) and previous['default'] is None:
             previous['default'] = line  # the default value wraps onto its own line
