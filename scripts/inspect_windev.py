@@ -15,7 +15,7 @@ KINDS = {'.wdp': 'project', '.wdw': 'window', '.wde': 'report', '.wdr': 'query',
 SKIP = {'.git', 'node_modules', 'target', 'dist', 'backup', 'exe',
         'cache.gestion de sources', 'history', 'groupware'}
 SEED_COLUMNS = ['id', 'kind', 'element', 'context', 'event', 'evidence', 'confidence',
-                'legacy_behavior', 'target_behavior', 'implemented_in', 'test', 'decision', 'ticket', 'status']
+                'legacy_behavior', 'target_behavior', 'implemented_in', 'test', 'decision', 'status']
 KEY_LINE = re.compile(r'^( *)(- +)?([^\s:#][^:]*?)\s*:(?:\s+(.*))?$')
 LITERAL = re.compile(r'^\|[0-9+-]*\s*$')
 PROCEDURE = re.compile(r'^\s*(?:INTERNAL\s+|INTERNE\s+)?PROC[EÉ]DURE\s+([\w$]+)', re.I)

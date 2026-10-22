@@ -12,4 +12,4 @@ Order follows dependencies: never start a slice whose dependencies are not `Done
 | … | | | | | | | | | |
 | n | Cutover | Rehearsal, final import, acceptance | MIG-… | all | human | `08-data-migration.md` | signed acceptance | all | To do |
 
-Statuses: To do / In progress / Blocked (reason in handoff) / Done. Progress: `python3 scripts/status.py --roadmap ROADMAP.md`.
+Statuses: To do / In progress / Blocked (reason in handoff) / Done. Parity progress: `python3 scripts/parity_check.py docs/parity/parity.csv`. With a tracker, one slice = one ticket: put its key in the Ticket column, the branch name and commit messages.

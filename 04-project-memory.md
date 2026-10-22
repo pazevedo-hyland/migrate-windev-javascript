@@ -29,7 +29,7 @@ The principle: **separate** the central memory, detailed documentation, decision
 └── .claude/settings.json      ← optional Claude Code adapter: hook → scripts/guard.py --hook; skills copied to .claude/skills/
 ```
 
-Everything above `.claude/` works with any coding agent. Agent-specific files are thin adapters over the same rules: see [11 — Agents](11-agents.md).
+Everything above `.claude/` works with any coding agent; agent-specific files are thin adapters over the same rules (see [Claude Code, Codex and other agents](#claude-code-codex-and-other-agents)).
 
 ## Root `AGENTS.md` — SHORT
 
@@ -68,7 +68,7 @@ What must **exist** in the project without living in the agent's head all the ti
 
 ## Skills — reusable workflows
 
-Encapsulate stable methods instead of repeating instructions. Copy [templates/agent/skills](templates/agent/skills/) to `skills/` in the application. They are plain Markdown with a short front-matter header, so every agent can follow them: `AGENTS.md` names them ("to review a stage, follow `skills/review/SKILL.md`"), and agents with native skill support load them from their own skills folder (copy or link — see [11](11-agents.md)):
+Encapsulate stable methods instead of repeating instructions. Copy [templates/agent/skills](templates/agent/skills/) to `skills/` in the application. They are plain Markdown with a short front-matter header, so every agent can follow them: `AGENTS.md` names them ("to review a stage, follow `skills/review/SKILL.md`"), and agents with native skill support can also load them from their own skills folder (e.g. a copy in `.claude/skills/`):
 
 - **review** — the four-category review checklist with systematic checks.
 - **map-element** — map one legacy element into a mapping note and parity rows (used by parallel sub-agents in stage 0).
@@ -88,3 +88,20 @@ An AI can forget an instruction; a hook cannot. One rule set, [templates/agent/g
 Pair the guard with the agent's own sandbox and approval settings (workspace-only writes, network off unless needed). Adjust the path constants at the top of `guard.py` to the accepted layout.
 
 > Guard and agent configuration files are owned by **the human**: agents are told not to modify them (and some agents protect their own configuration from self-modification). Change them from your clone and push.
+
+## Claude Code, Codex and other agents
+
+The rules live in `AGENTS.md`, skills are Markdown files, guardrails run in Git and CI — so the method works with any coding agent. Install once per application repository:
+
+```sh
+cp -R templates/agent/skills skills && cp templates/agent/guard.py scripts/guard.py
+mkdir -p .githooks && cp templates/agent/pre-commit .githooks/ && git config core.hooksPath .githooks   # every clone
+# Claude Code only
+cp templates/CLAUDE.template.md CLAUDE.md && mkdir -p .claude
+cp templates/claude/settings.json .claude/ && cp -R skills .claude/skills
+```
+
+- **Codex** reads `AGENTS.md` (and nested ones) natively. If your version supports skills or hooks, point them at `skills/` and `scripts/guard.py --command/--write`; otherwise the commit guard, its sandbox/approval modes and CI cover it.
+- **No sub-agents?** Run the mapping units as parallel sessions or one after another.
+- **Two agents** work well together: one implements, the other reviews with `skills/review/SKILL.md` — a different model catches different misses.
+

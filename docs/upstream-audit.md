@@ -63,8 +63,8 @@ This table traces **every upstream section** to its place in this playbook, so n
 
 ## Additions beyond upstream
 
-- [09 — WLanguage traps](../09-wlanguage-traps.md), [10 — Parity and verification](../10-parity-and-verification.md), [11 — Agents](../11-agents.md) (agent-neutral core: Claude Code, Codex, others), [12 — Project tracking](../12-project-tracking.md), [GETTING-STARTED](../GETTING-STARTED.md).
-- `status.py` progress report and tracker work items; one guard rule set for Git, agent hooks and CI.
+- [09 — WLanguage traps](../09-wlanguage-traps.md) and [10 — Parity and verification](../10-parity-and-verification.md).
+- One guard rule set for Git, agent hooks and CI; agent-neutral skills (Claude Code, Codex, others).
 - Inspector with window/control/event context, parity seed and secret hints; `parity_check.py`; `compare_exports.py`; tested hook guard and pre-commit hook.
 - Templates: mapping prompt, map-element skill, roadmap, parity matrix, window spec, golden scenario, compare config.
 

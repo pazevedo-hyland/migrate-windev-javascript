@@ -42,15 +42,6 @@ python3 scripts/parity_check.py docs/parity/parity.csv [--seed analysis-local/in
 
 Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). With `--seed`, every seed row must still exist. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
 
-## `status.py` — progress report and work items
-
-```sh
-python3 scripts/status.py --parity docs/parity/parity.csv [--roadmap ROADMAP.md] [--json] \
-  [--work-items analysis-local/work-items.csv] [--label windev-migration]
-```
-
-Prints overall parity %, rows per status, rows with unresolved legacy behavior, roadmap slices per status (in-progress and blocked listed), and a table per legacy element (least complete first) with its ticket keys. `--json` for dashboards. `--work-items` writes a tracker-importable CSV (Jira CSV importer compatible): one story per element with open rows that have no `ticket` yet. See [12 — Project tracking](../12-project-tracking.md).
-
 ## `compare_exports.py` — golden master and reconciliation
 
 ```sh

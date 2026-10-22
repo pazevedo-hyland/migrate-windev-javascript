@@ -41,7 +41,7 @@ Keep this file short (≈60 lines). Details live in `docs/`; local rules live in
 npm run verify          # typecheck + lint + unit + parity check: must pass before every commit
 npm run test:e2e        # browser workflow tests with mocked IPC
 npm run tauri -- build  # native package for this OS
-python3 scripts/status.py --roadmap ROADMAP.md   # parity and roadmap progress
+python3 scripts/parity_check.py docs/parity/parity.csv   # parity progress and validity
 <golden scenarios, bindings generation, migration commands…>
 ```
 
@@ -52,7 +52,7 @@ python3 scripts/status.py --roadmap ROADMAP.md   # parity and roadmap progress
 
 ## Work tracking
 
-Ticket key of the current slice: in `ROADMAP.md` and the `ticket` column of `parity.csv`. Branch `<KEY>-<slug>`, commits start with `<KEY>:`.
+Ticket key of the current slice: in `ROADMAP.md`. Branch `<KEY>-<slug>`, commits start with `<KEY>:`.
 
 ## Pointers
 

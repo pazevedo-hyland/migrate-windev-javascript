@@ -23,7 +23,7 @@ Each stage prompt STARTS with "Read docs/runbooks/handoff.md, AGENTS.md, ROADMAP
 ## First steps
 1. Ask the implementer to run the inspector, then the MAPPING (templates/mapping-prompt.md): parallel sub-agents, one per window/report/procedure set/table group, each producing a mapping note; then independent reviewer agents cross-check notes against sources and screenshots.
 2. From the notes, ask me the framing questions below (with a recommendation for each). Continue independent analysis while waiting.
-3. Then create from templates/: AGENTS.md (+ CLAUDE.md pointer), local AGENTS.md files, skills/, scripts/guard.py with the .githooks/pre-commit hook (plus the adapter for the agent in use, see 11-agents.md), docs/architecture.md, docs/legacy-inventory.md, docs/wlanguage-traps.md (project-specific additions), docs/data-migration.md, docs/parity/parity.csv (imported from the seed), docs/screens/, docs/golden/, docs/decisions/, docs/runbooks/handoff.md and ROADMAP.md with stage 0.
+3. Then create from templates/: AGENTS.md (+ CLAUDE.md pointer), local AGENTS.md files, skills/, scripts/guard.py with the .githooks/pre-commit hook (plus the adapter for the agent in use, see 04-project-memory.md), docs/architecture.md, docs/legacy-inventory.md, docs/wlanguage-traps.md (project-specific additions), docs/data-migration.md, docs/parity/parity.csv (imported from the seed), docs/screens/, docs/golden/, docs/decisions/, docs/runbooks/handoff.md and ROADMAP.md with stage 0.
 
 ## Framing questions (each answer becomes an ADR and a rule in AGENTS.md)
 - Users and topology: how many workstations, shared data or one machine, offline needs, concurrency (is HFSQL Classic shared over the network? Client/Server?).
@@ -36,7 +36,7 @@ Each stage prompt STARTS with "Read docs/runbooks/handoff.md, AGENTS.md, ROADMAP
 - Scheduled jobs, automatic tasks, replication.
 - Delivery: Git host, CI, installer, auto-update channels, code signing, release cadence.
 - Real data: how I provide sanitized representative data and golden scenarios for testing.
-- Tracking: tracker and project key (e.g. Jira MIG), epics, who approves Done (see 12-project-tracking.md).
+- Tracking: tracker and project key (e.g. Jira MIG) if slices are ticketed.
 - Scope: what is excluded or deliberately changed (each exclusion needs an ADR).
 - Build order: data first, a vertical workflow first, or another order (fixed in the roadmap + ADR).
 

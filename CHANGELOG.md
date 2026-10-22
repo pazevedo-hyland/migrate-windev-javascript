@@ -1,16 +1,11 @@
 # Changelog
 
-## 2026-10-22 — agent-neutral setup and project tracking
-
-### Added
-- [GETTING-STARTED](GETTING-STARTED.md) checklist, [11 — Agents](11-agents.md) (Claude Code, Codex, others) and [12 — Project tracking](12-project-tracking.md) (Jira structure, generated stories, progress and trend reporting, estimating).
-- `scripts/status.py`: parity and roadmap progress report (Markdown/JSON) and tracker-importable work items.
-- `ticket` column in the parity matrix; `Ticket` column in the roadmap template.
+## 2026-10-22 — agent-neutral guardrails
 
 ### Changed
 - One guard rule set (`templates/agent/guard.py`) used by a Git pre-commit hook (`--staged`, every agent and human), the Claude Code hook (`--hook`) and other agents' hooks (`--command`, `--write`); also blocks `--no-verify`.
-- Skills moved to agent-neutral `templates/agent/skills/` and named from `AGENTS.md`; Claude Code copies them to `.claude/skills/`.
-- Documentation tests also check `#anchor` links.
+- Skills moved to agent-neutral `templates/agent/skills/` and named from `AGENTS.md`; short Claude Code / Codex setup in [04](04-project-memory.md#claude-code-codex-and-other-agents).
+- Roadmap template has a Ticket column. Documentation tests also check `#anchor` links.
 
 ## 2026-10-22 — parity toolkit and full upstream coverage
 
