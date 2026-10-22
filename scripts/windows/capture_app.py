@@ -233,6 +233,27 @@ class Desktop:
         self.app.kill()
 
 
+def startup(args, desktop):
+    """Observe only: capture each window (and owned dialog) that appears in the first seconds."""
+    seen, captured = set(), []
+    deadline = time.time() + args.timeout
+    while time.time() < deadline:
+        for window in desktop.windows():
+            for target in [window] + [c for c in window.children() if c.element_info.control_type == 'Window']:
+                if target.handle in seen:
+                    continue
+                seen.add(target.handle)
+                time.sleep(1)  # let the window finish drawing
+                name = f'{len(captured):02d}-' + re.sub(r'[^\w-]+', '_', target.window_text() or 'untitled')[:40]
+                capture(desktop, target, args.out / '_startup' / name, False)
+                captured.append({'folder': name, 'title': target.window_text(),
+                                 'controls': len(target.descendants())})
+        time.sleep(0.5)
+    desktop.kill()
+    (args.out / 'startup-report.json').write_text(json.dumps(captured, indent=2, ensure_ascii=False), encoding='utf-8')
+    print(json.dumps(captured, indent=2, ensure_ascii=False))
+
+
 def probe(desktop, main_window, chains, main_name):
     """Go/no-go: does UI Automation expose the controls the first hop of each route needs?"""
     elements = [(d, d.window_text(), d.element_info.automation_id) for d in main_window.descendants()]
@@ -277,6 +298,8 @@ def main():
                         help='type MIGRATION_APP_USER / MIGRATION_APP_PASSWORD into the first window, then Enter')
     parser.add_argument('--timeout', type=float, default=15)
     parser.add_argument('--dry-run', action='store_true', help='print the routes and exit')
+    parser.add_argument('--startup-only', action='store_true',
+                        help='launch, capture every window that appears (screenshot + tree) without clicking, exit')
     parser.add_argument('--probe', action='store_true',
                         help='start the app, check which first-hop routes UI Automation can resolve, then exit')
     args = parser.parse_args()
@@ -310,6 +333,9 @@ def main():
             first = after
         return desktop, first
 
+    if args.startup_only:
+        startup(args, Desktop(args.app_dir / args.exe, args.app_dir, args.timeout))
+        return
     desktop, main_window = start()
     if main_window is None:
         parser.exit(1, 'main window did not appear\n')

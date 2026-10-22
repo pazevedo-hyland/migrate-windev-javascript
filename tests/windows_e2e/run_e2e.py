@@ -86,6 +86,13 @@ def main():
     crawler = ROOT / 'scripts/windows/capture_app.py'
     common = ['--exe', 'FakeApp.exe', '--plan', work / 'plan.json', '--login', '--timeout', '10']
 
+    startup_dir = fresh_copy(exe, work, 'startup-copy')
+    run(crawler, '--app-dir', startup_dir, '--out', work / 'startup', '--startup-only', '--exe', 'FakeApp.exe',
+        '--plan', work / 'plan.json', '--timeout', '6')
+    startup = json.loads((work / 'startup' / 'startup-report.json').read_text(encoding='utf-8'))
+    if not startup or startup[0]['title'] != 'Acesso' or not (work / 'startup' / '_startup' / startup[0]['folder'] / 'tree.json').exists():
+        failures.append(f'startup-only: {startup}')
+
     probe_dir = fresh_copy(exe, work, 'probe-copy')
     run(crawler, '--app-dir', probe_dir, '--out', work / 'probe', '--probe', '--allow-review', *common)
     verdict = json.loads((work / 'probe' / 'probe.json').read_text(encoding='utf-8'))
