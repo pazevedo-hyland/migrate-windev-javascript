@@ -217,6 +217,13 @@ class Desktop:
             surprise = [w for w in self.windows() if w.handle not in known]
             if surprise:
                 return surprise[0]
+            # UI Automation lists a dialog owned by the window as its child, not as a top-level window.
+            try:
+                owned = [c for c in window.children() if c.element_info.control_type == 'Window']
+            except Exception:
+                owned = []
+            if owned:
+                return owned[0]
             if not self.app.window(handle=handle).exists(timeout=0):
                 return None
             time.sleep(0.3)
