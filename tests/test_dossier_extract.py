@@ -51,7 +51,11 @@ class DossierExtractTests(unittest.TestCase):
     def test_supercontrol_children_rows_and_reports(self):
         window = module.collect([page('WINDEV window', 'WIN_F', 'Information on controls', body=(
             'EDT_Codigo 14 31 158 25 0 Active Numeric\nEDT_Nome 14 62 300 25 0 Read-onl Text\n'
-            'Supercontrol : SC_Form\nEdit control : SC_Form.EDT_Codigo\nTab order 2\n'))])['WINDEV window']['WIN_F']
+            'Supercontrol : SC_Form\nEdit control : SC_Form.EDT_Codigo\nTab order 2\n'
+            'Combo Box : SC_Form.COMBO_Codigo\nCaption PT: Cliente\nTab order 3\n'
+            'Code\nClick BTN_X\nTab order 9\n'))])['WINDEV window']['WIN_F']
+        self.assertEqual((window['controls']['COMBO_Codigo']['kind'], window['controls']['COMBO_Codigo']['tab_order']),
+                         ('Combo Box', 3))  # capitalised kind; code after "Code" is not a property
         code = window['controls']['EDT_Codigo']
         self.assertEqual((code['path'], code['tab_order'], code['input_type'], code['state']),
                          ('SC_Form.EDT_Codigo', 2, 'Numeric', 'Active'))
@@ -64,6 +68,23 @@ class DossierExtractTests(unittest.TestCase):
         self.assertEqual((report['report_type'], report['data_source']), ('Table', 'Embedded query'))
         self.assertEqual(report['controls']['ITEM_Codigo']['item'], 'Codigo')
         self.assertEqual(report['controls']['STC_Codigo']['width_mm'], 14.66)
+
+    def test_checkbox_values_from_drawn_check_marks(self):
+        tick = lambda x, y: f'{x} {y} m {x + 2.84} {y - 2.83} l S\n{x + 2.84} {y - 2.83} m {x + 8.5} {y + 2.84} l S\n'
+        content = (
+            "BT 46.72 269.67 Td (Large font management)' ET\n" + tick(277.97, 272.77) +
+            "BT 46.72 255.75 Td (Indep. HFSQL ctx.)' ET\n"
+            "BT 46.72 240.00 Td (Opening mode)' ET\nBT 280.00 240.00 Td (Centered)' ET\n"
+            "BT 46.72 230.00 Td (X position)' ET\nBT 198.16 231.21 Td (0)' ET\nBT 280.00 231.21 Td (0)' ET\n"
+            "BT 177.76 143.19 Td (X position)' ET\nBT 359.44 143.19 Td (Visible)' ET\n"
+            "BT 556.24 143.19 Td (Password)' ET\nBT 579.04 143.19 Td (Required input)' ET\n"
+            "BT 46.72 137.56 Td (EDT_palavra_passe)' ET\nBT 177.76 137.56 Td (28)' ET\n"
+            + tick(360.0, 143.1) + tick(556.8, 143.1) +
+            "BT 46.72 125.19 Td (EDT_utilizador)' ET\nBT 177.76 125.19 Td (28)' ET\n" + tick(360.0, 130.7))
+        properties, controls = module.checkboxes(content)
+        self.assertEqual(properties, {'Large font management': True, 'Indep. HFSQL ctx.': False})
+        self.assertEqual(controls['EDT_palavra_passe'], {'Visible': True, 'Password': True, 'Required input': False})
+        self.assertEqual(controls['EDT_utilizador'], {'Visible': True, 'Password': False, 'Required input': False})
 
     def test_query_sql_parameters_and_conditions(self):
         pages = [

@@ -5,13 +5,15 @@ description: Map one legacy WINDEV element (window, report, query, procedure set
 
 # Map one legacy element
 
-Input: one unit name. Paths are relative to the repository root. Read in full: the unit's dossier extract if present (`<dossier dir>/<kind>/<unit>.json`: captions, tab order, masks, query SQL — cite it as `dossier: <unit>/<control>`), the unit's source in `legacy/`, its extracted blocks in the inspector output (`<inspect dir>/code/…/<file>.json`), `docs/wlanguage-traps.md` and `docs/mapping/event-codes.md`. Never modify legacy files, never run anything from them, never copy credential values (locations only). Do not write application code.
+Input: one unit name. Paths are relative to the repository root; the locations named here are the defaults — when your stage prompt gives other paths, use those. Read in full: the unit's dossier extract if present (`<dossier dir>/<kind>/<unit>.json`: captions, tab order, masks, query SQL — cite it as `dossier: <unit>/<control>`), the unit's source in `legacy/`, its extracted blocks in the inspector output (`<inspect dir>/code/…/<file>.json`), `docs/wlanguage-traps.md` and `docs/mapping/event-codes.md`. Never modify legacy files, never run anything from them, never copy credential values (locations only). Do not write application code.
+
+Read the parsed fields of the dossier extract first (`title`, `controls.<name>.caption`, `tab_order`, `input_mask`, `input_type`, `state`, `flags` — checkbox properties such as `Indep. HFSQL ctx.`, `Required input`, `Multiline` — and for queries `sql`); open `lines` only for what the parsed fields do not cover.
 
 ## Scope
 
 - **Rows of the unit**: seed rows whose `element` column equals the unit name — not every row that mentions it. Keep every `SRC-*` ID.
 - **A block** is a non-empty code block (one seed row). Empty event slots are not rows; mention them only when meaningful (e.g. a Print button with no code).
-- **Follow one level of callers and callees**: search all legacy code for the unit name (`Open(…)`, `OpenChild(…)`, `ExecuteProcess(…)`, `iPrintReport(…)`) and read those call sites, plus the windows, procedures and queries the unit opens or calls. Cross-window behavior (shared file buffers and filters, globals, parameters, returned values) is where the risky rules are.
+- **Follow one level of callers and callees**: take the callers from `docs/evidence-report.json` (`callers.<unit>`: file and line) instead of searching, and read those call sites, plus the windows, procedures and queries the unit opens or calls. Cross-window behavior (shared file buffers and filters, globals, parameters, returned values) is where the risky rules are.
 
 ## Write `docs/mapping/<unit>.md`
 
@@ -28,6 +30,10 @@ Controls go **only** in the screen spec, not in the note.
 
 Follow `templates/window-spec.md`. Captions, masks, tab order and button types come from the dossier extract when it exists; the text sources keep them in encrypted `internal_properties`. Without a dossier, fill what readable text and code prove, otherwise write `unresolved (encoded)` once per column rather than guessing, and list the evidence needed.
 
+## Reports
+
+For a report (`.wde`), write `docs/reports/<unit>.md` from `templates/report-spec.md` instead of a screen spec: page format and the printable-width check, data source and sort, bands, columns with bound items (`controls.<name>.item` in the dossier extract, geometry in millimetres), calculations and presets. Report captions are usually visible only in the dossier image: read them there and say so. A report with no caller in `callers` is a finding (how is it printed today?), not an omission of yours.
+
 ## Write `docs/parity/<unit>.csv`
 
 Exact columns of `templates/parity.template.csv`.
@@ -35,6 +41,7 @@ Exact columns of `templates/parity.template.csv`.
 - `evidence`: repository-relative `path:line` (seed evidence is relative to the inspected folder: prefix it, e.g. `legacy/code/`).
 - `confidence`: `verified` (read directly in code/schema), `inferred` (reasoned; say how in `legacy_behavior`), `unresolved`.
 - `status`: `specified` with `target_behavior` = `Preserve legacy behavior` when the legacy behavior is understood; `unmapped` when an unresolved item blocks it (cite `U-nn` in `legacy_behavior`). Changes to legacy behavior are decided later by ADR, not here.
+- A block whose code is clear but whose outcome depends on an unresolved item (e.g. the window may or may not close afterwards): keep the block's `SRC-*` row `specified` for what the code does, and put the unresolved part in its own `RULE-*` row, `unmapped`, citing the `U-nn`.
 - New rule rows: `RULE-<UNIT-ABBREVIATION>-NNN` (e.g. `RULE-ORF-001`), for rules spanning several blocks or windows.
 - New event-code meanings you infer: add them to `docs/mapping/event-codes.md` with the evidence, labelled inferred.
 

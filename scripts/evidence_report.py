@@ -35,7 +35,7 @@ CATEGORIES = {
                             'sRead', 'sWrite', 'Beep', 'Speak'],
 }
 LITERALS = {'CommandLine': 0, 'INIRead': 3, 'INIWrite': 3, 'ExeRun': 0, 'iPrintReport': 0, 'Open': 0,
-            'OpenChild': 0, 'fOpen': 0}
+            'OpenChild': 0, 'OpenSister': 0, 'ExecuteProcess': 0, 'fOpen': 0}
 
 
 class CaseInsensitive(dict):
@@ -65,7 +65,9 @@ def dossier_items(dossier_dir):
     if not dossier_dir:
         return {}, {}, {}, {}
     root = Path(dossier_dir)
-    load = lambda kind: CaseInsensitive({p.stem: load_json(p) for p in (root / kind).glob('*.json')})
+    # `_general` holds a part's overview page, not an element.
+    load = lambda kind: CaseInsensitive({p.stem: load_json(p) for p in (root / kind).glob('*.json')
+                                         if not p.stem.startswith('_')})
     analysis = next(iter(load('analysis').values()), {})
     return load('windev-window'), load('report'), load('query'), analysis.get('files', {})
 
@@ -151,6 +153,32 @@ def text_in(labels, language):
     return labels.get(language) or next(iter(labels.values()), '?')
 
 
+def callers(used):
+    """{element: [caller element:line (function)]}: who opens each window and prints each report."""
+    index = collections.defaultdict(list)
+    for function in ('Open', 'OpenChild', 'OpenSister', 'iPrintReport', 'ExecuteProcess'):
+        for element, line, literal in used.get(function, []):
+            target = re.match(r'[A-Za-z_][\w$]*', literal or '')
+            if target:
+                index[target[0]].append(f'{element}:{line} ({function})')
+    # WLanguage names are case-insensitive: open(win_sistema) opens WIN_sistema.
+    merged = collections.defaultdict(set)
+    spelling = {}
+    for name, sites in index.items():
+        spelling.setdefault(name.lower(), name)
+        merged[name.lower()].update(sites)
+    return CaseInsensitive({spelling[key]: sorted(sites) for key, sites in merged.items()})
+
+
+def first_window(dossier_dir):
+    """The project's first window, as the dossier's project section states it (it has no caller)."""
+    for path in Path(dossier_dir or '.', 'project').glob('*.json') if dossier_dir else []:
+        for line in load_json(path).get('lines', []):
+            if line.startswith('First window '):
+                return line.split(' ', 2)[2].strip()
+    return None
+
+
 def runtime_questions(inspect_dir, dossier_dir, language='pt-PT'):
     """What the code and the dossier cannot settle. Identical dialogs are asked once."""
     questions = []
@@ -222,9 +250,14 @@ def main():
     rows, gaps = coverage(args.inspect_dir, args.dossier, tables)
     used = calls(args.inspect_dir)
     questions = runtime_questions(args.inspect_dir, args.dossier, args.language)
+    caller_index = callers(used)
+    first = first_window(args.dossier)
+    for row in rows:
+        if row['kind'] in ('window', 'report') and not caller_index.get(row['element']) and row['element'] != first:
+            gaps.append(f"{row['element']}: no caller found in code (unreachable, dynamic, or the project's first window)")
     args.out.write_text(markdown(rows, gaps, used, questions), encoding='utf-8')
     args.out.with_suffix('.json').write_text(json.dumps(
-        {'files': len(inventory['files']), 'coverage': rows, 'gaps': gaps, 'questions': questions,
+        {'files': len(inventory['files']), 'coverage': rows, 'gaps': gaps, 'questions': questions, 'callers': caller_index,
          'usage': {f: [list(s) for s in sites] for f, sites in used.items()}}, indent=1, ensure_ascii=False),
         encoding='utf-8')
     print(f'{len(rows)} elements, {len(gaps)} gaps, {len(used)} platform functions used, {len(questions)} runtime questions')

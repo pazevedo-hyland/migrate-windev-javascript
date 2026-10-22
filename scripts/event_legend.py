@@ -39,11 +39,14 @@ def compiled_labels(data):
 def legend(source_dir, compile_dir):
     inspector = load_inspector()
     compiled = {}
-    for path in Path(compile_dir).rglob('*.wcw'):
-        compiled.setdefault(path.name.split('.')[0].lower(), path)
+    # Compiled code: windows in .wcw, reports in .wce.
+    for pattern in ('*.wcw', '*.wce'):
+        for path in Path(compile_dir).rglob(pattern):
+            compiled.setdefault(path.name.split('.')[0].lower(), path)
     votes = collections.defaultdict(collections.Counter)
     windows = 0
-    for source in sorted(Path(source_dir).glob('*.[wW][dD][wW]')):
+    sources = sorted(Path(source_dir).glob('*.[wW][dD][wW]')) + sorted(Path(source_dir).glob('*.[wW][dD][eE]'))
+    for source in sources:
         wcw = compiled.get(source.stem.lower())
         text = inspector.decode_text(source.read_bytes())
         if wcw is None or text is None:

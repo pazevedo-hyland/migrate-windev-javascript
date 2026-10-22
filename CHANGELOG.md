@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-22 — small-scale mapping run with the dossier
+
+A dossier-aware mapping run on two windows and one report (with the first pilot's window as an A/B case) drove these changes.
+
+### Added
+- Dossier checkbox properties read from drawn check marks: window `flags` for all 51 windows (e.g. `Indep. HFSQL ctx.` on in only 2) and per-control `flags` (Required input, Multiline, Password…).
+- Caller index and "no caller" gaps in the evidence report; the project's first window from the dossier's overview page.
+- `templates/report-spec.md`; a reports section in the map-element skill.
+- Event legend covers reports (`.wce`): 327680 Open, 327692 Before printing, 327693 After printing.
+
+### Fixed
+- Dossier: capitalised control kinds (`Combo Box`), control details and report bindings parsed in page order, code listings no longer read as properties, report type, part overview pages kept, duplicate text removed (a third smaller).
+- Callers matched case-insensitively (`open(win_sistema)`).
+
+### Changed
+- map-element skill: paths are defaults a stage prompt may override; read parsed fields and flags before raw lines; callers from the evidence report; a clear block with an unresolved outcome stays `specified` with the unresolved part as its own `unmapped` rule row.
+
 ## 2026-10-22 — evidence completeness
 
 ### Added

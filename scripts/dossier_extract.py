@@ -18,7 +18,7 @@ HEADER = re.compile(r'^Part (\d+)\s+(.*)$')
 DETAIL = re.compile(r'^(Button|Edit control|Caption|Image|Supercontrol|Table|Column|Combo box|List box|Check box|'
                     r'Radio button|Tab|Static|Progress bar|Looper|Internal window|Layout|Spin|Slider|Scrollbar|'
                     r'Rating|Calendar|Chart|Toolbar|Menu option|Cell|Tree view|Rich text|HTML|Zone|Sidebar|'
-                    r'Organizer|Scheduler|Shape|Splitter|[A-Z][a-z]+(?: [a-z]+)*) : ([A-Za-z_][\w$]*(?:\.[A-Za-z_][\w$]*)*)$')
+                    r'Organizer|Scheduler|Shape|Splitter|[A-Z][a-z]+(?: [A-Za-z]+)*) : ([A-Za-z_][\w$]*(?:\.[A-Za-z_][\w$]*)*)$')
 # Control table rows: "EDT_Codigo 14 31 158 25 0 Active Numeric" (windows, pixels) or
 # "STC_Codigo Caption 0.00 0.00 6.09 14.66 0.10 Solid TBL-" (reports, millimetres).
 WINDOW_ROW = re.compile(r'^([A-Za-z_][\w$]*) (-?\d+) (-?\d+) (\d+) (\d+) (\d+)(?: (.*))?$')
@@ -37,6 +37,61 @@ def drawn_images(page):
     contents = page.get_contents()
     painted = set(re.findall(rb'/([A-Za-z0-9_.-]+)\s+Do\b', contents.get_data() if contents is not None else b''))
     return [image for image in page.images if image.name.rsplit('.', 1)[0].encode() in painted]
+
+
+TEXT_RUN = re.compile(r"BT ([\d.]+) ([\d.]+) Td \((.*?)\)' ET")
+SEGMENT = re.compile(r'([\d.]+) ([\d.]+) m ([\d.]+) ([\d.]+) l S')
+GRID_COLUMNS = (46.72, 299.08, 551.44)  # label columns of the property grid on "General information" pages
+
+
+def ticks(content):
+    """Check marks: a short down-right stroke followed by a longer up-right one (how the dossier draws ✓)."""
+    segments = [tuple(map(float, m)) for m in SEGMENT.findall(content)]
+    return [(a, (b + i) / 2) for (a, b, c, e), (f, g, h, i) in zip(segments, segments[1:])
+            if abs(c - f) < 0.1 and abs(e - g) < 0.1 and 1 < c - a < 5 and 1 < b - e < 5 and 3 < h - f < 9 and 3 < i - g < 9]
+
+
+def checkboxes(content):
+    """Boolean values drawn as check marks, from a page's raw content stream.
+
+    Returns (properties, controls): window-level properties from the three-column property grid, and per
+    control the boolean columns of control tables (Visible, Password, Required input…). A boolean cell is
+    one with no text in it; a check mark inside means True.
+    """
+    runs = [(float(x), float(y), text.replace('\\(', '(').replace('\\)', ')')) for x, y, text in TEXT_RUN.findall(content)]
+    marks = ticks(content)
+    # A control-table header row holds only column titles; the property grid's
+    # "X position 0 Y position 0 Width 380…" row holds numbers.
+    header_rows = sorted({y for x, y, t in runs if t == 'X position' and not any(
+        abs(ly - y) < 2 and re.fullmatch(r'-?[\d.]+', lt) for lx, ly, lt in runs)}, reverse=True)
+    # A control table runs from its header row down to the next header (or the page bottom).
+    tables = [(header_rows[i + 1] if i + 1 < len(header_rows) else -1, y) for i, y in enumerate(header_rows)]
+    in_table = lambda y: any(low < y <= high for low, high in tables)
+    properties = {}
+    for x, y, label in runs:
+        if not any(abs(x - column) < 0.5 for column in GRID_COLUMNS) or in_table(y):
+            continue
+        cell = (x + 226.0, x + 251.8)
+        if any(cell[0] <= lx <= cell[1] and abs(ly - y) < 3 for lx, ly, _ in runs):
+            continue  # a text value: not a checkbox
+        properties[label] = any(cell[0] <= tx <= cell[1] and -4 <= ty - y <= 10 for tx, ty in marks)
+    controls = {}
+    for index, header_y in enumerate(header_rows):
+        headers = sorted((x, t) for x, y, t in runs if abs(y - header_y) < 0.5 and x > 100)
+        floor = header_rows[index + 1] if index + 1 < len(header_rows) else -1
+        rows = [(y, t) for x, y, t in runs if abs(x - GRID_COLUMNS[0]) < 0.5 and floor < y < header_y - 1]
+        for row_y, name in rows:
+            if not re.fullmatch(r'[A-Za-z_][\w$]*', name):
+                continue
+            values = {}
+            for position, (column_x, column) in enumerate(headers):
+                right = headers[position + 1][0] if position + 1 < len(headers) else column_x + 40
+                if any(column_x - 1 <= lx < right - 1 and abs(ly - row_y) < 3 for lx, ly, _ in runs):
+                    continue  # this cell holds text (a number, a state, an input type)
+                values[column] = any(column_x - 1 <= tx < right - 1 and 2 <= ty - row_y <= 7 for tx, ty in marks)
+            if values:
+                controls[name] = values
+    return properties, controls
 
 
 def split_header(text):
@@ -163,9 +218,10 @@ def collect(pages):
     elements = {}
     for text in pages:
         part, header, body = split_header(text)
-        if not part or len(header) < 2:
+        if not part or not header:
             continue
-        kind, element = header[0], header[1]
+        # Part overview pages ("Part 1  Project") carry project-wide facts such as the first window.
+        kind, element = header[0], header[1] if len(header) > 1 else '_general'
         section = header[2] if len(header) > 2 else ''
         item = elements.setdefault(kind, {}).setdefault(element, {'sections': {}, 'lines': []})
         if kind == 'Analysis' and section == 'Files and items' and len(header) > 3:
@@ -175,9 +231,8 @@ def collect(pages):
         item['lines'].extend(body)  # page order: a section can start mid-page under the previous header
     for kind, items in elements.items():
         for element, item in items.items():
-            sections = item['sections']
-            lines = item.pop('lines')
-            item['lines'] = lines
+            sections = item.pop('sections')  # kept only for parsing: `lines` holds the same text in page order
+            lines = item['lines']
             general = sections.get('General information', [])
             for line in general:
                 for key, field in (('Title', 'title'), ('Window type', 'window_type'), ('Query type', 'query_type')):
@@ -190,7 +245,9 @@ def collect(pages):
                     parsed = parse_items(file_lines)
                     if parsed:  # the section's overview page lists no items
                         item['files'][name] = {'description': description, 'items': parsed}
-            control_lines = sections.get('Information on controls', []) + general
+            # Page order matters: a section can start mid-page under the previous header, and a
+            # control's "Item" line must follow its own row. Stop where the code listing starts.
+            control_lines = lines[:lines.index('Code')] if 'Code' in lines else lines
             controls = parse_details(control_lines)
             for name, row in parse_rows(control_lines, report=(kind == 'Report')).items():
                 target = controls.setdefault(name, {'kind': row.get('kind'), 'raw': []})
@@ -199,7 +256,8 @@ def collect(pages):
             if controls:
                 item['controls'] = controls
             if kind == 'Report':
-                for line in general:
+                start = next((i for i, line in enumerate(lines) if line.startswith('Physical report name')), 0)
+                for line in lines[start:]:
                     for key, field in (('Type', 'report_type'), ('Data source type', 'data_source'),
                                        ('Page format', 'page_format')):
                         if line.startswith(key + ' ') and field not in item:
@@ -216,6 +274,18 @@ def extract(pdf, out, images=True):
     reader = PdfReader(str(pdf))
     texts = [page.extract_text() or '' for page in reader.pages]
     elements = collect(texts)
+    for page, text in zip(reader.pages, texts):
+        part, header, _ = split_header(text)
+        if not part or len(header) < 2 or header[0] not in elements or header[1] not in elements[header[0]]:
+            continue
+        contents = page.get_contents()
+        properties, controls = checkboxes(contents.get_data().decode('latin1') if contents is not None else '')
+        item = elements[header[0]][header[1]]
+        if properties:
+            item.setdefault('flags', {}).update(properties)
+        for name, values in controls.items():
+            target = item.setdefault('controls', {}).setdefault(name, {'kind': None, 'raw': []})
+            target.setdefault('flags', {}).update(values)
     out.mkdir(parents=True, exist_ok=True)
     if images:
         for number, text in enumerate(texts):
