@@ -78,6 +78,31 @@ def parse_details(lines):
     return controls
 
 
+ITEM_TYPE = (r'Automatic identifier \(\d+ bytes\)|(?:Unsigned |Signed )?\d+-byte (?:integer|real)|Unicode String|String|'
+             r'Text Memo|Binary Memo|Image Memo|Boolean|Date and Time \([^)]*\)|Date \([^)]*\)|Time \([^)]*\)|'
+             r'Duration(?: \([^)]*\))?|Currency|Decimal|Numeric|Composite key|Character|Password')
+ITEM = re.compile(rf'^([A-Za-z_][\w$]*) (.*?) ?({ITEM_TYPE})(?: (\d+))?(?: (.*))?$')
+
+
+def parse_items(lines):
+    """Analysis file items: name, caption, type (as WINDEV names it), size, default value."""
+    items, previous = [], None
+    for line in lines:
+        line = line.strip()
+        match = ITEM.match(line)
+        if match and not line.startswith(('Name on disk', 'Caption Type')):
+            sized = match[3] in ('String', 'Unicode String', 'Character', 'Password')
+            number = int(match[4]) if match[4] else None
+            # Only strings have a size; after other types the number is the default value.
+            default = (match[5] or '').strip() or (None if sized or number is None else str(number))
+            previous = {'name': match[1], 'caption': match[2].strip(), 'type': match[3],
+                        'size': number if sized else None, 'default': default}
+            items.append(previous)
+        elif previous and re.fullmatch(r'-?\d+(?:\.\d+)?', line) and previous['default'] is None:
+            previous['default'] = line  # the default value wraps onto its own line
+    return items
+
+
 def parse_sql(lines):
     sql, inside = [], False
     for line in lines:
@@ -106,6 +131,9 @@ def collect(pages):
         kind, element = header[0], header[1]
         section = header[2] if len(header) > 2 else ''
         item = elements.setdefault(kind, {}).setdefault(element, {'sections': {}, 'lines': []})
+        if kind == 'Analysis' and section == 'Files and items' and len(header) > 3:
+            # One analysis holds many files: keep each file's pages apart.
+            item.setdefault('file_lines', {}).setdefault(header[3], []).extend(body)
         item['sections'].setdefault(section, []).extend(body)
         item['lines'].extend(body)  # page order: a section can start mid-page under the previous header
     for kind, items in elements.items():
@@ -118,6 +146,13 @@ def collect(pages):
                 for key, field in (('Title', 'title'), ('Window type', 'window_type'), ('Query type', 'query_type')):
                     if line.startswith(key + ' ') and field not in item:
                         item[field] = strip_language(line[len(key) + 1:].strip())
+            if 'file_lines' in item:
+                item['files'] = {}
+                for name, file_lines in item.pop('file_lines').items():
+                    description = next((l.split(': ', 1)[1] for l in file_lines if re.match(r'^[A-Z]{2}: .+', l)), None)
+                    parsed = parse_items(file_lines)
+                    if parsed:  # the section's overview page lists no items
+                        item['files'][name] = {'description': description, 'items': parsed}
             controls = parse_details(sections.get('Information on controls', []) + general)
             if controls:
                 item['controls'] = controls

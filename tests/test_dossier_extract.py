@@ -31,6 +31,23 @@ class DossierExtractTests(unittest.TestCase):
         self.assertNotIn('image', controls['BTN_Restore'])  # "Image handling menu" is another property
         self.assertEqual(controls['BTN_Restore']['initial_value'], {'PT': 'C:\\App\\Restore.gif'})
 
+    def test_analysis_items_with_captions_types_and_defaults(self):
+        pages = [page('Analysis', 'C:\\App\\App.wda', 'Files and items', 'artigos', 'Files and items', body=(
+            'General information\nartigos artigos\nName on disk artigos.fic\nDescription\nGB: Products\nPT:\n'
+            'artigos file items\nCaption Type\nSize\nDefault value\n'
+            'artigosID Identifier of artigos Automatic identifier (8 bytes)\n'
+            'Codigo Código String 30\npreco Preço 8-byte real 0\nstock stock Decimal 0\n'
+            'Cliente Cliente Unsigned 8-byte integer\n 0\n'))]
+        analysis = module.collect(pages)['Analysis']['C:\\App\\App.wda']
+        artigos = analysis['files']['artigos']
+        self.assertEqual(artigos['description'], 'Products')
+        items = {i['name']: i for i in artigos['items']}
+        self.assertEqual(items['artigosID']['type'], 'Automatic identifier (8 bytes)')
+        self.assertEqual((items['Codigo']['caption'], items['Codigo']['type'], items['Codigo']['size']), ('Código', 'String', 30))
+        self.assertEqual((items['preco']['type'], items['preco']['size'], items['preco']['default']), ('8-byte real', None, '0'))
+        self.assertEqual(items['stock']['type'], 'Decimal')
+        self.assertEqual(items['Cliente']['default'], '0')
+
     def test_query_sql_parameters_and_conditions(self):
         pages = [
             page('Query', 'QRY_cliente', 'Information on the result', body='Query parameters\nParamCodigo\n'),
