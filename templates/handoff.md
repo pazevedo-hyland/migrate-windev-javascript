@@ -1,18 +1,24 @@
-# Latest stage handoff — <App>
+# Handoff — latest stage (<App>)
 
-Stage: <name>; branch/commit: <actual values>; status: <actual status>.
+Entry point for the next session. Always holds the report of the **last** closed stage (overwritten each time). Full history: `git log`. Durable state: `AGENTS.md` + `docs/`.
 
-## Delivered
-<Files, behavior and parity rows completed.>
+## Stage — <name>
 
-## Assumptions and differences
-<Verified evidence, unresolved facts and intentional behavior changes.>
+Branch/commit: <actual values>. Pushed: <yes/no>. Working tree clean: <yes/no>.
+Parity: <rows moved, e.g. RULE-010..014 specified → verified>; matrix <n>% complete.
 
-## Checks actually executed
-<Exact commands, results and relevant platform; unavailable checks listed separately.>
+### 1. Delivered
+<Files, behavior, commands, migrations.>
 
-## Remaining work
-<Next steps and dependencies.>
+### 2. Assumptions and differences
+<Every assumption cited against real source/schema; nothing invented. Differences between legacy and target, and whether an ADR approved them.>
 
-## Decisions needed
-<Only decisions that affect scope or correctness.>
+### 3. Checks actually executed
+<Exact commands, results, OS. e.g. `npm run verify` → pass; golden GS-003 → pass on Windows 11.>
+Not run: <checks that could not run and why>.
+
+### 4. Remaining work
+1. <…>
+
+### 5. Decisions needed from the human
+<Open questions that affect scope or correctness, or "no blocking decision".>

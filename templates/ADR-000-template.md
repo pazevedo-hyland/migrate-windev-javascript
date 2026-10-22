@@ -1,13 +1,16 @@
-# ADR-00X — <Decision>
+# ADR-00X — <Short decision title>
 
-Date: <YYYY-MM-DD>
-Status: Proposed / Accepted / Superseded by <ADR>
+Copy to `docs/decisions/00X-title.md`. Numbers increase and are never reused. An accepted ADR is not rewritten: a new ADR supersedes it.
+
+- Date: <YYYY-MM-DD>
+- Status: Proposed / Accepted / Superseded by ADR-0YY
+- Parity rows affected: <IDs, or none>
 
 ## Context and evidence
-<Problem, source references and deployment constraints.>
+<The problem, what the real source/schema/data shows (with references), and the deployment constraints.>
 
 ## Decision
-<Selected approach, alternatives and why this fits.>
+<What is chosen, clearly. Alternatives considered, in one line each.>
 
 ## Consequences and verification
-<Tradeoffs, behavior changes, compatibility, required tests and recovery.>
+<What changes in code/schema/docs, what is now forbidden, behavior changes versus legacy, required tests, rollback/recovery.>

@@ -1,0 +1,2 @@
+id,kind,element,context,event,evidence,confidence,legacy_behavior,target_behavior,implemented_in,test,decision,status
+RULE-001,rule,Repair order total,WIN_RepairOrder/BTN_Save,,legacy/code/WIN_RepairOrder.wdw:120-164; screenshots/WIN_RepairOrder.png,verified,"Total = sum(lines) - discount, VAT applied after discount, rounded to 2 decimals per line",Preserve,src/domain/repairOrder.ts; src-tauri/src/commands/repair_order.rs,src/domain/repairOrder.test.ts; golden/GS-003,,verified

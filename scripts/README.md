@@ -1,24 +1,52 @@
-# WINDEV inspection tool
+# Scripts
 
-Python 3.10+; standard library only. No WINDEV runtime or AI credentials required.
+Python 3.10+, standard library only. No WINDEV runtime, network or AI credentials required. Run the tests with `python3 -m unittest discover -s tests -v`.
+
+## `inspect_windev.py` — inventory, context and parity seed
 
 ```sh
-python3 scripts/inspect_windev.py /absolute/path/to/project --out analysis-local
-python3 -m unittest discover -s tests -v
+python3 scripts/inspect_windev.py /absolute/path/to/project --out analysis-local/inspect-1 \
+  [--fallback-encoding cp1252] [--extra-ext .wwh ...] [--block-key <key> ...]
 ```
 
-Use a new output directory per run. Existing output is rejected to prevent mixing stale and current evidence. Output cannot equal or contain the source directory. The source is only read.
+Use a new output directory per run: existing output is rejected so stale and current evidence never mix. The output cannot equal or contain the source directory. The source is only read; legacy code is never executed.
 
-Recognized extensions: `.wdp`, `.wdw`, `.wde`, `.wdr`, `.wdg`, `.wdc`, `.xdd` (case insensitive). Walks nested source directories, skips symlinks, common build/runtime/cache/backup directories and compilation folders ending in `.cpl`. A nested output directory is excluded. This is a convenience inventory, not a guarantee of complete source discovery; compare it with the WINDEV project element list.
+**Recognized extensions** (case-insensitive): `.wdp` project, `.wdw` window, `.wde` report, `.wdr` query, `.wdg` procedure set, `.wdc` class, `.xdd` analysis export. Add others with `--extra-ext` after comparing with the project element list in WINDEV (for example WebDev pages). The walk skips symlinks, `.git`, `node_modules`, `target`, `dist`, `Backup`, `Exe`, `History`, `Groupware`, `Bkp_*` and `*.cpl` folders, and a nested output directory. This is a convenience inventory, not a guarantee of complete discovery.
 
-UTF-8/BOM and BOM-marked UTF-16 text are supported for code sources. Other encodings and binary files are reported unresolved. The tool recognizes indented `code : |1-`-style literal blocks and preserves their source line ranges and relative paths. It does not parse the full WINDEV text format, resolve resource strings, decode internal properties, or interpret numeric event identifiers. Inline code formats may not be extracted; inspect original sources when coverage matters.
+**Text sources**: UTF-8 (with or without BOM) and BOM-marked UTF-16 are decoded; `--fallback-encoding` accepts an explicit codec for older non-Unicode sources. Other files are reported `binary-or-unsupported` and seeded as `export-needed`. The tool recognizes indented `code : |1-` style literal blocks and records, for each block:
 
-XDD is parsed as XML with its declared encoding. DTD/entity declarations and non-ASCII-compatible XML are rejected. Each field's raw XML metadata and table attributes are retained, alongside other top-level metadata/relationships. Numeric type/key codes are deliberately not translated into SQL or TypeScript guesses.
+- `start_line`/`end_line` and the relative path;
+- `context.names`: ancestor `name :` values (e.g. `["WIN_Order", "BTN_Save"]`);
+- `context.siblings`: scalar keys next to the block, such as the raw event `type` code — **not interpreted**;
+- `procedures`: `PROCEDURE`/`PROCÉDURE` declarations found in the block.
 
-Outputs:
+`literal_keys` in the inventory counts every literal block key found in a file, so other embedded sources are visible; extract them with `--block-key`. The tool does not parse the full WINDEV text format, resolve resource strings, decode internal properties or interpret numeric event identifiers.
 
-- `inventory.json`: recognized source paths, byte sizes, SHA-256 hashes, status and block/table counts.
-- `code/<relative-source>.json`: extracted WLanguage blocks and line references.
-- `schema/<relative-source>.json`: raw table/field/relationship metadata.
+**XDD** is parsed as XML with its declared encoding; DTD/entity declarations and non-ASCII-compatible XML are rejected. Each field's raw XML metadata and table attributes are retained, with other top-level metadata/relationships. Numeric type/key codes are deliberately not translated.
 
-Binary queries are inventoried without claiming to understand them. HFSQL records, PDFs and images are not read. Encoded controls still need screenshots/designer inspection. Results may include passwords embedded in legacy code: keep them local and sanitize before publication. No secret scanner is included.
+**Outputs**
+
+- `inventory.json` — paths, kinds, sizes, SHA-256 hashes, status, block/table counts, literal keys, limitations.
+- `code/<relative-source>.json` — extracted blocks with context and line references.
+- `schema/<relative-source>.json` — raw table/field/relationship metadata.
+- `parity-seed.csv` — one `unmapped` row per code block, table and unresolved source, with stable `SRC-*` IDs. Import it into `docs/parity/parity.csv`.
+- `secret-hints.json` — `path`, `line` and hint type for likely hardcoded credentials and connection calls. **Values are never copied.** Treat findings as credentials to revoke.
+
+Outputs contain business logic and possibly secrets: keep them local (`analysis-local/` is ignored) and sanitize before sharing.
+
+## `parity_check.py` — the parity gate
+
+```sh
+python3 scripts/parity_check.py docs/parity/parity.csv [--seed analysis-local/inspect-1/parity-seed.csv] [--require-complete]
+```
+
+Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). With `--seed`, every seed row must still exist. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
+
+## `compare_exports.py` — golden master and reconciliation
+
+```sh
+python3 scripts/compare_exports.py --config docs/golden/compare.json \
+  --legacy legacy/golden/GS-001/after --target analysis-local/golden/GS-001/after [--report report.json]
+```
+
+Compares CSV exports table by table using the configured key (target column names), legacy→target column renames, ignored columns, per-side delimiter/encoding, and **declared** normalizations per column: `trim` (default on), `decimal` with optional `decimal_places`, `date_formats`, `casefold`, `strip_accents`, `empty_as_null`. Reports missing/extra rows, mismatched cells, duplicate keys and missing columns; exits 1 on any difference. Example: [templates/compare.example.json](../templates/compare.example.json).

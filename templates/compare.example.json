@@ -1,0 +1,16 @@
+{
+  "legacy": {"delimiter": ";", "encoding": "cp1252"},
+  "target": {"delimiter": ",", "encoding": "utf-8"},
+  "tables": {
+    "ORDERS": {
+      "key": ["id"],
+      "rename": {"IDCommande": "id", "Client": "customer_name", "Montant": "total", "DateCde": "ordered_on"},
+      "ignore": ["Horodatage", "updated_at"],
+      "columns": {
+        "total": {"decimal": true, "decimal_places": 2},
+        "ordered_on": {"date_formats": ["%Y%m%d", "%d/%m/%Y", "%Y-%m-%d"]},
+        "customer_name": {"trim": true}
+      }
+    }
+  }
+}

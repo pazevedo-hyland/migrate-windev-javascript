@@ -1,0 +1,28 @@
+#!/bin/sh
+# Agent-neutral guard: install with `cp templates/git-hooks/pre-commit .git/hooks/ && chmod +x .git/hooks/pre-commit`
+# or `git config core.hooksPath .githooks` after copying it there.
+status=0
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+
+for file in $staged; do
+  case "$file" in
+    legacy/*|analysis-local/*|origine/*)
+      echo "pre-commit: $file is private legacy evidence" >&2; status=1 ;;
+    *.fic|*.FIC|*.ndx|*.NDX|*.mmo|*.MMO|*.bak|*.bkp|.env|.env.*)
+      case "$file" in .env.example) ;; *)
+        echo "pre-commit: $file must not be committed (data, backup or secret)" >&2; status=1 ;;
+      esac ;;
+  esac
+done
+
+# Committed migrations are immutable.
+for file in $(git diff --cached --name-only --diff-filter=MD -- src-tauri/migrations); do
+  echo "pre-commit: $file is an existing migration; add a new one instead" >&2; status=1
+done
+
+if git diff --cached -U0 | grep -E '^\+' | grep -Eiq -- '-----BEGIN [A-Z ]*PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}|;[[:space:]]*(password|pwd)[[:space:]]*=[[:space:]]*[^[:space:];"'"'"']{4,}'; then
+  echo "pre-commit: staged content looks like a secret" >&2; status=1
+fi
+
+exit $status
