@@ -188,6 +188,25 @@ class Desktop:
             order.append({'type': info.control_type, 'name': info.name, 'automation_id': info.automation_id})
         return order
 
+    def login(self, window, user, password):
+        """Fill the first two edit fields through UI Automation, then confirm with Enter (the default button)."""
+        edits = window.descendants(control_type='Edit')
+        if len(edits) >= 2:
+            for edit, value in ((edits[0], user), (edits[1], password)):
+                try:
+                    edit.set_edit_text(value)
+                except Exception:
+                    edit.set_focus()
+                    self.send_keys('^a{DEL}')
+                    self.send_keys(value, with_spaces=True)
+            edits[1].set_focus()
+        else:
+            window.set_focus()
+            self.send_keys(user, with_spaces=True)
+            self.send_keys('{TAB}')
+            self.send_keys(password, with_spaces=True)
+        self.send_keys('{ENTER}')
+
     def close(self, window):
         window.close()
 
@@ -263,13 +282,13 @@ def main():
         desktop = Desktop(args.app_dir / args.exe, args.app_dir, args.timeout)
         first = desktop.wait_new_window(set())
         if args.login and first is not None:
-            capture(desktop, first, args.out / '_startup', not args.no_tab_order)
-            first.set_focus()
-            desktop.send_keys(os.environ.get('MIGRATION_APP_USER', ''), with_spaces=True)
-            desktop.send_keys('{TAB}')
-            desktop.send_keys(os.environ.get('MIGRATION_APP_PASSWORD', ''), with_spaces=True)
-            desktop.send_keys('{ENTER}')
-            first = desktop.wait_new_window({first.handle})
+            # No tab-order capture here: moving focus before typing would put the user name in the wrong field.
+            capture(desktop, first, args.out / '_startup', False)
+            desktop.login(first, os.environ.get('MIGRATION_APP_USER', ''), os.environ.get('MIGRATION_APP_PASSWORD', ''))
+            after = desktop.wait_new_window({first.handle})
+            if after is not None and after.window_text() == first.window_text():
+                parser.exit(1, 'login window still open after login\n')
+            first = after
         return desktop, first
 
     desktop, main_window = start()

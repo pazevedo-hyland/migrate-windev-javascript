@@ -24,7 +24,7 @@ def sqlserver_localdb():
     target = server + ';Database=migtest'
     with pyodbc.connect(target, autocommit=True) as db:
         db.execute('CREATE TABLE Clientes (ClientesID INT PRIMARY KEY, Descricao NVARCHAR(100), Saldo NUMERIC(10,2), Criado DATE)')
-        db.executemany('INSERT INTO Clientes VALUES (?, ?, ?, ?)', ROWS)
+        db.cursor().executemany('INSERT INTO Clientes VALUES (?, ?, ?, ?)', ROWS)
         db.execute('CREATE TABLE unidades (id INT PRIMARY KEY, nome NVARCHAR(20))')
         db.execute("INSERT INTO unidades VALUES (1, N'Peça')")
     return target
