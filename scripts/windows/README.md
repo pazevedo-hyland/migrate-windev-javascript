@@ -64,6 +64,10 @@ py scripts\windows\capture_app.py ... --out C:\capture\screens-review --allow-re
 
 `C:\capture\data\` → `legacy/data/`; `C:\capture\screens*\` → `legacy/screenshots/`; `capture-report.json` lists what was captured, what failed (control not found, timeout) and why. Failed and `manual` windows remain `unresolved` in the parity matrix until someone captures them by hand.
 
+## No Windows PC? A GitHub-hosted Windows VM
+
+With **fake or sanitized data only**, the same capture can run unattended on GitHub's Windows runners from a **private** repository: copy [templates/github-capture.yml](../../templates/github-capture.yml) into `.github/workflows/`, put the install-folder copy (exe, `wd*.dll`, data — without any server configuration file, so the app uses its local files) in `app/`, the text sources in `sources/`, this playbook in `playbook/`, set the test login as the `MIGRATION_APP_USER` / `MIGRATION_APP_PASSWORD` secrets and the executable name as the `APP_EXE` variable, then start the workflow. The evidence comes back as a workflow artifact. The WINDEV runtime DLLs must come from an installed copy of the application (they are redistributed with it); never download them from unofficial sources. No ODBC export runs there: decode or export the data separately.
+
 ## Limits
 
 - Tested end to end on GitHub's Windows runners (`.github/workflows/check.yml`, `tests/windows_e2e/`) against a WinForms stand-in: login, caption-only menus with submenus, a button found by automation id, tab order, a confirmation dialog on close (captured, never answered, app restarted), and a window that writes on open (run stopped by the data guard). `export_odbc.py` is tested against a real ODBC driver.

@@ -1,0 +1,54 @@
+# Runs the Windows capture kit on a GitHub-hosted Windows VM.
+# Use only in a PRIVATE repository and only with fake or sanitized data.
+# Repository layout: app/ = copy of the install folder (exe + wd*.dll + data, NO servidor.ini or other
+# server config), sources/ = text-format legacy sources, playbook/ = this playbook (or a submodule).
+# Secrets: MIGRATION_APP_USER, MIGRATION_APP_PASSWORD (test login of the app).
+name: Legacy capture
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pywinauto pillow
+      - name: Plan
+        run: |
+          python playbook/scripts/inspect_windev.py sources --out ${{ runner.temp }}/inspect
+          python playbook/scripts/plan_capture.py ${{ runner.temp }}/inspect --out ${{ runner.temp }}/capture-plan.json
+      - name: Fresh copies of the app
+        shell: pwsh
+        run: |
+          foreach ($name in 'probe', 'pass1', 'pass2') {
+            Copy-Item -Recurse app "${{ runner.temp }}/$name"
+            New-Item "${{ runner.temp }}/$name/.migration-capture-copy" -ItemType File | Out-Null
+          }
+      - name: Probe (go / no-go)
+        env:
+          MIGRATION_APP_USER: ${{ secrets.MIGRATION_APP_USER }}
+          MIGRATION_APP_PASSWORD: ${{ secrets.MIGRATION_APP_PASSWORD }}
+        run: python playbook/scripts/windows/capture_app.py --app-dir ${{ runner.temp }}/probe --exe ${{ vars.APP_EXE }} --plan ${{ runner.temp }}/capture-plan.json --out ${{ runner.temp }}/evidence/probe --probe --login --allow-review
+      - name: Capture
+        if: always()
+        env:
+          MIGRATION_APP_USER: ${{ secrets.MIGRATION_APP_USER }}
+          MIGRATION_APP_PASSWORD: ${{ secrets.MIGRATION_APP_PASSWORD }}
+        run: python playbook/scripts/windows/capture_app.py --app-dir ${{ runner.temp }}/pass1 --exe ${{ vars.APP_EXE }} --plan ${{ runner.temp }}/capture-plan.json --out ${{ runner.temp }}/evidence/screens --login
+      - name: Review pass
+        if: always()
+        env:
+          MIGRATION_APP_USER: ${{ secrets.MIGRATION_APP_USER }}
+          MIGRATION_APP_PASSWORD: ${{ secrets.MIGRATION_APP_PASSWORD }}
+        run: python playbook/scripts/windows/capture_app.py --app-dir ${{ runner.temp }}/pass2 --exe ${{ vars.APP_EXE }} --plan ${{ runner.temp }}/capture-plan.json --out ${{ runner.temp }}/evidence/screens-review --login --allow-review
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: legacy-evidence
+          path: ${{ runner.temp }}/evidence
+          retention-days: 7
