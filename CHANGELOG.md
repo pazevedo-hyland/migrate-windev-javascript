@@ -8,6 +8,7 @@
 - Chapter 05: mandatory review-fix stage per slice, with the pilot's numbers (8/18 over-claimed on first pass, 2/17 after rules and one fix stage); no ADR changes while a stage runs.
 - PromptInit: evidence policy question for inferred event codes.
 - Inspector lists every control and table column per window; `templates/ui-check/` is a Playwright control-coverage check with a new-vs-legacy screenshot report (validated on the pilot).
+- Inspector extracts dialog resources (messages and buttons in every language, cancel button); WLanguage traps note the `cancel_button` ambiguity.
 - `render_layouts.py` draws every legacy window to scale from source; the crawler matches controls by legacy position (estimating native frame offsets), labels captured trees with legacy names, identifies windows, and runs login steps by legacy names — all from running a real WINDEV 28 app on a GitHub Windows runner.
 - `templates/github-capture.yml`: run the capture kit on a GitHub-hosted Windows VM from a private repository with fake data.
 - Agent UI inspection: dev browser preview with the test fake backend, used in the pilot to click through the client list and form.

@@ -194,6 +194,56 @@ def control_names(text):
     return [item['name'] for item in control_layout(text)]
 
 
+def dialogs(text):
+    """Dialog boxes declared in the window resources: message and button labels per language,
+    button values and the cancel button (all readable in the text format)."""
+    lines = text.splitlines()
+    parsed = structure(lines, literal_mask(lines))
+    found, current, button, field, depth = [], None, None, None, None
+    for entry in parsed:
+        if not entry:
+            continue
+        indent, key, value, item = entry
+        if key == 'dialogs' and not value:
+            depth, current = indent, None
+            continue
+        if depth is None:
+            continue
+        if indent <= depth:
+            depth = None
+            continue
+        if key == 'identifier' and (current is None or indent <= current['_indent']):
+            current = {'identifier': value, 'label': {}, 'buttons': [], 'cancel_button': None, '_indent': indent}
+            found.append(current)
+            button, field = None, None
+        elif current is None:
+            continue
+        elif key == 'buttons':
+            field = 'buttons'
+        elif key == 'label':
+            if field == 'buttons':
+                button = {'label': {}, 'value': None, '_indent': indent}
+                current['buttons'].append(button)
+                field = 'button-label'
+            else:
+                field = 'dialog-label'
+        elif key == 'cancel_button':
+            current['cancel_button'] = int(value) if value.lstrip('-').isdigit() else value
+        elif key == 'value' and button is not None:
+            button['value'] = int(value) if value.lstrip('-').isdigit() else value
+            field = 'buttons'
+        elif value and field in ('dialog-label', 'button-label') and '-' in key and len(key) <= 6:
+            target = current['label'] if field == 'dialog-label' else button['label']
+            target[key] = value.strip('"')
+        elif key == 'image':
+            field = 'buttons' if field == 'button-label' else field
+    for dialog in found:
+        dialog.pop('_indent')
+        for b in dialog['buttons']:
+            b.pop('_indent')
+    return found
+
+
 def literal_keys(text):
     """Count every literal block key so other embedded sources (SQL, text) are visible."""
     counts = {}
@@ -325,7 +375,7 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
                     layout = control_layout(text)
                     controls = [item['name'] for item in layout]
                     destination.write_text(json.dumps({'path': relative, 'controls': controls, 'layout': layout,
-                                                       'blocks': blocks},
+                                                       'dialogs': dialogs(text), 'blocks': blocks},
                                                       indent=2, ensure_ascii=False), encoding='utf-8')
                     entry.update(status='text', code_blocks=len(blocks), controls=len(controls),
                                  literal_keys=literal_keys(text),

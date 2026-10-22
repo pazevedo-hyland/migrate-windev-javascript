@@ -91,6 +91,35 @@ class InspectionTests(unittest.TestCase):
 '''
         self.assertEqual(module.control_names(text), ['TABLE_X', 'COL_Code', 'BTN_Ok', 'EDT_Inner'])
 
+    def test_dialogs_with_languages_buttons_and_cancel(self):
+        text = """resources :
+ dialogs :
+  -
+    identifier : 0x173b
+    label :
+     en-GB : Do you want to delete the record?
+     pt-PT : Deseja apagar o registo?
+    image : {}
+    cancel_button : 1
+    buttons :
+     -
+       label :
+        en-GB : "&Delete"
+        pt-PT : Sim
+       image : {}
+       value : 1
+     -
+       label :
+        pt-PT : Não
+       image : {}
+       value : 2
+custom_note :
+"""
+        self.assertEqual(module.dialogs(text), [{
+            'identifier': '0x173b', 'cancel_button': 1,
+            'label': {'en-GB': 'Do you want to delete the record?', 'pt-PT': 'Deseja apagar o registo?'},
+            'buttons': [{'label': {'en-GB': '&Delete', 'pt-PT': 'Sim'}, 'value': 1}, {'label': {'pt-PT': 'Não'}, 'value': 2}]}])
+
     def test_control_layout_adds_parent_offsets(self):
         text = '''window :
  name : WIN_A

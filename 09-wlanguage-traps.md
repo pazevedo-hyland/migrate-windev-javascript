@@ -85,6 +85,7 @@ Agents fail silently where WLanguage and TypeScript **look** alike but behave di
 | Event order: window global declarations (with parameters) → controls initialization → window end of initialization | Initialization order affects values | Map into an explicit `load()` sequence per screen; test it |
 | `Open(WIN_X, params)` returning a value, `Close(WIN_X, value)` | **Blocks** until the window closes | `await openDialog(...)` and keep the following code after it |
 | `Info`, `Error`, `YesNo`, `OKCancel`, `Dialog` | Modal and **blocking**; code continues after the answer | Awaited dialog service; keep exact texts and button order |
+| `Dialog` resources (`dialogs` in the inspector output) | `cancel_button` names the button triggered by Esc/close — by position or by value is not documented in the source; when button 1 has value 1 ("Sim" / "&Delete"), Esc may **confirm** a delete | Treat as unresolved until observed in the running app; never default Esc to the destructive answer silently |
 | `OpenChild`, `OpenSister`, `OpenMobileWindow` | Non-modal; several windows alive with shared globals | Multi-window or tabs per ADR; explicit shared state |
 | `ExecuteProcess(BTN_X, trtClick)` | Runs another control's event code | Extract the code into a named function called from both |
 | `{"EDT_" + n}` indirection, `..Property` | Dynamic access to controls and properties by name | Keyed maps of fields; list every indirection in the mapping note |
