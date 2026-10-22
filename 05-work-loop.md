@@ -77,6 +77,7 @@ Example: a repair-order save is complete when validation, material/time recordin
 - Browser workflow tests (Playwright or Vitest browser mode) with Tauri IPC mocked through `@tauri-apps/api/mocks`, using legacy control names as `data-testid`.
 - Native end-to-end tests through [WebDriver](https://v2.tauri.app/develop/tests/webdriver/) with `tauri-driver` (Windows and Linux; macOS has no WebDriver support for WKWebView), plus manual smoke checks where automation is unavailable.
 - Golden scenarios compared with `scripts/compare_exports.py`.
+- **UI inspection by the agent:** in dev mode outside Tauri, the app installs the test fake backend (`mockIPC` with the golden data) behind a visible "browser preview" banner. The agent opens the Vite dev server in a browser preview, clicks through the slice's workflows and checks layout, focus and exact messages before the human run. It proves UI behavior only, never the Rust commands. Wait for the screen to settle before trusting a screenshot.
 
 Use the smallest meaningful set for the change; expand when failures or new risks justify it. These commands are conventions of the application, not executable commands of this playbook.
 

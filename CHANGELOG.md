@@ -7,6 +7,7 @@
 - Review skill, stage prompt and chapter 10: a row whose behavior includes an implementer's choice is not `verified`.
 - Chapter 05: mandatory review-fix stage per slice, with the pilot's numbers (8/18 over-claimed on first pass, 2/17 after rules and one fix stage); no ADR changes while a stage runs.
 - PromptInit: evidence policy question for inferred event codes.
+- Agent UI inspection: dev browser preview with the test fake backend, used in the pilot to click through the client list and form.
 - Human runs every slice before Done (agents often cannot open GUI windows); foundations include an opt-in dev seed; spec-derived golden data is labelled as such; commit regenerated bindings with the change; README validation status.
 
 ## 2026-10-22 — unattended capture without WINDEV
