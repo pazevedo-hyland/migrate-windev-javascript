@@ -84,6 +84,12 @@ def match_layout(elements, layout, tolerance=3):
     return result
 
 
+def best_layout(positions, layouts, minimum=3):
+    """Name of the layout matching the most positions (at least `minimum`), else None."""
+    scored = sorted(((len(match_layout(positions, layout)), name) for name, layout in layouts.items()), reverse=True)
+    return scored[0][1] if scored and scored[0][0] >= minimum else None
+
+
 def menu_steps(path):
     """WIN_MENU/MENU__Menu/OPT_Tabelas/OPT_Clientes -> ['OPT_Tabelas', 'OPT_Clientes']."""
     parts = path.split('/')[1:]
@@ -125,6 +131,7 @@ class Desktop:
     """Thin pywinauto wrapper; everything Windows-specific lives here."""
 
     layouts = {}
+    names = {}
 
     def __init__(self, exe, work_dir, timeout):
         from pywinauto import Application  # imported lazily so the planner runs anywhere
@@ -167,27 +174,43 @@ class Desktop:
             except Exception:
                 continue
 
-    def legacy_names(self, window, layout_name):
+    @staticmethod
+    def positions(window):
+        """(elements, [(index, rect relative to the window)]), read once; stale elements are skipped."""
+        elements, positions = [window] + window.descendants(), []
+        origin = window.rectangle()
+        for index, element in enumerate(elements):
+            try:
+                r = element.rectangle()
+            except Exception:  # the element vanished or changed while being read
+                continue
+            positions.append((index, (r.left - origin.left, r.top - origin.top,
+                                      r.right - origin.left, r.bottom - origin.top)))
+        return elements, positions
+
+    def legacy_names(self, window, layout_name, read=None):
         """{element: legacy control name} for a window whose legacy layout is known."""
         layout = self.layouts.get((layout_name or '').lower())
         if not layout:
             return {}
-        origin = window.rectangle()
-        elements = [window] + window.descendants()
-        positions = [(i, (r.left - origin.left, r.top - origin.top, r.right - origin.left, r.bottom - origin.top))
-                     for i, r in ((i, e.rectangle()) for i, e in enumerate(elements))]
+        elements, positions = read or self.positions(window)
         return {elements[i]: name for i, name in match_layout(positions, layout).items()}
 
     def identify(self, window):
         """The legacy window whose layout matches the most elements (at least 3), or None."""
-        best = max(((len(self.legacy_names(window, name)), name) for name in self.layouts), default=(0, None))
-        return best[1] if best[0] >= 3 else None
+        try:
+            _, positions = self.positions(window)
+        except Exception:
+            return None
+        found = best_layout(positions, self.layouts)
+        # Report the plan's spelling of the window name, not the lower-case key.
+        return self.names.get(found, found)
 
     def find_window(self, legacy_name):
         """The visible window or owned dialog that is this legacy window, by layout."""
         for window in self.windows():
             for target in [window] + [c for c in window.children() if c.element_info.control_type == 'Window']:
-                if self.identify(target) == legacy_name:
+                if (self.identify(target) or '').lower() == legacy_name.lower():
                     return target
         return None
 
@@ -395,6 +418,7 @@ def main():
 
     plan = json.loads(args.plan.read_text(encoding='utf-8'))
     Desktop.layouts = {w['window'].lower(): w.get('layout', []) for w in plan['windows']}
+    Desktop.names = {w['window'].lower(): w['window'] for w in plan['windows']}
     chains = routes(plan, args.main_window, args.allow_review)
     if args.dry_run:
         for window, chain in chains.items():

@@ -84,6 +84,15 @@ class CrawlerLogicTests(unittest.TestCase):
                          {1: 'BTN_Cancelar', 2: 'BTN_Confirmar', 3: 'BTN_NoName1', 6: 'EDT_palavra_passe',
                           7: 'EDT_utilizador', 12: 'BTN_SYST_FERMER'})
 
+    def test_best_layout_identifies_the_window(self):
+        positions = [(0, (28, 75, 284, 115)), (1, (290, 74, 350, 114)), (2, (28, 229, 186, 271))]
+        login = [{'name': 'EDT_u', 'x': 28, 'y': 75, 'width': 256, 'height': 40},
+                 {'name': 'BTN_dots', 'x': 290, 'y': 74, 'width': 60, 'height': 40},
+                 {'name': 'BTN_ok', 'x': 28, 'y': 229, 'width': 158, 'height': 42}]
+        other = [{'name': 'BTN_ok', 'x': 28, 'y': 229, 'width': 158, 'height': 42}]
+        self.assertEqual(crawler.best_layout(positions, {'win_acesso': login, 'win_other': other}), 'win_acesso')
+        self.assertIsNone(crawler.best_layout(positions[:2], {'win_other': other}))
+
     def test_data_guard(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
