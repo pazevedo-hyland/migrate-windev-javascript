@@ -53,6 +53,20 @@ python3 scripts/dossier_extract.py legacy/docs/<project>_Documentation.pdf --out
 
 WINDEV's project technical documentation states what the text sources encrypt. The extractor writes one JSON per element (`windev-window/`, `report/`, `query/`, `analysis/`, `project/`) with the raw section text plus parsed fields — window `title` and `window_type`; per control `caption`, `tab_order`, `input_mask`, `input_size`, `image`, `background_image`, `anchoring`; per query `sql`, `parameters`, `conditions`; per analysis file its description and items with `caption`, `type` as WINDEV names it ("8-byte real", "Decimal", "Automatic identifier (8 bytes)"), `size` and `default` — and each element's image under `images/`. On a real WINDEV 28 project (2,303 pages): 51 windows, 28 reports, 29 queries with SQL, 106 images, in about 15 seconds. Only images actually painted on a page are taken (every page shares a resource dictionary of ~150 images). Requires `pypdf`; the other scripts stay standard-library only.
 
+## `evidence_report.py` — is the evidence complete?
+
+```sh
+python3 scripts/evidence_report.py analysis-local/inspect-1 --dossier analysis-local/dossier --out docs/evidence-report.md [--language pt-PT]
+```
+
+Merges the inspector output and the dossier extract into one report before mapping starts:
+
+1. **Coverage** per window, report, query and table: code blocks, controls, dossier description, captions, image, dialogs, SQL, typed items — and a list of **gaps** (missing dossier entries, undescribed controls, queries without SQL, untyped tables). Names are matched case-insensitively and by each element's internal name.
+2. **Platform usage**: every WLanguage function the code calls, grouped by what the new app must provide (data access, navigation, dialogs, tables, printing, files/INI/registry, external programs, devices), with literal arguments — INI files, external programs, command-line options, printed reports.
+3. **Runtime questions**: what only the running app can answer, one per pattern (a dialog's Esc button, whether a Validate button closes its window), grouped across windows.
+
+On the real WINDEV 28 project: 108 elements, 4 gaps, 50 platform functions (revealing `servidor.ini`, the `WDModFic.EXE` schema update run at startup and the `"artigos"`/`"modulo"` command-line modes), 11 runtime questions.
+
 ## `event_legend.py` — event codes verified from the compile folder
 
 ```sh

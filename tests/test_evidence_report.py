@@ -1,0 +1,53 @@
+import json
+from pathlib import Path
+import tempfile
+import unittest
+
+from helpers import load
+
+module = load('scripts/evidence_report.py')
+
+
+def block(names, code, line=1):
+    return {'context': {'names': names, 'siblings': {}}, 'code': code, 'start_line': line, 'end_line': line}
+
+
+DIALOG = {'label': {'en-GB': 'Delete?', 'pt-PT': 'Apagar?'}, 'cancel_button': 1,
+          'buttons': [{'label': {'pt-PT': 'Sim'}, 'value': 1}, {'label': {'pt-PT': 'Não'}, 'value': 2}]}
+
+
+class EvidenceReportTests(unittest.TestCase):
+    def test_nested_call_arguments(self):
+        code = 'x = INIRead("db", "server", "", CompleteDir(fExeDir())+"servidor.ini")'
+        self.assertEqual(module.arguments(code, code.index('(') + 1),
+                         ['"db"', '"server"', '""', 'CompleteDir(fExeDir())+"servidor.ini"'])
+
+    def test_coverage_usage_and_grouped_questions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'inspect/code').mkdir(parents=True)
+            for name in ('WIN_A', 'WIN_B'):
+                (root / f'inspect/code/{name}.wdw.json').write_text(json.dumps({
+                    'path': f'{name}.wdw', 'name': name, 'dialogs': [DIALOG],
+                    'layout': [{'name': 'BTN_Ok', 'kind': 'control', 'x': 0, 'y': 0, 'width': 10, 'height': 10},
+                               {'name': 'EDT_X', 'kind': 'control', 'x': 0, 'y': 20, 'width': 10, 'height': 10}],
+                    'blocks': [block([name, 'BTN_Ok'], 'iPrintReport(RPT_List)\nExeRun("tool.exe")')]}))
+            (root / 'dossier/windev-window').mkdir(parents=True)
+            (root / 'dossier/windev-window/win_a.json').write_text(json.dumps({'image_file': 'images/WIN_A.jpg', 'controls': {
+                'BTN_Ok': {'kind': 'Button', 'caption': {'PT': 'Validar'}, 'row': 'Active Validate', 'raw': []}}}))
+            (root / 'dossier/query').mkdir()
+            (root / 'dossier/query/QRY_A.json').write_text(json.dumps({'sql': '', 'parameters': []}))
+            rows, gaps = module.coverage(root / 'inspect', root / 'dossier', {'Clientes'})
+            used = module.calls(root / 'inspect')
+            questions = module.runtime_questions(root / 'inspect', root / 'dossier')
+        self.assertIn('WIN_A: 1 controls without dossier description: EDT_X', gaps)  # case-insensitive match
+        self.assertIn('WIN_B: no dossier entry (captions, tab order, masks unknown)', gaps)
+        self.assertIn('QRY_A: query without SQL in the dossier', gaps)
+        self.assertIn('Clientes: table without typed items in the dossier analysis', gaps)
+        self.assertEqual({s[2] for s in used['ExeRun']}, {'"tool.exe"'})
+        self.assertEqual(len([q for q in questions if q.startswith('Dialog "Apagar?"')]), 1)  # merged, pt-PT
+        self.assertTrue(any('Validate button "Validar"' in q for q in questions))
+
+
+if __name__ == '__main__':
+    unittest.main()

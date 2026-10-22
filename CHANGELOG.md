@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-22 — evidence completeness
+
+### Added
+- `scripts/evidence_report.py`: coverage and gaps per element, platform-usage inventory with literal arguments, grouped runtime questions. On the real project: 4 gaps, 11 questions; it surfaced `servidor.ini`, the `WDModFic.EXE` startup schema update and two command-line modes.
+- Dossier extraction now parses analysis items (captions, WINDEV types such as "8-byte real", sizes, defaults), supercontrol children (`SC_Form.EDT_Codigo`), control rows (initial state, input type) and report controls (type, millimetre geometry, bound item, data source).
+- The inspector records each element's internal name, which can differ from its file name (`WIN_WIN_Teclado.wdw` holds `WIN_Teclado_Alfa`).
+
 ## 2026-10-22 — removed what did not work
 
 ### Removed

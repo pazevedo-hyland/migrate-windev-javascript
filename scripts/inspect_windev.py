@@ -244,6 +244,12 @@ def dialogs(text):
     return found
 
 
+def element_name(text, fallback):
+    """The element's own name (`info : / name :`), which can differ from its file name."""
+    match = re.search(r'^info :\s*\n name : ([A-Za-z_][\w$]*)', text, re.M)
+    return match[1] if match else fallback
+
+
 def literal_keys(text):
     """Count every literal block key so other embedded sources (SQL, text) are visible."""
     counts = {}
@@ -296,9 +302,9 @@ def seed_row(row_id, kind, element, evidence, context='', event=''):
     return row
 
 
-def seed_rows(relative, kind, blocks):
+def seed_rows(relative, kind, blocks, element=None):
     rows, seen = [], {}
-    element = Path(relative).stem
+    element = element or Path(relative).stem
     for block in blocks:
         names = '/'.join(block['context']['names'])
         event = block['context']['siblings'].get('type', '')
@@ -372,15 +378,16 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
                     blocks = extract_blocks(text, literal_block_keys)
                     destination = output / 'code' / (relative + '.json')
                     destination.parent.mkdir(parents=True, exist_ok=True)
+                    name = element_name(text, path.stem)
                     layout = control_layout(text)
                     controls = [item['name'] for item in layout]
-                    destination.write_text(json.dumps({'path': relative, 'controls': controls, 'layout': layout,
+                    destination.write_text(json.dumps({'path': relative, 'name': name, 'controls': controls, 'layout': layout,
                                                        'dialogs': dialogs(text), 'blocks': blocks},
                                                       indent=2, ensure_ascii=False), encoding='utf-8')
-                    entry.update(status='text', code_blocks=len(blocks), controls=len(controls),
+                    entry.update(status='text', name=name, code_blocks=len(blocks), controls=len(controls),
                                  literal_keys=literal_keys(text),
                                  encoded_properties='internal_properties' in text)
-                    seeds.extend(seed_rows(relative, kind, blocks))
+                    seeds.extend(seed_rows(relative, kind, blocks, name))
                     hints.extend(secret_hints(relative, blocks))
             inventory.append(entry)
     with (output / 'parity-seed.csv').open('w', newline='', encoding='utf-8') as handle:

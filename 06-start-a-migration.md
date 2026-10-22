@@ -32,7 +32,15 @@ python3 scripts/dossier_extract.py legacy/docs/<project>_Documentation.pdf --out
 
 Per-element JSON (window title and type; each control's caption, tab order, input mask and size, button type, images; each query's SQL, parameters and conditions) plus each window's image as WINDEV draws it. Mapping notes and screen specs cite it as evidence (`dossier: WIN_X/BTN_Y`). It does not show runtime behavior (what Esc does on a dialog, dynamic states): that comes from the code, and when the code cannot settle it, from someone observing the running app — record it as `unresolved` until then.
 
-## 4b. Export the data
+## 4b. Check that the evidence is complete
+
+```sh
+python3 scripts/evidence_report.py analysis-local/inspect-1 --dossier analysis-local/dossier --out docs/evidence-report.md
+```
+
+Coverage per element with the list of gaps, the platform functions the code depends on (printing, INI files, external programs, command-line modes), and the few runtime questions for someone with the running app. Fix or record every gap before mapping.
+
+## 4c. Export the data
 
 Export every table to CSV through the HFSQL ODBC driver ([data export](scripts/windows/README.md)), from a copy of the data or a backup of the HFSQL server database.
 

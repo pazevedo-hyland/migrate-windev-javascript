@@ -170,6 +170,11 @@ custom_note :
         self.assertEqual(blocks[0]['end_line'], 5)
         self.assertEqual(blocks[0]['code'], 'IF stock < 0 THEN\n\tError("Stock")\nEND')
 
+    def test_element_name_can_differ_from_file_name(self):
+        text = 'info :\n name : WIN_Teclado_Alfa\n major_version : 28\nwindow :\n name : WIN_Teclado_Alfa\n'
+        self.assertEqual(module.element_name(text, 'WIN_WIN_Teclado'), 'WIN_Teclado_Alfa')
+        self.assertEqual(module.element_name('window :\n', 'WIN_X'), 'WIN_X')
+
     def test_context_names_events_and_procedures(self):
         blocks = module.extract_blocks(NESTED)
         self.assertEqual([b['start_line'] for b in blocks], [4, 11, 16])

@@ -18,7 +18,13 @@ HEADER = re.compile(r'^Part (\d+)\s+(.*)$')
 DETAIL = re.compile(r'^(Button|Edit control|Caption|Image|Supercontrol|Table|Column|Combo box|List box|Check box|'
                     r'Radio button|Tab|Static|Progress bar|Looper|Internal window|Layout|Spin|Slider|Scrollbar|'
                     r'Rating|Calendar|Chart|Toolbar|Menu option|Cell|Tree view|Rich text|HTML|Zone|Sidebar|'
-                    r'Organizer|Scheduler|Shape|Splitter|[A-Z][a-z]+(?: [a-z]+)*) : ([A-Za-z_][\w$]*)$')
+                    r'Organizer|Scheduler|Shape|Splitter|[A-Z][a-z]+(?: [a-z]+)*) : ([A-Za-z_][\w$]*(?:\.[A-Za-z_][\w$]*)*)$')
+# Control table rows: "EDT_Codigo 14 31 158 25 0 Active Numeric" (windows, pixels) or
+# "STC_Codigo Caption 0.00 0.00 6.09 14.66 0.10 Solid TBL-" (reports, millimetres).
+WINDOW_ROW = re.compile(r'^([A-Za-z_][\w$]*) (-?\d+) (-?\d+) (\d+) (\d+) (\d+)(?: (.*))?$')
+REPORT_ROW = re.compile(r'^([A-Za-z_][\w$]*) ([A-Z][a-z]+(?: [a-z]+)*) (-?\d+\.\d+) (-?\d+\.\d+) (\d+\.\d+) (\d+\.\d+)(?: (.*))?$')
+STATES = ('Active', 'Read-only', 'Read-onl', 'Grayed', 'Inactive')
+INPUT_TYPES = ('Text', 'Numeric', 'Date', 'Time', 'Currency', 'Duration', 'Date and Time', 'Password')
 FIELDS = {'Caption': 'caption', 'Tab order': 'tab_order', 'Input mask': 'input_mask', 'Input size': 'input_size',
           'Image': 'image', 'Background image': 'background_image', 'Initial value': 'initial_value',
           'Anchoring': 'anchoring', 'Title': 'title', 'Linked item': 'linked_item', 'File link': 'linked_item',
@@ -57,9 +63,11 @@ def parse_details(lines):
     for line in lines:
         line = line.strip()
         match = DETAIL.match(line)
-        if match and not line.startswith(('Window :', 'Supercontrol :')) or (match and match[1] == 'Supercontrol'
-                                                                              and not line.startswith('Supercontrol :')):
-            current = controls.setdefault(match[2], {'kind': match[1], 'raw': []})
+        if match and not line.startswith(('Window :', 'Supercontrol :')):
+            path = match[2]
+            current = controls.setdefault(path.rsplit('.', 1)[-1], {'kind': match[1], 'raw': []})
+            if '.' in path:
+                current['path'] = path
             continue
         if line.startswith(('Window :', 'Supercontrol :')):
             current = None
@@ -101,6 +109,35 @@ def parse_items(lines):
         elif previous and re.fullmatch(r'-?\d+(?:\.\d+)?', line) and previous['default'] is None:
             previous['default'] = line  # the default value wraps onto its own line
     return items
+
+
+def parse_rows(lines, report=False):
+    """Control table rows: position, size, state, input type (windows) or type and bound item (reports)."""
+    rows, previous = {}, None
+    for line in lines:
+        line = line.strip()
+        if report:
+            match = REPORT_ROW.match(line)
+            if match:
+                previous = rows[match[1]] = {'kind': match[2], 'x_mm': float(match[3]), 'y_mm': float(match[4]),
+                                             'height_mm': float(match[5]), 'width_mm': float(match[6]),
+                                             'row': (match[7] or '').strip()}
+            elif previous and line.startswith('Item '):
+                previous['item'] = line[5:].strip()
+            continue
+        match = WINDOW_ROW.match(line)
+        if match:
+            rest = (match[7] or '').split()
+            row = {'x': int(match[2]), 'y': int(match[3]), 'width': int(match[4]), 'height': int(match[5]),
+                   'row': ' '.join(rest)}
+            state = next((t for t in rest if t in STATES), None)
+            if state:
+                row['state'] = 'Read-only' if state.startswith('Read-on') else state
+            kind = next((t for t in rest if t in INPUT_TYPES), None)
+            if kind:
+                row['input_type'] = kind
+            rows[match[1]] = row
+    return rows
 
 
 def parse_sql(lines):
@@ -153,9 +190,20 @@ def collect(pages):
                     parsed = parse_items(file_lines)
                     if parsed:  # the section's overview page lists no items
                         item['files'][name] = {'description': description, 'items': parsed}
-            controls = parse_details(sections.get('Information on controls', []) + general)
+            control_lines = sections.get('Information on controls', []) + general
+            controls = parse_details(control_lines)
+            for name, row in parse_rows(control_lines, report=(kind == 'Report')).items():
+                target = controls.setdefault(name, {'kind': row.get('kind'), 'raw': []})
+                for key, value in row.items():
+                    target.setdefault(key, value)
             if controls:
                 item['controls'] = controls
+            if kind == 'Report':
+                for line in general:
+                    for key, field in (('Type', 'report_type'), ('Data source type', 'data_source'),
+                                       ('Page format', 'page_format')):
+                        if line.startswith(key + ' ') and field not in item:
+                            item[field] = line[len(key) + 1:].strip()
             if kind == 'Query':
                 item['sql'] = parse_sql(item['lines'])
                 item.update(parse_query(sections.get('Information on the result', []) +

@@ -55,7 +55,7 @@ def render(inspect_dir, out, dossier_dir=None, language='PT'):
     rendered = []
     for path in sorted(Path(inspect_dir, 'code').rglob('*.json')):
         data = json.loads(path.read_text(encoding='utf-8'))
-        window = Path(data['path']).stem
+        window = data.get('name') or Path(data['path']).stem
         drawing = svg(window, data.get('layout', []), captions.get(window, {}))
         if drawing:
             (out / f'{window}.svg').write_text(drawing, encoding='utf-8')

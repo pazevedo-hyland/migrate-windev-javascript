@@ -48,6 +48,23 @@ class DossierExtractTests(unittest.TestCase):
         self.assertEqual(items['stock']['type'], 'Decimal')
         self.assertEqual(items['Cliente']['default'], '0')
 
+    def test_supercontrol_children_rows_and_reports(self):
+        window = module.collect([page('WINDEV window', 'WIN_F', 'Information on controls', body=(
+            'EDT_Codigo 14 31 158 25 0 Active Numeric\nEDT_Nome 14 62 300 25 0 Read-onl Text\n'
+            'Supercontrol : SC_Form\nEdit control : SC_Form.EDT_Codigo\nTab order 2\n'))])['WINDEV window']['WIN_F']
+        code = window['controls']['EDT_Codigo']
+        self.assertEqual((code['path'], code['tab_order'], code['input_type'], code['state']),
+                         ('SC_Form.EDT_Codigo', 2, 'Numeric', 'Active'))
+        self.assertEqual(window['controls']['EDT_Nome']['state'], 'Read-only')
+        report = module.collect([
+            page('Report', 'RPT_L', 'General information', body='Type Table\nData source type Embedded query\n'),
+            page('Report', 'RPT_L', 'Information on controls', body=(
+                'STC_Codigo Caption 0.00 0.00 6.09 14.66 0.10 Solid TBL-\n'
+                'ITEM_Codigo Caption 0.00 0.00 6.20 14.66 0.10 Solid -BL-\nItem Codigo\n'))])['Report']['RPT_L']
+        self.assertEqual((report['report_type'], report['data_source']), ('Table', 'Embedded query'))
+        self.assertEqual(report['controls']['ITEM_Codigo']['item'], 'Codigo')
+        self.assertEqual(report['controls']['STC_Codigo']['width_mm'], 14.66)
+
     def test_query_sql_parameters_and_conditions(self):
         pages = [
             page('Query', 'QRY_cliente', 'Information on the result', body='Query parameters\nParamCodigo\n'),
