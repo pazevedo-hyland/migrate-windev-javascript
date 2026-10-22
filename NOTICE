@@ -1,0 +1,7 @@
+This project is adapted from migration-windev/windev-vers-dotnet.
+https://github.com/migration-windev/windev-vers-dotnet
+Upstream base commit: 2f3e04c808070bb5631299a10f287d47dffd2874
+Copyright (c) 2026 migration-windev. MIT License (see LICENSE).
+
+The TypeScript/Tauri guides, assistant-neutral templates and inspection toolkit
+are adaptations/additions. This project is not an official PC SOFT or Tauri tool.

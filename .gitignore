@@ -1,0 +1,21 @@
+# Local legacy sources, business data and extraction results
+legacy/
+origine/
+analysis-local/
+.env
+.env.*
+!.env.example
+*.fic
+*.FIC
+*.ndx
+*.NDX
+*.mmo
+*.MMO
+*.bkp
+*.bak
+__pycache__/
+*.pyc
+node_modules/
+dist/
+target/
+.DS_Store
