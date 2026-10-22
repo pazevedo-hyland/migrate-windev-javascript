@@ -84,6 +84,15 @@ class CrawlerLogicTests(unittest.TestCase):
                          {1: 'BTN_Cancelar', 2: 'BTN_Confirmar', 3: 'BTN_NoName1', 6: 'EDT_palavra_passe',
                           7: 'EDT_utilizador', 12: 'BTN_SYST_FERMER'})
 
+    def test_layout_matching_estimates_the_window_frame(self):
+        # Same controls on a window with a native title bar and border: everything shifted by (8, 31).
+        layout = [{'name': 'TABLE_u', 'x': 14, 'y': 31, 'width': 585, 'height': 557},
+                  {'name': 'BTN_selecionar', 'x': 605, 'y': 550, 'width': 90, 'height': 38},
+                  {'name': 'BTN_Fechar', 'x': 605, 'y': 506, 'width': 90, 'height': 38}]
+        shifted = [(0, (22, 62, 607, 619)), (1, (613, 581, 703, 619)), (2, (613, 537, 703, 575)), (3, (0, 0, 711, 627))]
+        self.assertEqual(crawler.frame_offset(shifted, layout), (8, 31))
+        self.assertEqual(crawler.match_layout(shifted, layout), {0: 'TABLE_u', 1: 'BTN_selecionar', 2: 'BTN_Fechar'})
+
     def test_best_layout_identifies_the_window(self):
         positions = [(0, (28, 75, 284, 115)), (1, (290, 74, 350, 114)), (2, (28, 229, 186, 271))]
         login = [{'name': 'EDT_u', 'x': 28, 'y': 75, 'width': 256, 'height': 40},

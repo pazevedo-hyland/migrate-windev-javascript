@@ -61,12 +61,35 @@ def best_match(control, elements):
     return elements[scored[0][1]][0]
 
 
+def frame_offset(elements, layout, tolerance=3):
+    """The (dx, dy) shift between legacy positions and screen positions, e.g. a native title bar
+    and border that skinned windows do not have: the shift shared by the most same-sized pairs."""
+    votes = {}
+    for _, (left, top, right, bottom) in elements:
+        for item in layout:
+            if item.get('width') is None or item.get('height') is None:
+                continue
+            if abs((right - left) - item['width']) <= tolerance and abs((bottom - top) - item['height']) <= tolerance:
+                key = (left - item['x'], top - item['y'])
+                votes[key] = votes.get(key, 0) + 1
+    # Group shifts that differ by a few pixels, prefer no shift on ties.
+    best, best_votes = (0, 0), 0
+    for key in votes:
+        count = sum(v for k, v in votes.items() if abs(k[0] - key[0]) <= tolerance and abs(k[1] - key[1]) <= tolerance)
+        if count > best_votes or (count == best_votes and key == (0, 0)):
+            best, best_votes = key, count
+    return best if best_votes >= 2 else (0, 0)
+
+
 def match_layout(elements, layout, tolerance=3):
     """Pair UI Automation elements with legacy controls by position inside the window.
 
     elements: [(index, (left, top, right, bottom) relative to the window)]; layout: inspector items.
     Returns {index: legacy name}; each legacy control is used once, closest match first.
+    The window frame offset (title bar, border) is estimated first.
     """
+    dx, dy = frame_offset(elements, layout, tolerance)
+    elements = [(i, (l - dx, t - dy, r - dx, b - dy)) for i, (l, t, r, b) in elements]
     candidates = []
     for index, (left, top, right, bottom) in elements:
         for item in layout:
@@ -222,12 +245,19 @@ class Desktop:
                 window = self.find_window(step['window'])
                 time.sleep(0.3)
             if window is None:
+                self.diagnose(f'step-{number}')
                 raise LookupError(f"step {number}: window {step['window']} not found")
-            name = step.get('click') or step.get('type')
-            element = self.by_position(window, name, step['window'])
+            name = step.get('click') or step.get('type') or step.get('click_text')
+            if 'click_text' in step:  # e.g. a grid row or list item showing this text
+                element = next((e for e in window.descendants() if e.window_text().strip() == step['click_text']), None)
+            else:
+                element = self.by_position(window, name, step['window'])
             if element is None:
+                self.diagnose(f'step-{number}')
                 raise LookupError(f"step {number}: {name} not found in {step['window']}")
-            if 'click' in step:
+            if 'click_text' in step:
+                element.click_input()
+            elif 'click' in step:
                 self.activate(element, True)
             else:
                 value = os.environ.get(step['env'], '') if 'env' in step else step.get('text', '')
@@ -238,6 +268,21 @@ class Desktop:
                     self.send_keys('^a{DEL}')
                     self.send_keys(value, with_spaces=True)
             time.sleep(0.8)
+
+    diagnostics = None
+
+    def diagnose(self, label):
+        """Save every visible window and owned dialog (screenshot + tree) when a step fails."""
+        if self.diagnostics is None:
+            return
+        for n, window in enumerate(self.windows()):
+            for m, target in enumerate([window] + [c for c in window.children()
+                                                   if c.element_info.control_type == 'Window']):
+                try:
+                    capture(self, target, self.diagnostics / f'_failed-{label}' / f'{n:02d}-{m:02d}', False,
+                            self.identify(target))
+                except Exception:
+                    continue
 
     def by_position(self, window, control, layout_name):
         return next((e for e, name in self.legacy_names(window, layout_name).items()
@@ -406,8 +451,8 @@ def main():
     parser.add_argument('--login', action='store_true',
                         help='type MIGRATION_APP_USER / MIGRATION_APP_PASSWORD into the first window, then Enter')
     parser.add_argument('--login-steps', type=Path,
-                        help='JSON list of steps by legacy names, e.g. [{"window": "WIN_Acesso", "type": "EDT_x", '
-                             '"env": "MIGRATION_APP_PASSWORD"}, {"window": "WIN_Acesso", "click": "BTN_OK"}]')
+                        help='JSON list of steps by legacy names: {"window", "click": control} | '
+                             '{"window", "click_text": visible text} | {"window", "type": control, "env"|"text"}')
     parser.add_argument('--timeout', type=float, default=15)
     parser.add_argument('--dry-run', action='store_true', help='print the routes and exit')
     parser.add_argument('--startup-only', action='store_true',
@@ -419,6 +464,7 @@ def main():
     plan = json.loads(args.plan.read_text(encoding='utf-8'))
     Desktop.layouts = {w['window'].lower(): w.get('layout', []) for w in plan['windows']}
     Desktop.names = {w['window'].lower(): w['window'] for w in plan['windows']}
+    Desktop.diagnostics = args.out
     chains = routes(plan, args.main_window, args.allow_review)
     if args.dry_run:
         for window, chain in chains.items():
