@@ -66,6 +66,7 @@ py scripts\windows\capture_app.py ... --out C:\capture\screens-review --allow-re
 
 ## Limits
 
-- Not yet run against a real WINDEV app: the first run will show whether WINDEV exposes captions and automation ids through UI Automation. Review `capture-report.json` and a few `tree.json` files first.
+- Tested end to end on GitHub's Windows runners (`.github/workflows/check.yml`, `tests/windows_e2e/`) against a WinForms stand-in: login, caption-only menus with submenus, a button found by automation id, tab order, a confirmation dialog on close (captured, never answered, app restarted), and a window that writes on open (run stopped by the data guard). `export_odbc.py` is tested against a real ODBC driver.
+- Not yet run against a real WINDEV app: whether WINDEV exposes captions and automation ids through UI Automation is only known after `--probe` on the real application. Run it first; a `no-go` verdict means screenshots still work but routes need manual help.
 - Captions are matched from control names (`OPT_Ordens_de_Reparação` → "Ordens de Reparação"); ambiguous matches are refused, not guessed.
 - Reports are not printed; use the code-defined layouts and historical data (chapter 10).
