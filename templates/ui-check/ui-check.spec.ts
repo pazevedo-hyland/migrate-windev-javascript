@@ -10,7 +10,17 @@ type WindowConfig = {
   /** Legacy controls deliberately absent, each with the reason (ADR, deferred slice, skin chrome…). */
   ignore: Record<string, string>;
 };
-type Config = { inspectDir: string; legacyScreenshots: string; report: string; windows: Record<string, WindowConfig> };
+type Config = {
+  inspectDir: string;
+  /** Legacy window images: the dossier extract's images/ folder (or any <WINDOW>.png|jpg folder). */
+  legacyScreenshots: string;
+  report: string;
+  /** dossier_extract.py output: legacy captions are compared when present. */
+  dossierDir?: string;
+  /** Caption language in the dossier, e.g. "PT". */
+  language?: string;
+  windows: Record<string, WindowConfig & { captionIgnore?: Record<string, string> }>;
+};
 
 const root = process.cwd();
 const config: Config = JSON.parse(readFileSync(join(root, "ui-check.config.json"), "utf-8"));
@@ -31,7 +41,26 @@ function legacyControls(window: string): string[] {
   throw new Error(`no inspector output for ${window}`);
 }
 
-const results: { window: string; missing: string[]; ignored: number; total: number }[] = [];
+/** {legacy control name: caption} from the dossier extract. */
+function legacyCaptions(window: string): Record<string, string> {
+  if (!config.dossierDir) return {};
+  const path = resolve(root, config.dossierDir, "windev-window", `${window}.json`);
+  if (!existsSync(path)) return {};
+  const controls = JSON.parse(readFileSync(path, "utf-8")).controls ?? {};
+  const captions: Record<string, string> = {};
+  for (const [name, control] of Object.entries<{ kind?: string; caption?: string | Record<string, string> }>(controls)) {
+    // Tables, supercontrols and loopers carry an internal caption that WINDEV does not display.
+    if (["Table", "Supercontrol", "Looper"].includes(control.kind ?? "")) continue;
+    const caption = typeof control.caption === "string" ? control.caption : control.caption?.[config.language ?? "PT"];
+    if (caption) captions[name] = caption;
+  }
+  return captions;
+}
+
+const normalize = (text: string) => text.replace(/&/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+
+type Mismatch = { name: string; legacy: string; actual: string };
+const results: { window: string; missing: string[]; ignored: number; total: number; captions: Mismatch[] }[] = [];
 
 for (const [window, settings] of Object.entries(config.windows)) {
   test(`${window}: legacy controls present`, async ({ page }) => {
@@ -44,22 +73,31 @@ for (const [window, settings] of Object.entries(config.windows)) {
     for (const name of expected) {
       if ((await page.getByTestId(name).count()) === 0) missing.push(name);
     }
+    const captions: Mismatch[] = [];
+    for (const [name, legacy] of Object.entries(legacyCaptions(window))) {
+      if (name in settings.ignore || name in (settings.captionIgnore ?? {})) continue;
+      if ((await page.getByTestId(name).count()) === 0) continue;
+      const element = page.getByTestId(name).first();
+      const actual = (await element.innerText().catch(() => "")) || (await element.getAttribute("value")) || "";
+      if (!normalize(actual).includes(normalize(legacy))) captions.push({ name, legacy, actual: actual.trim() });
+    }
     mkdirSync(resolve(root, config.report), { recursive: true });
     await view.screenshot({ path: resolve(root, config.report, `${window}.png`) });
-    results.push({ window, missing, ignored: Object.keys(settings.ignore).length, total: expected.length });
+    results.push({ window, missing, ignored: Object.keys(settings.ignore).length, total: expected.length, captions });
     expect(missing, `legacy controls with no data-testid in ${window}`).toEqual([]);
+    expect(captions, `captions differing from the legacy dossier in ${window}`).toEqual([]);
   });
 }
 
 test.afterAll(() => {
   const rows = results.map((r) => {
-    // Accepts both <WINDOW>.png and the capture kit's <WINDOW>/screenshot.png.
-    const legacy = [`${r.window}.png`, join(r.window, "screenshot.png")]
+    const legacy = [`${r.window}.png`, `${r.window}.jpg`, join(r.window, "screenshot.png")]
       .map((name) => resolve(root, config.legacyScreenshots, name))
       .find((path) => existsSync(path)) ?? "";
     const legacyCell = legacy ? `<img src="file://${legacy}">` : "<em>no legacy screenshot yet</em>";
     return `<tr><td><b>${r.window}</b><br>${r.total - r.missing.length}/${r.total} controls, ${r.ignored} ignored` +
-      `${r.missing.length ? `<br>missing: ${r.missing.join(", ")}` : ""}</td>` +
+      `${r.missing.length ? `<br>missing: ${r.missing.join(", ")}` : ""}` +
+      `${r.captions.map((c) => `<br>${c.name}: “${c.actual}” ≠ legacy “${c.legacy}”`).join("")}</td>` +
       `<td><img src="${r.window}.png"></td><td>${legacyCell}</td></tr>`;
   });
   writeFileSync(resolve(root, config.report, "index.html"),

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Draw every legacy window to scale from the inspector's control layout (no WINDEV, no app run).
 
-Each control becomes a labelled rectangle at its source position. Captions come from capture-kit
-`tree.json` files when available (elements labelled with `legacy_name`); otherwise the legacy
-control name is shown. Output: one SVG per window plus an index.html gallery.
+Each control becomes a labelled rectangle at its source position. Captions come from the
+dossier extract (dossier_extract.py) when given; otherwise the legacy control name is shown. Output: one SVG per window plus an index.html gallery.
 """
 import argparse
 from html import escape
@@ -14,16 +13,17 @@ COLORS = {'BTN': '#d6e4ff', 'EDT': '#ffffff', 'TABLE': '#f3f3f3', 'COL': '#ecece
           'STC': 'none', 'CBOX': '#e8f5e9', 'IMG': '#f3e5f5', 'SC': 'none', 'TAB': 'none', 'LAYOUT': 'none'}
 
 
-def captions_from_captures(capture_dir):
-    """{window: {legacy control name: caption}} from capture-kit tree.json files."""
+def captions_from_dossier(dossier_dir, language='PT'):
+    """{window: {legacy control name: caption}} from dossier_extract.py output."""
     captions = {}
-    if not capture_dir:
+    if not dossier_dir:
         return captions
-    for tree in Path(capture_dir).rglob('tree.json'):
-        window = tree.parent.name
-        for element in json.loads(tree.read_text(encoding='utf-8')):
-            if element.get('legacy_name') and element.get('name'):
-                captions.setdefault(window, {})[element['legacy_name']] = element['name']
+    for path in Path(dossier_dir, 'windev-window').glob('*.json'):
+        for name, control in json.loads(path.read_text(encoding='utf-8')).get('controls', {}).items():
+            caption = control.get('caption')
+            caption = caption.get(language) if isinstance(caption, dict) else caption
+            if caption:
+                captions.setdefault(path.stem, {})[name] = caption
     return captions
 
 
@@ -49,9 +49,9 @@ def svg(window, layout, captions):
     return '\n'.join(parts)
 
 
-def render(inspect_dir, out, capture_dir=None):
+def render(inspect_dir, out, dossier_dir=None, language='PT'):
     out.mkdir(parents=True, exist_ok=True)
-    captions = captions_from_captures(capture_dir)
+    captions = captions_from_dossier(dossier_dir, language)
     rendered = []
     for path in sorted(Path(inspect_dir, 'code').rglob('*.json')):
         data = json.loads(path.read_text(encoding='utf-8'))
@@ -60,7 +60,7 @@ def render(inspect_dir, out, capture_dir=None):
         if drawing:
             (out / f'{window}.svg').write_text(drawing, encoding='utf-8')
             rendered.append((window, window in captions))
-    cards = ''.join(f'<figure><figcaption>{escape(w)}{" — captions from capture" if c else ""}</figcaption>'
+    cards = ''.join(f'<figure><figcaption>{escape(w)}{" — captions from the dossier" if c else ""}</figcaption>'
                     f'<img src="{escape(w)}.svg"></figure>' for w, c in rendered)
     (out / 'index.html').write_text(
         '<!doctype html><meta charset="utf-8"><title>Legacy layouts</title><style>body{font-family:sans-serif}'
@@ -73,10 +73,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('inspect_dir', type=Path, help='inspect_windev.py output directory')
     parser.add_argument('--out', type=Path, required=True)
-    parser.add_argument('--captures', type=Path, help='capture-kit output (tree.json files) for real captions')
+    parser.add_argument('--dossier', type=Path, help='dossier_extract.py output, for the real captions')
+    parser.add_argument('--language', default='PT', help='caption language in the dossier')
     args = parser.parse_args()
-    rendered = render(args.inspect_dir, args.out, args.captures)
-    print(f'{len(rendered)} windows rendered, {sum(1 for _, c in rendered if c)} with captured captions')
+    rendered = render(args.inspect_dir, args.out, args.dossier, args.language)
+    print(f'{len(rendered)} windows rendered, {sum(1 for _, c in rendered if c)} with dossier captions')
 
 
 if __name__ == '__main__':

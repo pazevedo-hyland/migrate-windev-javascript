@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-22 — removed what did not work
+
+### Removed
+- The UI crawler (`plan_capture.py`, `windows/capture_app.py`, `templates/windows-capture-prompt.md`, `templates/github-capture.yml`, its WinForms CI test). On the real WINDEV 28 app it logged in but WINDEV exposed no menu items to UI Automation and it captured no windows; the dossier gives that evidence. Recorded in the README so agents do not retry it.
+- The advice to decode `.fic` files from the schema: a homemade decoder was reliable for about a third of the real tables. Data export goes through the HFSQL ODBC driver.
+
+### Changed
+- `scripts/windows/` is now the ODBC data export only, with its honest status (tested on a real ODBC driver, not yet on HFSQL's).
+- `render_layouts.py` and the UI check take captions and window images from the dossier extract; the UI check now fails on captions that differ from the legacy ones (it found 8 wrong captions in the pilot).
+
 ## 2026-10-22 — the dossier as primary evidence
 
 ### Added

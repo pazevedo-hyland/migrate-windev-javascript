@@ -28,9 +28,10 @@ Reading a text-format window file does not require WINDEV; reproducing runtime b
 
 **No WINDEV machine?** Much of the migration still works from the project folder alone:
 
-- **Readable without WINDEV:** text-format sources (`.wdw`, `.wde`, `.wdp`) and the XDD schema. The HFSQL Classic data files are fixed-length records laid out by the XDD, so they can usually be decoded from the schema: verify every field type against counts, key and foreign-key consistency, and plausible values before trusting the result.
-- **Inferred only:** binary queries (`.WDR`). Their intent comes from the name, call sites and schema, marked `inferred`.
-- **Lost:** encoded designer properties (captions, masks, tab order, which button closes or cancels) and runtime evidence. Get them by running the compiled app (any Windows PC with the WINDEV runtime DLLs, no licence needed) with the unattended [Windows capture kit](scripts/windows/README.md), which also exports the data through ODBC; or record them as `unresolved` and decide them with the users.
+- **Readable without WINDEV:** text-format sources (`.wdw`, `.wde`, `.wdp`), the XDD schema, and the compile folder's event labels.
+- **From the dossier PDF, if present:** captions, tab order, masks, window images and every query's SQL — the encrypted parts.
+- **Data:** export it through PC SOFT's HFSQL ODBC driver on any Windows PC ([data export](scripts/windows/README.md)). Do not decode `.fic` files from the schema by hand: record layouts vary by field type and table and a homemade decoder is unreliable.
+- **Without a dossier:** binary queries (`.WDR`) are inferred from name, call sites and schema; encoded designer properties stay `unresolved` until someone with WINDEV exports the dossier or the users decide them.
 
 ## D. An isolated machine for the coding agent
 

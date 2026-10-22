@@ -64,18 +64,10 @@ The text sources store events as raw codes (18, 17, 34…). The compiled per-win
 ## `render_layouts.py` — every legacy window drawn from source
 
 ```sh
-python3 scripts/render_layouts.py analysis-local/inspect-1 --out analysis-local/layouts [--captures <capture-kit output>]
+python3 scripts/render_layouts.py analysis-local/inspect-1 --out analysis-local/layouts [--dossier analysis-local/dossier]
 ```
 
-Draws every window to scale from the inspector's control positions (one SVG each plus `index.html`), labelled with legacy control names, or with real captions when capture-kit `tree.json` files are given. No WINDEV and no running app needed: it covers windows the crawler cannot reach.
-
-## `plan_capture.py` — unattended capture plan
-
-```sh
-python3 scripts/plan_capture.py analysis-local/inspect-1 --out analysis-local/capture-plan.json
-```
-
-Lists every window, every route that opens it (menu option or button, call and arguments, evidence) and classifies routes and windows: `navigation` / `review` / `writes` for clicks, and whether the window writes on open or close. Writes `capture-plan.json` and a `capture-plan.md` checklist. Used by the [Windows capture kit](windows/README.md), which also contains `capture_app.py` (screens) and `export_odbc.py` (data).
+Draws every window to scale from the inspector's control positions (one SVG each plus `index.html`), labelled with legacy control names, or with the real captions when a dossier extract is given. No WINDEV and no running app needed: it covers every window, reachable or not.
 
 ## `compare_exports.py` — golden master and reconciliation
 

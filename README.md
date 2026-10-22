@@ -86,12 +86,13 @@ Project-specific values are written in angle brackets: `<App>` (application name
 
 Tested on a real WINDEV 28 project (51 windows, 17 tables):
 
-- **Inspector and capture planner:** run on the full project; two parser bugs found on real files and fixed.
+- **Inspector:** run on the full project; two parser bugs found on real files and fixed.
 - **Mapping skill:** 3 windows mapped by parallel agents; an independent cross-review confirmed 14 of 15 key claims.
 - **Build loop:** the client list and form built in Tauri through 4 stages with independent reviews. The first pass over-claimed 8 of 18 `verified` rows; after the "No guessing" rules and one fix stage, the final audit found 2 of 17.
 - **Dossier extraction:** WINDEV's 2,303-page project documentation turned into per-element JSON (captions, tab order, masks, 29 queries' SQL) and 106 window/report images.
-- **Windows capture kit:** end-to-end CI against a WinForms stand-in; on the real app on a GitHub Windows runner it logged in through legacy-position matching but found no menu items exposed by WINDEV, so the dossier replaced it for static properties.
-- **Not yet:** the capture kit against a real WINDEV runtime, and golden scenarios recorded from the legacy app.
+- **Event legend:** event codes verified from the project's compile folder (18 = Click, 293 matches, no conflict).
+- **Not yet:** the ODBC export against the HFSQL driver, and golden scenarios recorded from the legacy app.
+- **Tried and removed:** an automated UI crawler driving the running app through Windows UI Automation. On the real app it logged in but WINDEV exposed no menu items, so it captured no windows; the dossier provides that evidence instead.
 
 ## Verification and limits
 
