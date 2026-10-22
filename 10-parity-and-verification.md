@@ -39,6 +39,7 @@ Choose scenarios for: every workflow's happy path, each boundary (zero, negative
 
 - **Screen spec** per window ([template](templates/window-spec.md)) from the `.wdw` source, designer and screenshots: controls in tab order, linked items, masks, required fields, max lengths, rules, shortcuts, default/cancel buttons, exact messages.
 - **Legacy control names as `data-testid`** (`EDT_Customer`, `BTN_Save`): tests, parity rows, rights and the screen spec share one vocabulary.
+- **Automated control coverage** ([templates/ui-check](templates/ui-check/)): a Playwright check opens each window in browser-preview mode (fake backend) through its configured route, asserts that **every legacy control** listed by the inspector (`controls` in its output, table columns included) exists as a `data-testid`, and fails on any gap that has no recorded reason in `ui-check.config.json`. It screenshots every window into a side-by-side report with the legacy screenshots from the capture kit. In the pilot it found the only gaps by itself (skin title-bar controls, a deferred picker button) in 3.5 seconds.
 - **Keyboard walkthrough tests** generated from the spec (tab order, Enter/Esc, shortcuts).
 - **Visual comparison** with the screenshot: an automated screenshot of the target next to the legacy one, **approved by the human**. Visual decisions are human decisions.
 

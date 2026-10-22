@@ -29,6 +29,7 @@ Use a new output directory per run: existing output is rejected so stale and cur
 - `inventory.json` — paths, kinds, sizes, SHA-256 hashes, status, block/table counts, literal keys, limitations.
 - `code/<relative-source>.json` — extracted blocks with context and line references.
 - `schema/<relative-source>.json` — raw table/field/relationship metadata.
+- `controls` in each `code/<file>.json` — every control and table column declared in the window or report, in source order (used by the UI control-coverage check).
 - `parity-seed.csv` — one `unmapped` row per code block, table and unresolved source, with stable `SRC-*` IDs. Import it into `docs/parity/parity.csv`.
 - `secret-hints.json` — `path`, `line` and hint type for likely hardcoded credentials and connection calls. **Values are never copied.** Treat findings as credentials to revoke.
 

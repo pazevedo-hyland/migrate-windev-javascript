@@ -151,6 +151,21 @@ def extract_blocks(text, keys=('code',)):
     return blocks
 
 
+def control_names(text):
+    """Every control and table column declared in a window/report, in source order."""
+    lines = text.splitlines()
+    parsed = structure(lines, literal_mask(lines))
+    names = []
+    for i, entry in enumerate(parsed):
+        if not entry or entry[1] != 'name' or not entry[2]:
+            continue
+        # The nearest less-indented key is the list holding this item (bare `-` lines are not keys).
+        parent = next((parsed[j] for j in range(i - 1, -1, -1) if parsed[j] and parsed[j][0] < entry[0]), None)
+        if parent and parent[1] in ('controls', 'columns'):
+            names.append(entry[2])
+    return names
+
+
 def literal_keys(text):
     """Count every literal block key so other embedded sources (SQL, text) are visible."""
     counts = {}
@@ -279,9 +294,10 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
                     blocks = extract_blocks(text, literal_block_keys)
                     destination = output / 'code' / (relative + '.json')
                     destination.parent.mkdir(parents=True, exist_ok=True)
-                    destination.write_text(json.dumps({'path': relative, 'blocks': blocks},
+                    controls = control_names(text)
+                    destination.write_text(json.dumps({'path': relative, 'controls': controls, 'blocks': blocks},
                                                       indent=2, ensure_ascii=False), encoding='utf-8')
-                    entry.update(status='text', code_blocks=len(blocks),
+                    entry.update(status='text', code_blocks=len(blocks), controls=len(controls),
                                  literal_keys=literal_keys(text),
                                  encoded_properties='internal_properties' in text)
                     seeds.extend(seed_rows(relative, kind, blocks))

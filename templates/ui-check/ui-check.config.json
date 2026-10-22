@@ -1,0 +1,14 @@
+{
+  "inspectDir": "analysis-local",
+  "legacyScreenshots": "legacy/screenshots",
+  "report": "ui-report",
+  "windows": {
+    "WIN_Table_Clientes": {
+      "open": [],
+      "ignore": {
+        "BTN_selecionar": "picker mode deferred (roadmap #4)",
+        "RADTitle": "skin title bar: native window chrome (ADR-002)"
+      }
+    }
+  }
+}

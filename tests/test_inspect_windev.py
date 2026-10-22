@@ -70,6 +70,27 @@ REAL_SHAPE = '''window :
 
 
 class InspectionTests(unittest.TestCase):
+    def test_control_names_include_nested_controls_and_columns(self):
+        text = '''window :
+ name : WIN_List
+ controls :
+  -
+    name : TABLE_X
+    columns :
+     -
+       name : COL_Code
+    code_elements :
+     p_codes :
+      -
+        code : |1-
+         name : not_a_control
+  - name : BTN_Ok
+    controls :
+     -
+       name : EDT_Inner
+'''
+        self.assertEqual(module.control_names(text), ['TABLE_X', 'COL_Code', 'BTN_Ok', 'EDT_Inner'])
+
     def test_real_shape_bare_list_items(self):
         blocks = module.extract_blocks(REAL_SHAPE)
         got = [('/'.join(b['context']['names']), b['context']['siblings'].get('type')) for b in blocks]
