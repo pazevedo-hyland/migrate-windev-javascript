@@ -43,6 +43,14 @@ python3 scripts/parity_check.py docs/parity/parity.csv [--seed analysis-local/in
 
 Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). With `--seed`, every seed row must still exist. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
 
+## `render_layouts.py` — every legacy window drawn from source
+
+```sh
+python3 scripts/render_layouts.py analysis-local/inspect-1 --out analysis-local/layouts [--captures <capture-kit output>]
+```
+
+Draws every window to scale from the inspector's control positions (one SVG each plus `index.html`), labelled with legacy control names, or with real captions when capture-kit `tree.json` files are given. No WINDEV and no running app needed: it covers windows the crawler cannot reach.
+
 ## `plan_capture.py` — unattended capture plan
 
 ```sh
