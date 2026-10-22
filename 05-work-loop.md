@@ -65,7 +65,8 @@ A rule is not migrated because a screen exists. A slice is done when:
 - `npm run verify` passes, including the parity check;
 - the slice's golden scenarios pass ([10](10-parity-and-verification.md));
 - failure cases show the legacy messages; data persists after restart; report totals match;
-- native checks ran on the target OS, or are listed as not run.
+- native checks ran on the target OS, or are listed as not run;
+- **the human has run the slice** (`npm run dev:seed` or equivalent) and tried its workflows. Agents often cannot open GUI windows, so this is usually the first time the app is seen running.
 
 Example: a repair-order save is complete when validation, material/time recording, failure handling, persistence after restart and report totals behave as agreed.
 

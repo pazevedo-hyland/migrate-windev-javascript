@@ -12,7 +12,7 @@ Copy each block into an `AGENTS.md` inside the named folder of the application (
 ## `src/bindings/AGENTS.md`
 
 - Generated from Rust command signatures (`tauri-specta` or `ts-rs`). Do not edit; run `<bindings command>`.
-- A Rust command change without regenerated bindings is a broken build.
+- A Rust command change without regenerated bindings is a broken build. Commit the regenerated files with the change: the CI check compares against what is committed, so new binding files fail it until they are staged.
 
 ## `src/domain/AGENTS.md`
 

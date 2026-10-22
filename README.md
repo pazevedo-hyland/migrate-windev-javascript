@@ -80,6 +80,16 @@ WINDEV / WEBDEV / WINDEV Mobile developers and teams who want an AI coding agent
 
 Project-specific values are written in angle brackets: `<App>` (application name), `<repository>`, `<WIN_Name>`… Replace them when using a template. If your application **complements a third-party system** (ERP, accounting…), it is called the "third-party system"; otherwise ignore those mentions.
 
+## Validation status
+
+Tested on a real WINDEV 28 project (51 windows, 17 tables):
+
+- **Inspector and capture planner:** run on the full project; two parser bugs found on real files and fixed.
+- **Mapping skill:** 3 windows mapped by parallel agents; an independent cross-review confirmed 14 of 15 key claims.
+- **Build loop:** the client list and form built in Tauri through 4 stages with independent reviews. The first pass over-claimed 8 of 18 `verified` rows; after the "No guessing" rules and one fix stage, the final audit found 2 of 17.
+- **Windows capture kit:** end-to-end CI on GitHub's Windows runners against a WinForms stand-in (login, menus, dialogs, data guard) and a real ODBC driver.
+- **Not yet:** the capture kit against a real WINDEV runtime, and golden scenarios recorded from the legacy app.
+
 ## Verification and limits
 
 `python3 -m unittest discover -s tests -v` runs the toolkit tests (inspector, parity gate, comparator, guard in all modes, documentation links and anchors). Native application checks belong to each application repository. This repository does not include a runnable Tauri app, a WLanguage compiler, an HFSQL reader or a query decoder.

@@ -46,7 +46,7 @@ UI style is one of these choices: a **WINDEV-like replica** (same layout, fields
 
 ## 7. Foundations
 
-Scaffold the Tauri app in the accepted structure, `npm run verify` in CI on every target OS, bindings generation, schema v1 migrations, and an import **dry run** on sanitized data with a reconciliation report ([08](08-data-migration.md)). Record golden scenarios for the first workflows in the legacy app ([10](10-parity-and-verification.md)).
+Scaffold the Tauri app in the accepted structure, `npm run verify` in CI on every target OS, bindings generation, schema v1 migrations, an opt-in dev seed (a Cargo feature such as `dev-seed` that loads the synthetic data into an empty database, so humans can try every slice), and an import **dry run** on sanitized data with a reconciliation report ([08](08-data-migration.md)). Record golden scenarios for the first workflows in the legacy app ([10](10-parity-and-verification.md)).
 
 ## 8. First vertical slice
 
