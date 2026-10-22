@@ -33,9 +33,6 @@ jobs:
         run: C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /codepage:65001 /target:winexe /out:FakeApp.exe /r:System.Windows.Forms.dll /r:System.Drawing.dll tests\windows_e2e\FakeApp.cs
       - name: Inspector, planner and crawler against the fake app
         run: python tests\windows_e2e\run_e2e.py FakeApp.exe ${{ runner.temp }}\e2e
-      - name: Install SQLite ODBC driver
-        if: always()
-        run: choco install sqliteodbc -y --no-progress
       - name: ODBC export against a real driver
         if: always()
         run: python tests\windows_e2e\odbc_e2e.py ${{ runner.temp }}\odbc

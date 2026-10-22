@@ -115,7 +115,8 @@ class Desktop:
         while time.time() < deadline:
             for w in self.windows():
                 if w.handle not in known:
-                    w.wait('ready', timeout=self.timeout)
+                    # Wrappers cannot wait; a window specification for the same handle can.
+                    self.app.window(handle=w.handle).wait('ready', timeout=self.timeout)
                     return w
             time.sleep(0.3)
         return None
