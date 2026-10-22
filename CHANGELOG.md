@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-22 — mapping skill tested on a real project
+
+### Changed
+- `map-element` skill rewritten from three real mapping runs plus a cross-review: unit rows by `element`, block definition, one level of callers/callees, encoded-property fallback, defined `confidence`/`status`/rule-ID/evidence conventions, shared event-code legend, controls only in the screen spec, self-validation.
+- Mapping prompt starts with a shared `docs/mapping/event-codes.md` legend and merges per-unit parity files.
+- `parity_check.py --element` validates one unit's file against its seed rows.
+- 00: what can and cannot be done without a WINDEV machine.
+
 ## 2026-10-22 — validated on a real WINDEV 27 project
 
 ### Fixed

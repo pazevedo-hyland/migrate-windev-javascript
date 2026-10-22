@@ -18,7 +18,7 @@ def read_csv(path):
         return reader.fieldnames or [], list(reader)
 
 
-def check(matrix, seed=None, require_complete=False):
+def check(matrix, seed=None, require_complete=False, element=None):
     """Return (errors, summary). Errors make the gate fail."""
     header, rows = read_csv(matrix)
     errors = [f'missing column: {c}' for c in REQUIRED if c not in header]
@@ -54,6 +54,8 @@ def check(matrix, seed=None, require_complete=False):
             errors.append(f'{where}: not complete ({value["status"]})')
     if seed:
         _, seed_rows = read_csv(seed)
+        if element:
+            seed_rows = [r for r in seed_rows if r.get('element') == element]
         missing = [r['id'] for r in seed_rows if r['id'] not in ids]
         # Seed rows may be refined or excluded, never silently dropped.
         errors.extend(f'seed row missing from matrix: {i}' for i in missing)
@@ -69,11 +71,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('matrix', type=Path, help='docs/parity/parity.csv')
     parser.add_argument('--seed', type=Path, help='parity-seed.csv produced by inspect_windev.py')
+    parser.add_argument('--element', help='Only require the seed rows of this legacy element (per-unit files)')
     parser.add_argument('--require-complete', action='store_true',
                         help='Fail unless every row is verified or excluded')
     args = parser.parse_args()
     try:
-        errors, summary = check(args.matrix, args.seed, args.require_complete)
+        errors, summary = check(args.matrix, args.seed, args.require_complete, args.element)
     except OSError as error:
         parser.exit(1, f'Parity check failed: {error}\n')
     print(json.dumps(summary, indent=2))

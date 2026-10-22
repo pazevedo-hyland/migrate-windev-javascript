@@ -66,6 +66,12 @@ class ParityCheckTests(unittest.TestCase):
         self.assertIn('seed row missing from matrix: R2', errors)
         self.assertTrue(any('not complete (specified)' in e for e in errors))
 
+    def test_seed_can_be_limited_to_one_element(self):
+        write(self.root / 'parity.csv', [row('R1', 'unmapped', confidence='unresolved')])
+        write(self.root / 'seed.csv', [row('R1', 'unmapped'), {**row('R2', 'unmapped'), 'element': 'WIN_Other'}])
+        errors, _ = module.check(self.root / 'parity.csv', self.root / 'seed.csv', element='WIN_Order')
+        self.assertEqual(errors, [])
+
     def test_missing_columns(self):
         (self.root / 'parity.csv').write_text('id,status\nR1,verified\n', encoding='utf-8')
         errors, _ = module.check(self.root / 'parity.csv')

@@ -1,23 +1,47 @@
 ---
 name: map-element
-description: Map one legacy WINDEV element (window, report, query, procedure set, class or table group) into a mapping note and parity rows. Use during stage 0 mapping or when a new legacy source appears.
+description: Map one legacy WINDEV element (window, report, query, procedure set, class or table group) into a mapping note, a screen spec and parity rows. Use during stage 0 mapping or when a new legacy source appears.
 ---
 
 # Map one legacy element
 
-Input: one unit name and its sources (`legacy/…`, `analysis-local/code/<file>.json`, screenshots, exported SQL). Read them in full. Do not modify them and do not write application code.
+Input: one unit name. Paths are relative to the repository root. Read in full: the unit's source in `legacy/`, its extracted blocks in the inspector output (`<inspect dir>/code/…/<file>.json`), `docs/wlanguage-traps.md` and `docs/mapping/event-codes.md`. Never modify legacy files, never run anything from them, never copy credential values (locations only). Do not write application code.
 
-Write `docs/mapping/<unit>.md` with:
+## Scope
 
-1. **Purpose** — what the user does here, in one paragraph, from evidence.
-2. **Entry and exit** — who opens it (menu, other window, parameters), modal or not, returned value, what it opens.
-3. **Controls** (windows) — name, type, caption, linked file item, input mask, required, max length, initial state, visibility/enabled rules, tab order, shortcut. Copy into `docs/screens/<WINDOW>.md` (`templates/window-spec.md`).
-4. **Events** — one entry per code block: path (`WIN/CONTROL`), raw event code, `path:line` range, behavior in plain language, HFSQL calls (files, keys, filters, locks, transactions), calls to procedures/windows/reports.
-5. **Rules** — each business rule with inputs, outputs, rounding/date/text semantics, failure messages (exact text), and a concrete example. Check every construct against `docs/wlanguage-traps.md`.
-6. **Data** — files/tables read and written, keys, implicit current-record use, queries with parameters (note which conditions are skipped when a parameter is null or not given).
-7. **Unresolved** — binary parts, missing exports, unknown codes, references not found. Never guess.
-8. **Secrets** — location of hardcoded credentials, never the value.
+- **Rows of the unit**: seed rows whose `element` column equals the unit name — not every row that mentions it. Keep every `SRC-*` ID.
+- **A block** is a non-empty code block (one seed row). Empty event slots are not rows; mention them only when meaningful (e.g. a Print button with no code).
+- **Follow one level of callers and callees**: search all legacy code for the unit name (`Open(…)`, `OpenChild(…)`, `ExecuteProcess(…)`, `iPrintReport(…)`) and read those call sites, plus the windows, procedures and queries the unit opens or calls. Cross-window behavior (shared file buffers and filters, globals, parameters, returned values) is where the risky rules are.
 
-Then propose parity rows (CSV, same columns as `templates/parity.template.csv`): keep every `SRC-*` ID from `analysis-local/parity-seed.csv` for this unit, fill `legacy_behavior` and `confidence`, and add `RULE-*` rows for rules spanning several blocks. Status stays `unmapped` or `specified`.
+## Write `docs/mapping/<unit>.md`
 
-Finish with a short list: blocks covered / total for this unit, and the questions for the human.
+1. **Purpose** — what the user does here, from evidence.
+2. **Entry and exit** — callers (`path:line`), parameters, modal or not, returned value, what it opens, how it closes.
+3. **Events** — one entry per block: control path, raw event code and its legend meaning (or "unknown"), `path:line`, behavior in plain language, HFSQL calls (files, keys, filters, locks, transactions, error handlers), calls out.
+4. **Rules** — each business rule: inputs, outputs, rounding/date/text semantics, exact message texts, one concrete example, and the traps from `docs/wlanguage-traps.md` it involves.
+5. **Data** — files/tables read and written, keys, implicit current-record use, queries and their parameters (binary queries: intent inferred from name, call sites and schema — marked inferred).
+6. **Unresolved** — numbered `U-01…`: binary parts, encoded designer properties, unknown codes, missing references. For each, the evidence that would resolve it (screenshot, designer export, query SQL export, running the legacy app).
+
+Controls go **only** in the screen spec, not in the note.
+
+## Write `docs/screens/<unit>.md` (windows only)
+
+Follow `templates/window-spec.md`. Captions, masks, tab order, linked items and shortcuts are usually in encoded `internal_properties`: fill what readable text and code prove; otherwise write `unresolved (encoded)` once per column rather than guessing, and list the screenshots needed.
+
+## Write `docs/parity/<unit>.csv`
+
+Exact columns of `templates/parity.template.csv`.
+
+- `evidence`: repository-relative `path:line` (seed evidence is relative to the inspected folder: prefix it, e.g. `legacy/code/`).
+- `confidence`: `verified` (read directly in code/schema), `inferred` (reasoned; say how in `legacy_behavior`), `unresolved`.
+- `status`: `specified` with `target_behavior` = `Preserve legacy behavior` when the legacy behavior is understood; `unmapped` when an unresolved item blocks it (cite `U-nn` in `legacy_behavior`). Changes to legacy behavior are decided later by ADR, not here.
+- New rule rows: `RULE-<UNIT-ABBREVIATION>-NNN` (e.g. `RULE-ORF-001`), for rules spanning several blocks or windows.
+- New event-code meanings you infer: add them to `docs/mapping/event-codes.md` with the evidence, labelled inferred.
+
+Validate before finishing:
+
+```sh
+python3 scripts/parity_check.py docs/parity/<unit>.csv --seed <inspect dir>/parity-seed.csv --element <unit>
+```
+
+Finish with: blocks covered / total, rows written, the top risky rules, the unresolved list, and questions for the human.

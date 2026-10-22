@@ -24,6 +24,12 @@ Keep a Windows machine or VM with the **original WINDEV version** and an HFSQL e
 
 Reading a text-format window file does not require WINDEV; reproducing runtime behavior does.
 
+**No WINDEV machine?** Much of the migration still works from the project folder alone:
+
+- **Readable without WINDEV:** text-format sources (`.wdw`, `.wde`, `.wdp`) and the XDD schema. The HFSQL Classic data files are fixed-length records laid out by the XDD, so they can usually be decoded from the schema: verify every field type against counts, key and foreign-key consistency, and plausible values before trusting the result.
+- **Inferred only:** binary queries (`.WDR`). Their intent comes from the name, call sites and schema, marked `inferred`.
+- **Lost:** encoded designer properties (captions, masks, tab order, which button closes or cancels) and runtime evidence. Get them by running the compiled app (any Windows PC with the WINDEV runtime DLLs, no licence needed), or record them as `unresolved` and decide them with the users.
+
 ## D. An isolated machine for the coding agent
 
 A coding agent acts like a person at a terminal: it opens shells, installs tools, runs programs. Give it **its own environment** (VM, dev container or cloud sandbox) rather than your workstation:
