@@ -208,7 +208,19 @@ class Desktop:
         self.send_keys('{ENTER}')
 
     def close(self, window):
+        """Close and wait until the window is gone; return a dialog that appeared instead, if any."""
+        known = {w.handle for w in self.windows()}
+        handle = window.handle
         window.close()
+        deadline = time.time() + max(3, self.timeout / 2)
+        while time.time() < deadline:
+            surprise = [w for w in self.windows() if w.handle not in known]
+            if surprise:
+                return surprise[0]
+            if not self.app.window(handle=handle).exists(timeout=0):
+                return None
+            time.sleep(0.3)
+        raise RuntimeError('window did not close and no dialog appeared')
 
     def kill(self):
         self.app.kill()
@@ -319,12 +331,9 @@ def main():
             status['title'] = capture(desktop, current, args.out / target, not args.no_tab_order)
             status['result'] = 'captured'
             for window in reversed(opened):
-                known = {w.handle for w in desktop.windows()}
-                desktop.close(window)
-                time.sleep(0.5)
-                surprise = [w for w in desktop.windows() if w.handle not in known]
-                if surprise:  # a confirmation on close: record it, then restart cleanly
-                    capture(desktop, surprise[0], args.out / target / '_on_close', False)
+                surprise = desktop.close(window)
+                if surprise is not None:  # a confirmation on close: record it, never answer it, restart cleanly
+                    capture(desktop, surprise, args.out / target / '_on_close', False)
                     raise RuntimeError('dialog on close; restarted')
         except Exception as error:
             status.setdefault('result', 'failed')
