@@ -27,8 +27,58 @@ NESTED = '''- name : WIN_Order
             type : 851978
 '''
 
+# Shape observed in real WINDEV 27 text exports: list items are a bare `-` line.
+REAL_SHAPE = '''window :
+ name : WIN_Order
+ controls :
+  -
+    name : BTN_Cancel
+    type : 4
+    code_elements :
+     type_code : 3
+     p_codes :
+      -
+        code : |1-
+         Close()
+        type : 18
+  -
+    name : BTN_Save
+    code_elements :
+     p_codes :
+      -
+        code : |1-
+         
+        type : 14
+      -
+        code : |1-
+         IF sPassword = INIRead("x", "password", "") THEN
+        type : 18
+      -
+        code : |1-
+         Save()
+        type : 33
+ code_elements :
+  p_codes :
+   -
+     code : |1-
+      PROCEDURE MyWindow(gMode is string)
+   -
+     code : |1-
+      cnx..Password = "s3cret"
+     type : 34
+'''
+
 
 class InspectionTests(unittest.TestCase):
+    def test_real_shape_bare_list_items(self):
+        blocks = module.extract_blocks(REAL_SHAPE)
+        got = [('/'.join(b['context']['names']), b['context']['siblings'].get('type')) for b in blocks]
+        self.assertEqual(got, [('WIN_Order/BTN_Cancel', '18'), ('WIN_Order/BTN_Save', '18'),
+                               ('WIN_Order/BTN_Save', '33'), ('WIN_Order', None), ('WIN_Order', '34')])
+        self.assertEqual(blocks[3]['procedures'], ['MyWindow'])
+        hints = module.secret_hints('w.wdw', blocks)
+        self.assertEqual([h['line'] for h in hints], [blocks[4]['start_line']])
+
     def test_literal_blocks_keep_lines_and_stop_at_sibling(self):
         text = 'name : Save\n  code : |1-\n   IF stock < 0 THEN\n   \tError("Stock")\n   END\n  type : 14\n'
         blocks = module.extract_blocks(text)
@@ -80,13 +130,17 @@ class InspectionTests(unittest.TestCase):
             (source / 'query.WDR').write_bytes(b'PCS\x00binary')
             (source / 'orders.fic').write_bytes(b'PRIVATE DATA')
             (source / 'schema.xdd').write_text('<ANALYSE><FICHIER Nom="Orders"/></ANALYSE>')
+            (source / 'Project.ana').mkdir()
+            (source / 'Project.ana' / 'schema.xdd').write_text('<ANALYSE><FICHIER Nom="Orders"/></ANALYSE>')
             for folder in ('Backup', 'Bkp_20261022', 'project.cpl', 'Exe'):
                 (source / folder).mkdir()
                 (source / folder / 'copy.wdw').write_text('skip')
             (source / 'link.wdw').symlink_to(source / 'window.wdw')
             out = source / 'analysis-local'
             manifest = module.inspect(source, out, extra_extensions=['wwh'])
-            self.assertEqual(len(manifest['files']), 5)
+            self.assertEqual(len(manifest['files']), 6)
+            duplicate = next(f for f in manifest['files'] if f['status'] == 'duplicate')
+            self.assertEqual(duplicate['duplicate_of'], 'schema.xdd')
             statuses = {f['path']: f['status'] for f in manifest['files']}
             self.assertEqual(statuses['query.WDR'], 'binary-or-unsupported')
             self.assertEqual(statuses['schema.xdd'], 'schema')

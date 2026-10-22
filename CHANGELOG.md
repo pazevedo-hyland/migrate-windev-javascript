@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-22 — validated on a real WINDEV 27 project
+
+### Fixed
+- Inspector: list items written as a bare `-` line (real WINDEV text format) gave every block the last event code of its list and leaked sibling control names into the path.
+- Secret hints: `Password=`/`PWD=` only inside connection strings, not variables such as `sPassword=`; byte-identical sources (the `.ana` copy of the XDD) are marked `duplicate` and not seeded twice.
+
+### Added
+- WLanguage traps: SQL built by string concatenation (`HExecuteSQLQuery`) and `TableDisplay` refresh semantics, both heavily used in the test project.
+
 ## 2026-10-22 — agent-neutral guardrails
 
 ### Changed

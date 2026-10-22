@@ -71,6 +71,8 @@ Agents fail silently where WLanguage and TypeScript **look** alike but behave di
 | Queries with parameters | A condition whose **parameter is not given (or null) is ignored** by default | Build dynamic `WHERE` clauses replicating this, with tests for each omitted parameter |
 | `ScreenToFile` / `FileToScreen` | Automatic binding between controls and file items | Explicit mapping in the form model; list linked items in `docs/screens/` |
 | Table controls **bound to a file/query** | Automatic paging, sorting, filtering, in-place edits written directly | Paginated query command + explicit save command |
+| `HExecuteSQLQuery(q, "select … where numero='" + x + "'")` | SQL **built by string concatenation**: injection risk, and quoting/escaping, `LIKE` and date formats are part of the behavior | Parameterized queries in the command; tests with quotes, wildcards and empty values in the inputs |
+| `TableDisplay`, `TableDisplay(…, taCurrentSelection)` | Refreshes a table control from its source and keeps or moves the selection | Re-run the query command after each save; test selection and scroll position after refresh |
 | `HTransactionStart/End/Cancel` | Transaction scope across calls | One command, one transaction |
 | `HLockRecord`, lock modes, `HOnError` | Custom handlers change what happens on lock/duplicate/integrity errors **globally** | Find every `HOnError`; map each error to a typed result and the same user message |
 | `HDescribeTrigger` | WLanguage procedures run before/after H functions on a file | Inventory them; call the logic explicitly in commands |

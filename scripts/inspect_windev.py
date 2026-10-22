@@ -24,7 +24,8 @@ SECRET_HINTS = [
     ('credential-assignment', re.compile(
         r'\b(password|passwd|pwd|mot_?de_?passe|motdepasse|secret|token|api_?key|apikey)\w*\s*=\s*"[^"]+"', re.I)),
     ('connection-call', re.compile(r'\b(HOpenConnection|HDescribeConnection|HOuvreConnexion|HDécritConnexion)\s*\(', re.I)),
-    ('connection-string', re.compile(r'(Password|PWD)\s*=\s*[^;"\s]+', re.I)),
+    # Inside connection strings: start of line or after ; or a quote, not variables like sPassword=.
+    ('connection-string', re.compile(r'(^|[;"\'])\s*(Password|PWD)\s*=\s*[^;"\s]+', re.I)),
 ]
 
 
@@ -72,7 +73,23 @@ def literal_mask(lines):
     return mask
 
 
-def block_context(lines, mask, index, indent, is_item=False):
+def structure(lines, mask):
+    """Parsed key lines; a key following a bare `-` line opens a list item."""
+    parsed, pending = [None] * len(lines), False
+    for i, line in enumerate(lines):
+        if mask[i] or not line.strip():
+            continue
+        if line.strip() == '-':
+            pending = True
+            continue
+        entry = parse_key(line)
+        if entry:
+            parsed[i] = entry[:3] + (entry[3] or pending,)
+        pending = False
+    return parsed
+
+
+def block_context(parsed, index, indent, is_item=False):
     """Ancestor `name` values plus scalar siblings of the mapping holding a block."""
     names = []
     level = indent
@@ -80,30 +97,26 @@ def block_context(lines, mask, index, indent, is_item=False):
     closed = is_item
     sibling_start = index
     for j in range(index - 1, -1, -1):
-        parsed = None if mask[j] else parse_key(lines[j])
-        if not parsed:
+        if not parsed[j]:
             continue
-        key_indent, key, value, is_item = parsed
+        key_indent, key, value, item = parsed[j]
         if key_indent == level and not closed:
             if level == indent:
                 sibling_start = j
             if key == 'name' and value and level != indent:
                 names.append(value)
-            if is_item:
+            if item:
                 closed = True
         elif key_indent < level:
-            level, closed = key_indent, is_item
+            level, closed = key_indent, item
             if key == 'name' and value:
                 names.append(value)
     siblings = {}
-    for j in range(sibling_start, len(lines)):
-        if j == index or mask[j]:
+    for j in range(sibling_start, len(parsed)):
+        if j == index or not parsed[j]:
             continue
-        parsed = parse_key(lines[j])
-        if not parsed:
-            continue
-        key_indent, key, value, is_item = parsed
-        if key_indent < indent or (j > index and is_item and key_indent == indent):
+        key_indent, key, value, item = parsed[j]
+        if key_indent < indent or (j > index and item and key_indent == indent):
             break
         if key_indent == indent and value and not LITERAL.match(value):
             siblings[key] = value
@@ -114,14 +127,15 @@ def extract_blocks(text, keys=('code',)):
     """Recognize WINDEV's indented literal blocks, not general YAML."""
     lines = text.splitlines()
     mask = literal_mask(lines)
+    parsed = structure(lines, mask)
     blocks = []
     for i, line in enumerate(lines):
         if mask[i]:
             continue
-        parsed = parse_key(line)
-        if not parsed or parsed[1] not in keys or not LITERAL.match(parsed[2]):
+        entry = parsed[i]
+        if not entry or entry[1] not in keys or not LITERAL.match(entry[2]):
             continue
-        indent = parsed[0]
+        indent = entry[0]
         body = []
         for following in lines[i + 1:]:
             if following.strip() and len(following) - len(following.lstrip(' ')) <= indent:
@@ -130,9 +144,9 @@ def extract_blocks(text, keys=('code',)):
         # WINDEV's |1- representation uses one extra space for literal content.
         code = '\n'.join(s[indent + 1:] if s.strip() else '' for s in body).rstrip()
         if code.strip():
-            blocks.append({'key': parsed[1], 'declaration_line': i + 1, 'start_line': i + 2,
+            blocks.append({'key': entry[1], 'declaration_line': i + 1, 'start_line': i + 2,
                            'end_line': i + 1 + len(body), 'code': code,
-                           'context': block_context(lines, mask, i, indent, parsed[3]),
+                           'context': block_context(parsed, i, indent, parsed[i][3]),
                            'procedures': [m[1] for m in map(PROCEDURE.match, code.splitlines()) if m]})
     return blocks
 
@@ -215,6 +229,7 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
     # Refuse reuse: stale artifacts must never be mistaken for current evidence.
     output.mkdir(parents=True, exist_ok=False)
     inventory, seeds, hints = [], [], []
+    seen_digests = {}
     for current, dirs, names in os.walk(source, followlinks=False):
         dirs[:] = sorted(d for d in dirs if d.lower() not in SKIP
                          and not d.lower().startswith('bkp_')
@@ -229,8 +244,14 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
             relative = path.relative_to(source).as_posix()
             kind = KINDS.get(suffix, suffix.lstrip('.'))
             data = path.read_bytes()
-            entry = {'path': relative, 'kind': kind, 'bytes': len(data),
-                     'sha256': hashlib.sha256(data).hexdigest()}
+            digest = hashlib.sha256(data).hexdigest()
+            entry = {'path': relative, 'kind': kind, 'bytes': len(data), 'sha256': digest}
+            if digest in seen_digests:
+                # Identical copies (e.g. the analysis folder's XDD) must not double the parity seed.
+                entry.update(status='duplicate', duplicate_of=seen_digests[digest])
+                inventory.append(entry)
+                continue
+            seen_digests[digest] = relative
             if suffix == '.xdd':
                 try:
                     schema = raw_schema(data)
