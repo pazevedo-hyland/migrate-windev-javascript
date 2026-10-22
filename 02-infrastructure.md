@@ -61,7 +61,7 @@ A **complete, isolated** environment (a self-hosted Windows runner works well), 
 ## Synchronization and prompt flow
 
 - **Prompts**: the planner writes the stage prompt from the real state (it reads the handoff first). You paste it into the implementer. The implementer executes, commits, pushes, and writes the handoff. You bring the handoff back to the planner for review. **You are the bridge.**
-- **Code**: the implementer pushes (main direction). You `git pull` so the planner reviews the current version. You also push from the clone when needed — an ADR, `AGENTS.md`, or `.claude/` files the agents may not modify themselves:
+- **Code**: the implementer pushes (main direction). You `git pull` so the planner reviews the current version. You also push from the clone when needed — an ADR, `AGENTS.md`, or the guard and agent configuration files (`scripts/guard.py`, `.githooks/`, `.claude/`) that agents must not modify themselves:
 
   ```sh
   git pull

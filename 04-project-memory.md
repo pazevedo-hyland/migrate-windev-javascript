@@ -23,12 +23,13 @@ The principle: **separate** the central memory, detailed documentation, decision
 ├── src-tauri/migrations/AGENTS.md   ← local rules (templates/local-instructions/)
 ├── src/bindings/AGENTS.md
 ├── src/domain/AGENTS.md
-├── .claude/
-│   ├── settings.json          ← hooks and permission rules (templates/claude/)
-│   ├── hooks/guard.py         ← deterministic guardrails
-│   └── skills/                ← review, map-element
-└── .githooks/pre-commit       ← agent-neutral guard (templates/git-hooks/)
+├── skills/                    ← agent-neutral playbooks: review, map-element (templates/agent/skills/)
+├── scripts/                   ← inspector, parity gate, status, comparator, guard.py (shared guardrails)
+├── .githooks/pre-commit       ← runs scripts/guard.py --staged for every agent and human
+└── .claude/settings.json      ← optional Claude Code adapter: hook → scripts/guard.py --hook; skills copied to .claude/skills/
 ```
+
+Everything above `.claude/` works with any coding agent. Agent-specific files are thin adapters over the same rules: see [11 — Agents](11-agents.md).
 
 ## Root `AGENTS.md` — SHORT
 
@@ -67,7 +68,7 @@ What must **exist** in the project without living in the agent's head all the ti
 
 ## Skills — reusable workflows
 
-Encapsulate stable methods instead of repeating instructions. Copy [templates/claude/skills](templates/claude/skills/) to `.claude/skills/` (other agents: reference the same Markdown from `AGENTS.md`):
+Encapsulate stable methods instead of repeating instructions. Copy [templates/agent/skills](templates/agent/skills/) to `skills/` in the application. They are plain Markdown with a short front-matter header, so every agent can follow them: `AGENTS.md` names them ("to review a stage, follow `skills/review/SKILL.md`"), and agents with native skill support load them from their own skills folder (copy or link — see [11](11-agents.md)):
 
 - **review** — the four-category review checklist with systematic checks.
 - **map-element** — map one legacy element into a mapping note and parity rows (used by parallel sub-agents in stage 0).
@@ -76,9 +77,14 @@ The handoff format is fixed by [templates/handoff.md](templates/handoff.md): Del
 
 ## Hooks — deterministic guardrails
 
-An AI can forget an instruction; a hook cannot. Two layers:
+An AI can forget an instruction; a hook cannot. One rule set, [templates/agent/guard.py](templates/agent/guard.py) (copy to `scripts/guard.py`; tested in this playbook), applied at three points:
 
-- **Claude Code hook** ([templates/claude/hooks/guard.py](templates/claude/hooks/guard.py), wired by [templates/claude/settings.json](templates/claude/settings.json)) blocks before the tool runs: edits under `legacy/` or generated folders, edits to committed migrations, destructive SQL in new migrations, content that looks like a secret, force-push, `git add -A`/`commit -a`. Adjust paths to your layout; it has tests in this playbook.
-- **Git pre-commit hook** ([templates/git-hooks/pre-commit](templates/git-hooks/pre-commit)) works with any agent or human: refuses legacy files, HFSQL data files, backups, `.env`, modified committed migrations and secret-like content.
+| Layer | Applies to | How |
+|---|---|---|
+| **Commit** (mandatory) | every agent and human | [templates/agent/pre-commit](templates/agent/pre-commit) → `scripts/guard.py --staged`, installed with `git config core.hooksPath .githooks`. Refuses legacy files, HFSQL data files, backups, `.env*` (except `.env.example`), modified or deleted committed migrations, destructive SQL in new migrations, secret-like content |
+| **Before each tool call** (where supported) | agents with pre-tool hooks | Claude Code: [templates/claude/settings.json](templates/claude/settings.json) → `scripts/guard.py --hook`. Other agents: call `--command "<cmd>"` or `--write <path>` (content on stdin) from their hook or wrapper; exit 2 means blocked. Also blocks force-push, `git add -A`, `commit -a`, `--no-verify`, edits to legacy and generated folders |
+| **CI** (backstop) | everything pushed | `npm run verify` + parity gate; branch protection on `main` |
 
-> Files under `.claude/` are often protected from self-modification by the agent: **the human** edits them, and pushes them from the clone.
+Pair the guard with the agent's own sandbox and approval settings (workspace-only writes, network off unless needed). Adjust the path constants at the top of `guard.py` to the accepted layout.
+
+> Guard and agent configuration files are owned by **the human**: agents are told not to modify them (and some agents protect their own configuration from self-modification). Change them from your clone and push.

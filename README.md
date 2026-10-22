@@ -12,7 +12,7 @@ An evidence-based, AI-driven method for rebuilding WINDEV/HFSQL business applica
 |---|---|---|
 | frames, designs, **writes stage prompts**, **reviews**, keeps roadmap and memory | codes in the repository (on its isolated machine), **tests for real**, commits, pushes, writes the **handoff** | **validate** each stage, **decide**, **bridge** the two (paste prompts, `git pull`) |
 
-One agent can play both AI roles in separate passes; the separation of concerns is what matters.
+One agent can play both AI roles in separate passes; the separation of concerns is what matters. Works with Claude Code, Codex or other coding agents: rules live in `AGENTS.md`, skills are plain Markdown and guardrails run in Git and CI ([11](11-agents.md)).
 
 ## Proposed target
 
@@ -52,6 +52,8 @@ At the end of the roadmap: `parity_check.py --require-complete` passes, golden s
 
 ## Guide
 
+**New here? Start with [GETTING-STARTED](GETTING-STARTED.md)** — a checklist for the first two weeks.
+
 | Chapter | Purpose |
 |---|---|
 | [00 — Prerequisites](00-prerequisites.md) | Accounts, tools, legacy Windows environment, isolated agent machine, source collection layout |
@@ -65,10 +67,12 @@ At the end of the roadmap: `parity_check.py --require-complete` passes, golden s
 | [08 — Data migration](08-data-migration.md) | HFSQL feature map, SQLite/PostgreSQL, transformation, reconciliation, cutover |
 | [09 — WLanguage traps](09-wlanguage-traps.md) | Semantics that silently break translations |
 | [10 — Parity and verification](10-parity-and-verification.md) | Closed-world matrix, golden scenarios, UI/report/native checks, gates |
-| [Scripts](scripts/README.md) | Inspector, parity gate, export comparator |
+| [11 — Agents](11-agents.md) | Claude Code, Codex or any agent: neutral core and thin adapters |
+| [12 — Project tracking](12-project-tracking.md) | Jira structure, generated stories, progress reports, estimating |
+| [Scripts](scripts/README.md) | Inspector, parity gate, status report, export comparator |
 | [Upstream audit](docs/upstream-audit.md) | Where every upstream section lives now, and what was replaced |
 
-**Templates** ([templates/](templates/)): `AGENTS.template.md`, `CLAUDE.template.md`, local instruction files, `PromptInit.md`, `mapping-prompt.md`, `prompt-stage.md`, ADR, handoff, roadmap, parity matrix, window spec, golden scenario, compare config, Claude Code skills (`review`, `map-element`), hook guard and settings, Git pre-commit hook.
+**Templates** ([templates/](templates/)): `AGENTS.template.md`, `CLAUDE.template.md`, local instruction files, `PromptInit.md`, `mapping-prompt.md`, `prompt-stage.md`, ADR, handoff, roadmap, parity matrix, window spec, golden scenario, compare config, agent-neutral skills (`review`, `map-element`), shared guard with a Git pre-commit hook, and a Claude Code adapter (settings).
 
 ## Audience
 
@@ -80,6 +84,6 @@ Project-specific values are written in angle brackets: `<App>` (application name
 
 ## Verification and limits
 
-`python3 -m unittest discover -s tests -v` runs the toolkit tests (inspector, parity gate, comparator, hook guard, documentation links). Native application checks belong to each application repository. This repository does not include a runnable Tauri app, a WLanguage compiler, an HFSQL reader or a query decoder.
+`python3 -m unittest discover -s tests -v` runs the toolkit tests (inspector, parity gate, status report, comparator, guard in all modes, documentation links and anchors). Native application checks belong to each application repository. This repository does not include a runnable Tauri app, a WLanguage compiler, an HFSQL reader or a query decoder.
 
 See [NOTICE](NOTICE), [LICENSE](LICENSE), [CHANGELOG](CHANGELOG.md) and [CONTRIBUTING](CONTRIBUTING.md).

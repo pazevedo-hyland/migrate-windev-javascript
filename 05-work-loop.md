@@ -32,7 +32,7 @@ Each prompt is **bounded** ("do not build X yet") and lists its parity rows, evi
 
 **3. The human** runs `git pull` on the clone.
 
-**4. The planner reviews** with the [review skill](templates/claude/skills/review/SKILL.md) and reports **only** real findings:
+**4. The planner reviews** with the [review skill](templates/agent/skills/review/SKILL.md) and reports **only** real findings:
 
 1. **Blocking error**;
 2. **Parity gap** (behavior missing or changed without ADR, `verified` without executed test, WLanguage trap mistranslated);

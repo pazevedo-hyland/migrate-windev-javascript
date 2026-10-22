@@ -8,7 +8,7 @@ Accounts, tools, legacy Windows environment, isolated agent machine, test machin
 
 ## 2. Create the project repository
 
-Create a private repository for the application. Copy `templates/` and `scripts/` from this playbook; add the `.gitignore` entries for `legacy/`, `analysis-local/`, HFSQL data files and `.env`. Install the guards: `.claude/` from `templates/claude/`, and `templates/git-hooks/pre-commit` as the Git hook.
+Create a private repository for the application. Copy `templates/` and `scripts/` from this playbook; add the `.gitignore` entries for `legacy/`, `analysis-local/`, HFSQL data files and `.env`. Install the skills, the shared guard with its pre-commit hook, and the adapter for your agent ([11 — Agents](11-agents.md#installing-the-adapters-in-an-application-repository)).
 
 ## 3. Collect the sources
 
@@ -28,7 +28,7 @@ The inspector is deliberately shallow: it extracts code blocks with their window
 
 The first prompt to the implementer is the **mapping** ([templates/mapping-prompt.md](templates/mapping-prompt.md)):
 
-- **sub-agents in parallel**, one per window/report/procedure set/table group, each using the [map-element skill](templates/claude/skills/map-element/SKILL.md), produce `docs/mapping/*.md` notes: entities, screens and navigation, events, business rules, naming conventions, traps, external dependencies, **hardcoded secrets to revoke**;
+- **sub-agents in parallel**, one per window/report/procedure set/table group, each using the [map-element skill](templates/agent/skills/map-element/SKILL.md), produce `docs/mapping/*.md` notes: entities, screens and navigation, events, business rules, naming conventions, traps, external dependencies, **hardcoded secrets to revoke**;
 - **other agents review** each note against the sources and screenshots;
 - consolidated outputs: `docs/legacy-inventory.md`, navigation map, `docs/screens/<WINDOW>.md`, and `docs/parity/parity.csv` imported from the seed plus manual rows (menus, shortcuts, rights, reports, jobs, integrations).
 

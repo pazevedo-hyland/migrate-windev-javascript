@@ -33,8 +33,8 @@ This table traces **every upstream section** to its place in this playbook, so n
 | 04 — short root CLAUDE.md (~50–60 lines, 5 parts) | [04 — Root AGENTS.md](../04-project-memory.md#root-agentsmd--short) | Kept |
 | 04 — local CLAUDE.md files (database, generated entities, build) | [04 — Local instruction files](../04-project-memory.md#local-instruction-files), [templates/local-instructions](../templates/local-instructions/README.md) | Kept (migrations, bindings, domain, CI, legacy) |
 | 04 — docs/, ADRs, runbooks, rolling handoff | [04](../04-project-memory.md#docs--the-detailed-truth) | Kept |
-| 04 — skills (review, handoff format) | [04 — Skills](../04-project-memory.md#skills--reusable-workflows), [review](../templates/claude/skills/review/SKILL.md), [map-element](../templates/claude/skills/map-element/SKILL.md) | Kept and extended |
-| 04 — hooks (block DROP, forbidden commands); `.claude/` edited by the human | [04 — Hooks](../04-project-memory.md#hooks--deterministic-guardrails), [guard.py](../templates/claude/hooks/guard.py), [pre-commit](../templates/git-hooks/pre-commit) | Kept and implemented, with tests |
+| 04 — skills (review, handoff format) | [04 — Skills](../04-project-memory.md#skills--reusable-workflows), [review](../templates/agent/skills/review/SKILL.md), [map-element](../templates/agent/skills/map-element/SKILL.md) | Kept and extended |
+| 04 — hooks (block DROP, forbidden commands); `.claude/` edited by the human — now agent-neutral (commit-time guard) | [04 — Hooks](../04-project-memory.md#hooks--deterministic-guardrails), [guard.py](../templates/agent/guard.py), [pre-commit](../templates/agent/pre-commit) | Kept and implemented, with tests |
 | 05 — roadmap fields | [05 — The roadmap](../05-work-loop.md#the-roadmap), [ROADMAP template](../templates/ROADMAP.template.md) | Kept |
 | 05 — stage cycle diagram, prompt preamble and closing, 3-category review, ADR + status | [05 — Cycle](../05-work-loop.md#the-cycle-of-a-stage) | Kept |
 | 05 — handoff format (5 sections), honest self-criticism | [05 — Handoff format](../05-work-loop.md#the-handoff-format), [template](../templates/handoff.md) | Kept |
@@ -63,7 +63,8 @@ This table traces **every upstream section** to its place in this playbook, so n
 
 ## Additions beyond upstream
 
-- [09 — WLanguage traps](../09-wlanguage-traps.md) and [10 — Parity and verification](../10-parity-and-verification.md).
+- [09 — WLanguage traps](../09-wlanguage-traps.md), [10 — Parity and verification](../10-parity-and-verification.md), [11 — Agents](../11-agents.md) (agent-neutral core: Claude Code, Codex, others), [12 — Project tracking](../12-project-tracking.md), [GETTING-STARTED](../GETTING-STARTED.md).
+- `status.py` progress report and tracker work items; one guard rule set for Git, agent hooks and CI.
 - Inspector with window/control/event context, parity seed and secret hints; `parity_check.py`; `compare_exports.py`; tested hook guard and pre-commit hook.
 - Templates: mapping prompt, map-element skill, roadmap, parity matrix, window spec, golden scenario, compare config.
 

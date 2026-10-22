@@ -15,6 +15,7 @@ Keep this file short (≈60 lines). Details live in `docs/`; local rules live in
 - `src-tauri/migrations/` — ordered SQL migrations; committed ones are immutable. See local `AGENTS.md`.
 - `docs/parity/parity.csv` — behavior parity matrix: the definition of done.
 - `legacy/`, `analysis-local/` — private, ignored, read-only evidence. Never execute legacy code.
+- `skills/` — playbooks to follow; `scripts/` — inspector, parity gate, status, comparator, guard. Humans own `scripts/guard.py`, `.githooks/` and agent configuration: do not modify them.
 
 ## Non-negotiable rules
 
@@ -28,6 +29,7 @@ Keep this file short (≈60 lines). Details live in `docs/`; local rules live in
 8. Generated files (bindings, scaffolds) are regenerated, not edited.
 9. Never claim a check passed unless you ran it. Record checks you could not run.
 10. Do not re-open accepted decisions without new evidence. Read whole files before concluding.
+11. A guard block (`scripts/guard.py`, pre-commit) is deliberate: report it in the handoff; never bypass it (`--no-verify`, renames, other paths).
 
 ## Project-specific rules (filled in at framing, each backed by an ADR)
 
@@ -39,8 +41,18 @@ Keep this file short (≈60 lines). Details live in `docs/`; local rules live in
 npm run verify          # typecheck + lint + unit + parity check: must pass before every commit
 npm run test:e2e        # browser workflow tests with mocked IPC
 npm run tauri -- build  # native package for this OS
+python3 scripts/status.py --roadmap ROADMAP.md   # parity and roadmap progress
 <golden scenarios, bindings generation, migration commands…>
 ```
+
+## Skills (follow the file when the task matches)
+
+- Review a stage → `skills/review/SKILL.md`
+- Map a legacy element → `skills/map-element/SKILL.md`
+
+## Work tracking
+
+Ticket key of the current slice: in `ROADMAP.md` and the `ticket` column of `parity.csv`. Branch `<KEY>-<slug>`, commits start with `<KEY>:`.
 
 ## Pointers
 

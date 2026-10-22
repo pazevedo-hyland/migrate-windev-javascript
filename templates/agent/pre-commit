@@ -1,0 +1,5 @@
+#!/bin/sh
+# Agent-neutral commit guard. Install once per clone:
+#   mkdir -p .githooks && cp templates/agent/pre-commit .githooks/ && chmod +x .githooks/pre-commit
+#   git config core.hooksPath .githooks
+exec python3 scripts/guard.py --staged
