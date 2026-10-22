@@ -76,15 +76,56 @@ class DossierExtractTests(unittest.TestCase):
             "BT 46.72 255.75 Td (Indep. HFSQL ctx.)' ET\n"
             "BT 46.72 240.00 Td (Opening mode)' ET\nBT 280.00 240.00 Td (Centered)' ET\n"
             "BT 46.72 230.00 Td (X position)' ET\nBT 198.16 231.21 Td (0)' ET\nBT 280.00 231.21 Td (0)' ET\n"
-            "BT 177.76 143.19 Td (X position)' ET\nBT 359.44 143.19 Td (Visible)' ET\n"
+            "BT 46.72 220.00 Td (WIN_Login)' ET\n"  # the window's own name is not a property
+            "BT 177.76 143.19 Td (X position)' ET\nBT 240.00 143.19 Td (Y position)' ET\n"
+            "BT 359.44 143.19 Td (Visible)' ET\nBT 420.00 143.19 Td (Initial state)' ET\n"
             "BT 556.24 143.19 Td (Password)' ET\nBT 579.04 143.19 Td (Required input)' ET\n"
-            "BT 46.72 137.56 Td (EDT_palavra_passe)' ET\nBT 177.76 137.56 Td (28)' ET\n"
+            # values are centred under their header, so "Active" starts left of "Initial state"
+            "BT 46.72 137.56 Td (EDT_palavra_passe)' ET\nBT 198.00 137.56 Td (28)' ET\n"
+            "BT 260.00 137.56 Td (40)' ET\nBT 415.00 137.56 Td (Active)' ET\n"
             + tick(360.0, 143.1) + tick(556.8, 143.1) +
-            "BT 46.72 125.19 Td (EDT_utilizador)' ET\nBT 177.76 125.19 Td (28)' ET\n" + tick(360.0, 130.7))
+            "BT 46.72 125.19 Td (EDT_utilizador)' ET\nBT 198.00 125.19 Td (28)' ET\nBT 260.00 125.19 Td (12)' ET\n"
+            + tick(360.0, 130.7) +
+            "BT 46.72 100.50 Td (Opacity)' ET\nBT 273.90 100.50 Td (100)' ET\n")  # a detail key, not a control
         properties, controls = module.checkboxes(content)
         self.assertEqual(properties, {'Large font management': True, 'Indep. HFSQL ctx.': False})
         self.assertEqual(controls['EDT_palavra_passe'], {'Visible': True, 'Password': True, 'Required input': False})
         self.assertEqual(controls['EDT_utilizador'], {'Visible': True, 'Password': False, 'Required input': False})
+        self.assertNotIn('Opacity', controls)
+
+    def test_analysis_key_flags(self):
+        tick = lambda x, y: f'{x} {y} m {x + 2.84} {y - 2.83} l S\n{x + 2.84} {y - 2.83} m {x + 8.5} {y + 2.84} l S\n'
+        content = (
+            "BT 289.24 178.11 Td (Caption)' ET\nBT 485.44 178.11 Td (Type)' ET\n"
+            "BT 623.08 178.11 Td (Unique Key)' ET\nBT 660.88 178.11 Td (Key with Duplicates)' ET\n"
+            "BT 46.72 173.43 Td (ClientesID)' ET\nBT 425.20 173.43 Td (Automatic identifier)' ET\n" + tick(624.9, 177.8) +
+            "BT 46.72 159.27 Td (Codigo)' ET\nBT 425.20 159.27 Td (8-byte integer)' ET\n" + tick(624.9, 163.6) +
+            "BT 46.72 145.11 Td (Descricao)' ET\nBT 425.20 145.11 Td (String)' ET\n" + tick(662.8, 149.5) +
+            "BT 46.72 131.00 Td (Morada1)' ET\nBT 425.20 131.00 Td (String)' ET\n")
+        _, items = module.checkboxes(content)
+        self.assertEqual(items['Codigo'], {'Unique Key': True, 'Key with Duplicates': False})
+        self.assertEqual(items['Descricao'], {'Unique Key': False, 'Key with Duplicates': True})
+        self.assertEqual(items['Morada1'], {'Unique Key': False, 'Key with Duplicates': False})
+
+    def test_tables_continue_across_pages_and_skip_code(self):
+        tick = lambda x, y: f'{x} {y} m {x + 2.84} {y - 2.83} l S\n{x + 2.84} {y - 2.83} m {x + 8.5} {y + 2.84} l S\n'
+        first = ("BT 289.24 178.11 Td (Caption)' ET\nBT 623.08 178.11 Td (Unique Key)' ET\n"
+                 "BT 660.88 178.11 Td (Key with Duplicates)' ET\n"
+                 "BT 46.72 173.43 Td (ClientesID)' ET\nBT 425.20 173.43 Td (Automatic identifier)' ET\n" + tick(624.9, 177.8))
+        # The next page has no header row: its rows continue the table above.
+        second = ("BT 46.72 520.80 Td (artigo)' ET\nBT 425.20 520.70 Td (String)' ET\n" + tick(662.8, 525.2) +
+                  "BT 46.72 500.00 Td (IF)' ET\nBT 52.00 500.00 Td ( )' ET\nBT 57.00 500.00 Td (Timer)' ET\n")
+        carry = {}
+        module.checkboxes(first, carry)
+        _, items = module.checkboxes(second, carry)
+        self.assertEqual(items, {'artigo': {'Unique Key': False, 'Key with Duplicates': True}})
+
+    def test_coverage_warns_when_nothing_is_recognised(self):
+        elements = {'WINDEV window': {'WIN_A': {'controls': {'BTN_X': {'kind': 'Button'}}},
+                                      'WIN_B': {'controls': {}}}}
+        coverage = module.parsed_coverage(elements)
+        self.assertEqual(coverage['windows_with_flags'], '0/2')
+        self.assertTrue(any('windows_with_flags' in w for w in coverage['warnings']))
 
     def test_query_sql_parameters_and_conditions(self):
         pages = [

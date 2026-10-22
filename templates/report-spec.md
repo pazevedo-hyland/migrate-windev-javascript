@@ -8,7 +8,7 @@ Destination: <preview (`iPreview`), printer, PDF, file>. Parameters: <…>.
 
 | Format | Orientation | Margins (mm) T/B/L/R | Printable width (mm) | Widest band (mm) | Fits? |
 |---|---|---|---|---|---|
-| A4 (210 × 297) | portrait | 20/20/20/20 | 170 | <max x + width> | <yes / no: what legacy does> |
+| A4 (210 × 297) | <portrait / landscape, or "not in dossier": read it from the image> | 20/20/20/20 | 170 | <max x + width> | <yes / no: what legacy does> |
 
 ## Data source
 
@@ -18,16 +18,20 @@ Type: <embedded query / query QRY_x / file / programmed>. SQL: <from the dossier
 
 | Band | Repeats | Contents | Notes |
 |---|---|---|---|
+| Start of document | once | <title block, if any> | |
 | Page header | every page | <company name, title, date…> | |
 | Column header | every page | <captions> | |
 | Body | per record | <bound items> | |
 | Break header / footer | per <item> | <…> | |
 | Page footer | every page | <page n/N, totals…> | needs page count (two passes) |
+| End of document | once | <grand totals, if any> | |
 
 ## Columns and controls
 
-| Control | Band | Type | Text / bound item | x, width (mm) | Alignment | Mask / format | Borders | Overflow |
-|---|---|---|---|---|---|---|---|---|
+| Control | Band | Type | Text / bound item | Text source | x, width (mm) | Alignment | Mask / format | Borders | Overflow |
+|---|---|---|---|---|---|---|---|---|---|
+
+Text source: `dossier` (parsed field), `image` (read from the dossier image: say so) or `code`. Geometry comes from the source layout (`layout` in the inspector output) or the dossier, in millimetres. Adjacent cells often share a border line (one cell's x + width = the next x): draw it once.
 
 ## Calculations and presets
 

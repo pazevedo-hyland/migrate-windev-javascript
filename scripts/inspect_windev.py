@@ -177,8 +177,10 @@ def control_layout(text):
                 break
             if line[0] == indent:
                 in_properties = line[0] if line[1] == 'properties' else None
-            elif in_properties is not None and line[1] in ('x', 'y', 'width', 'height') and line[2].lstrip('-').isdigit():
-                geometry.setdefault(line[1], int(line[2]))
+            elif in_properties is not None and line[1] in ('x', 'y', 'width', 'height') and re.fullmatch(r'-?\d+(\.\d+)?', line[2]):
+                # Windows use whole pixels; reports use decimals (millimetres).
+                number = float(line[2])
+                geometry.setdefault(line[1], int(number) if number.is_integer() else number)
         while stack and stack[-1][0] >= indent:
             stack.pop()
         base_x, base_y = (stack[-1][1], stack[-1][2]) if stack else (0, 0)

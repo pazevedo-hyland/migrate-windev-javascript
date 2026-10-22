@@ -7,13 +7,13 @@ description: Map one legacy WINDEV element (window, report, query, procedure set
 
 Input: one unit name. Paths are relative to the repository root; the locations named here are the defaults — when your stage prompt gives other paths, use those. Read in full: the unit's dossier extract if present (`<dossier dir>/<kind>/<unit>.json`: captions, tab order, masks, query SQL — cite it as `dossier: <unit>/<control>`), the unit's source in `legacy/`, its extracted blocks in the inspector output (`<inspect dir>/code/…/<file>.json`), `docs/wlanguage-traps.md` and `docs/mapping/event-codes.md`. Never modify legacy files, never run anything from them, never copy credential values (locations only). Do not write application code.
 
-Read the parsed fields of the dossier extract first (`title`, `controls.<name>.caption`, `tab_order`, `input_mask`, `input_type`, `state`, `flags` — checkbox properties such as `Indep. HFSQL ctx.`, `Required input`, `Multiline` — and for queries `sql`); open `lines` only for what the parsed fields do not cover.
+Read the parsed fields of the dossier extract first (`title`, `controls.<name>.caption`, `tab_order`, `input_mask`, `input_type`, `state`, `flags` — checkbox properties such as `Indep. HFSQL ctx.`, `Required input`, `Multiline` — for analysis items `keys` (`Unique Key`, `Key with Duplicates`), and for queries `sql`). A field missing from the extract is "not extracted", never false: check `index.json` → `coverage` and its warnings; open `lines` only for what the parsed fields do not cover.
 
 ## Scope
 
 - **Rows of the unit**: seed rows whose `element` column equals the unit name — not every row that mentions it. Keep every `SRC-*` ID.
 - **A block** is a non-empty code block (one seed row). Empty event slots are not rows; mention them only when meaningful (e.g. a Print button with no code).
-- **Follow one level of callers and callees**: take the callers from `docs/evidence-report.json` (`callers.<unit>`: file and line) instead of searching, and read those call sites, plus the windows, procedures and queries the unit opens or calls. Cross-window behavior (shared file buffers and filters, globals, parameters, returned values) is where the risky rules are.
+- **Follow one level of callers and callees**: take the callers from `docs/evidence-report.json` (`callers.<unit>`: `<source file>:<line> (<function> in <caller>)`, relative to the inspected folder) instead of searching, and read those call sites, plus the windows, procedures and queries the unit opens or calls. Cross-window behavior (shared file buffers and filters, globals, parameters, returned values) is where the risky rules are.
 
 ## Write `docs/mapping/<unit>.md`
 
@@ -32,7 +32,7 @@ Follow `templates/window-spec.md`. Captions, masks, tab order and button types c
 
 ## Reports
 
-For a report (`.wde`), write `docs/reports/<unit>.md` from `templates/report-spec.md` instead of a screen spec: page format and the printable-width check, data source and sort, bands, columns with bound items (`controls.<name>.item` in the dossier extract, geometry in millimetres), calculations and presets. Report captions are usually visible only in the dossier image: read them there and say so. A report with no caller in `callers` is a finding (how is it printed today?), not an omission of yours.
+For a report (`.wde`), write `docs/reports/<unit>.md` from `templates/report-spec.md` instead of a screen spec: page format and the printable-width check, data source and sort, bands, columns with bound items (`controls.<name>.item` in the dossier extract, geometry in millimetres), calculations and presets. Report captions are usually visible only in the dossier image: read them there and say so. A report with no caller in `callers` is a finding (how is it printed today?), not an omission of yours: confirm it with a case-insensitive search of the sources for the report name (e.g. `grep -rni "RPT_List_Clientes" legacy/code`; a hit outside the report itself and the project file `.wdp`, which lists every element, is a caller the index missed — report it) before writing "no caller found".
 
 ## Write `docs/parity/<unit>.csv`
 

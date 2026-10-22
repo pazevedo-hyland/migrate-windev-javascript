@@ -120,6 +120,21 @@ custom_note :
             'label': {'en-GB': 'Do you want to delete the record?', 'pt-PT': 'Deseja apagar o registo?'},
             'buttons': [{'label': {'en-GB': '&Delete', 'pt-PT': 'Sim'}, 'value': 1}, {'label': {'pt-PT': 'Não'}, 'value': 2}]}])
 
+    def test_control_layout_reads_decimal_report_geometry(self):
+        text = '''report :
+ name : RPT_A
+ controls :
+  -
+    name : ITEM_Codigo
+    properties :
+     x : 66.99
+     y : 0
+     width : 14.66
+     height : 6.2
+'''
+        item = next(i for i in module.control_layout(text) if i['name'] == 'ITEM_Codigo')
+        self.assertEqual((item['x'], item['y'], item['width'], item['height']), (66.99, 0, 14.66, 6.2))
+
     def test_control_layout_adds_parent_offsets(self):
         text = '''window :
  name : WIN_A

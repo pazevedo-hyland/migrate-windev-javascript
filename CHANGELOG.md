@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-23 — extraction fixes from the small-scale run
+
+### Added
+- Analysis item `keys` (Unique Key, Key with Duplicates) from drawn check marks: 126 of 128 items on the real project.
+- Extraction `coverage` in the dossier `index.json`, with warnings when a dossier's layout or labels are not recognised (other WINDEV versions or UI languages).
+- Report geometry in millimetres from the `.wde` sources (decimal positions were dropped).
+- Callers give `<source file>:<line> (<function> in <caller>)`.
+
+### Fixed
+- Checkbox reader: column headers and text columns (Initial state, Button type, Plane, Nb. columns) no longer read as false flags; detail keys (Opacity) and code lines (IF …) no longer read as controls; the window name no longer read as a property; values centred or right-aligned under headers; tables continued on the next page; control names cut at 31 characters merged into the full name; layout measured from the page margin instead of fixed positions.
+- report-spec: text-source column, start/end-of-document bands, orientation "not in dossier", shared borders; map-element skill: confirm "no caller" with a search, read `keys` and `coverage`.
+
 ## 2026-10-22 — small-scale mapping run with the dossier
 
 A dossier-aware mapping run on two windows and one report (with the first pilot's window as an A/B case) drove these changes.

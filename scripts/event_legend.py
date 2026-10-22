@@ -80,7 +80,7 @@ def legend(source_dir, compile_dir):
 
 def markdown(data):
     lines = ['# Event codes (derived from the compile folder)', '',
-             f"Evidence from {data['windows']} windows: compiled event labels paired with raw codes of the text "
+             f"Evidence from {data['windows']} elements (windows and reports): compiled event labels paired with raw codes of the text "
              'sources where unambiguous. Codes without evidence stay `inferred` until confirmed.', '',
              '| Code | Event | Evidence | Conflicts |', '|---|---|---|---|']
     for code, item in data['codes'].items():

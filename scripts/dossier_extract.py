@@ -8,9 +8,11 @@ item types. Requires `pip install pypdf`. Parsing works on page text, so it is t
 PDFs; the raw section text is always kept next to the parsed fields.
 """
 import argparse
+import collections
 import json
 from pathlib import Path
 import re
+import sys
 
 # Properties whose names start with a FIELDS key but mean something else.
 LONGER = ('Image handling menu', 'Caption + Time left', 'Tab order (input)', 'Input mask (display)')
@@ -41,7 +43,10 @@ def drawn_images(page):
 
 TEXT_RUN = re.compile(r"BT ([\d.]+) ([\d.]+) Td \((.*?)\)' ET")
 SEGMENT = re.compile(r'([\d.]+) ([\d.]+) m ([\d.]+) ([\d.]+) l S')
-GRID_COLUMNS = (46.72, 299.08, 551.44)  # label columns of the property grid on "General information" pages
+# Property-grid geometry, in points from the page's left text margin (measured on WINDEV 28 dossiers,
+# A4 landscape): three label columns, each with its checkbox cell at the right end of the column.
+GRID_OFFSETS = (0.0, 252.36, 504.72)
+GRID_CELL = (226.0, 251.8)
 
 
 def ticks(content):
@@ -51,47 +56,88 @@ def ticks(content):
             if abs(c - f) < 0.1 and abs(e - g) < 0.1 and 1 < c - a < 5 and 1 < b - e < 5 and 3 < h - f < 9 and 3 < i - g < 9]
 
 
-def checkboxes(content):
+# Labels as printed by an English-language WINDEV. A dossier printed by another UI language uses other
+# words: add them here (the coverage summary of extract() shows when nothing was recognised).
+CONTROL_TABLE = {'X position'}          # header that starts a table of controls
+KEY_TABLE = {'Unique Key'}              # header that starts an analysis item table with key columns
+# Table columns that hold words or numbers, even when every cell of a page happens to be empty.
+TEXT_COLUMNS = {'X position', 'Y position', 'Width', 'Height', 'Plane', 'Initial state', 'Button type', 'Input type',
+                'Caption', 'Type', 'Direction', 'Default value'}
+COUNT_COLUMN = re.compile(r'^Nb\.')    # "Nb. columns", "Nb. tabs/row": numbers, not checkboxes
+TYPE_WORDS = re.compile(r'integer|String|Memo|Boolean|Date|Time|real|Decimal|identifier|key|Currency|Duration')
+
+
+def checkboxes(content, carry=None):
     """Boolean values drawn as check marks, from a page's raw content stream.
 
-    Returns (properties, controls): window-level properties from the three-column property grid, and per
-    control the boolean columns of control tables (Visible, Password, Required input…). A boolean cell is
-    one with no text in it; a check mark inside means True.
+    Returns (properties, rows): window-level properties from the three-column property grid, and per
+    row of a table — control tables (CONTROL_TABLE header) and analysis item tables (KEY_TABLE header)
+    — its boolean columns. A column holding words in any row is a text column, never a checkbox; in a
+    boolean column a check mark means True and an empty cell False. Tables continue across pages
+    without repeating their header: pass the same `carry` dict for consecutive pages of one element.
     """
     runs = [(float(x), float(y), text.replace('\\(', '(').replace('\\)', ')')) for x, y, text in TEXT_RUN.findall(content)]
     marks = ticks(content)
-    # A control-table header row holds only column titles; the property grid's
-    # "X position 0 Y position 0 Width 380…" row holds numbers.
-    header_rows = sorted({y for x, y, t in runs if t == 'X position' and not any(
-        abs(ly - y) < 2 and re.fullmatch(r'-?[\d.]+', lt) for lx, ly, lt in runs)}, reverse=True)
-    # A control table runs from its header row down to the next header (or the page bottom).
-    tables = [(header_rows[i + 1] if i + 1 < len(header_rows) else -1, y) for i, y in enumerate(header_rows)]
-    in_table = lambda y: any(low < y <= high for low, high in tables)
+    numeric = lambda t: re.fullmatch(r'-?[\d.]+', t) is not None
+    if not runs:
+        return {}, {}
+    # Row labels start at the body margin: the most common x near the left edge (section titles sit a little left of it).
+    left = min(x for x, _, _ in runs)
+    margin = collections.Counter(x for x, _, _ in runs if x < left + 30).most_common(1)[0][0]
+    grid = [margin + offset for offset in GRID_OFFSETS]
+    anchors = sorted({(y, 'control' if t in CONTROL_TABLE else 'key') for x, y, t in runs
+                      if t in CONTROL_TABLE | KEY_TABLE and not any(abs(ly - y) < 2 and numeric(lt) for lx, ly, lt in runs)},
+                     reverse=True)
+    tables = [(anchors[i + 1][0] if i + 1 < len(anchors) else -1, y, kind, None) for i, (y, kind) in enumerate(anchors)]
+    if carry is not None and carry.get('headers'):
+        # Rows above the first header of this page continue the previous page's table.
+        top = max(y for _, y, _ in runs) + 1
+        tables.insert(0, (anchors[0][0] if anchors else -1, top, carry['kind'], carry['headers']))
+    in_table = lambda y: any(low < y <= high for low, high, _, _ in tables)
     properties = {}
     for x, y, label in runs:
-        if not any(abs(x - column) < 0.5 for column in GRID_COLUMNS) or in_table(y):
+        if not any(abs(x - column) < 0.5 for column in grid) or in_table(y) or re.fullmatch(r'\w+_\w+', label):
             continue
-        cell = (x + 226.0, x + 251.8)
-        if any(cell[0] <= lx <= cell[1] and abs(ly - y) < 3 for lx, ly, _ in runs):
-            continue  # a text value: not a checkbox
+        # A checkbox property has nothing else on its row within its column (no value text).
+        if any(x < lx < x + GRID_CELL[1] and abs(ly - y) < 3 for lx, ly, _ in runs):
+            continue
+        cell = (x + GRID_CELL[0], x + GRID_CELL[1])
         properties[label] = any(cell[0] <= tx <= cell[1] and -4 <= ty - y <= 10 for tx, ty in marks)
-    controls = {}
-    for index, header_y in enumerate(header_rows):
-        headers = sorted((x, t) for x, y, t in runs if abs(y - header_y) < 0.5 and x > 100)
-        floor = header_rows[index + 1] if index + 1 < len(header_rows) else -1
-        rows = [(y, t) for x, y, t in runs if abs(x - GRID_COLUMNS[0]) < 0.5 and floor < y < header_y - 1]
-        for row_y, name in rows:
-            if not re.fullmatch(r'[A-Za-z_][\w$]*', name):
+    rows = {}
+    for floor, header_y, kind, carried in tables:
+        headers = carried or sorted((x, t) for x, y, t in runs if abs(y - header_y) < 0.5 and x > margin + 50)
+        anchor_x = next((x for x, t in headers if t in (CONTROL_TABLE if kind == 'control' else KEY_TABLE)), None)
+        if anchor_x is None:
+            continue  # the header word sits in the label column: a property, not a table
+        if carry is not None:
+            carry.update(headers=headers, kind=kind)
+        # Word values are centred under their header: a column spans midpoint to midpoint.
+        xs = [x for x, _ in headers]
+        columns = [(x, (xs[i - 1] + x) / 2 if i else x - 20, (x + xs[i + 1]) / 2 if i + 1 < len(xs) else x + 40, t)
+                   for i, (x, t) in enumerate(headers)]
+        candidates = []
+        for x, y, name in runs:
+            if abs(x - margin) >= 0.5 or not (floor < y < header_y + 1) or not re.fullmatch(r'[A-Za-z_][\w$]*', name):
                 continue
-            values = {}
-            for position, (column_x, column) in enumerate(headers):
-                right = headers[position + 1][0] if position + 1 < len(headers) else column_x + 40
-                if any(column_x - 1 <= lx < right - 1 and abs(ly - row_y) < 3 for lx, ly, _ in runs):
-                    continue  # this cell holds text (a number, a state, an input type)
-                values[column] = any(column_x - 1 <= tx < right - 1 and 2 <= ty - row_y <= 7 for tx, ty in marks)
+            same_row = [(lx, lt) for lx, ly, lt in runs if abs(ly - y) < 2 and lx > x + 1]
+            if any(lx < x + 100 for lx, _ in same_row):
+                continue  # code is drawn token by token ("IF", " ", "Timer"…); table values start far right
+            if kind == 'control' and sum(1 for lx, lt in same_row if anchor_x - 20 < lx < anchor_x + 150 and numeric(lt)) < 2:
+                continue  # not a control row: detail keys ("Opacity 100") have no X and Y coordinates
+            if kind == 'key' and not any(TYPE_WORDS.search(lt) for _, lt in same_row):
+                continue
+            candidates.append((y, name))
+        # Numbers are right-aligned past their header, so only words mark a text column.
+        text_columns = TEXT_COLUMNS | {t for _, left, right, t in columns for y, _ in candidates
+                                       if any(left <= lx < right and abs(ly - y) < 2 and not numeric(lt) for lx, ly, lt in runs)}
+        for y, name in candidates:
+            # A check mark is drawn just right of its column header's x.
+            values = {t: any(-3 <= tx - hx <= 8 and 2 <= ty - y <= 7 for tx, ty in marks)
+                      for hx, _, right, t in columns if t not in text_columns and not COUNT_COLUMN.match(t)
+                      and (kind == 'control' or right > anchor_x)}  # analysis: only the key columns
             if values:
-                controls[name] = values
-    return properties, controls
+                rows[name] = values
+    return properties, rows
 
 
 def split_header(text):
@@ -274,15 +320,24 @@ def extract(pdf, out, images=True):
     reader = PdfReader(str(pdf))
     texts = [page.extract_text() or '' for page in reader.pages]
     elements = collect(texts)
+    carries = {}
     for page, text in zip(reader.pages, texts):
         part, header, _ = split_header(text)
         if not part or len(header) < 2 or header[0] not in elements or header[1] not in elements[header[0]]:
             continue
+        if len(header) > 2 and 'code' in header[-1].lower():
+            continue  # code listings ("Code", "Control code") hold no checkboxes
         contents = page.get_contents()
-        properties, controls = checkboxes(contents.get_data().decode('latin1') if contents is not None else '')
+        carry = carries.setdefault(tuple(header), {})  # same element and section: a table may continue
+        properties, controls = checkboxes(contents.get_data().decode('latin1') if contents is not None else '', carry)
         item = elements[header[0]][header[1]]
-        if properties:
+        if properties and header[0] == 'WINDEV window':  # reports and queries have no property grid
             item.setdefault('flags', {}).update(properties)
+        if header[0] == 'Analysis':
+            # Item key flags belong to the file whose pages these are.
+            if len(header) > 3:
+                item.setdefault('item_flags', {}).setdefault(header[3], {}).update(controls)
+            continue
         for name, values in controls.items():
             target = item.setdefault('controls', {}).setdefault(name, {'kind': None, 'raw': []})
             target.setdefault('flags', {}).update(values)
@@ -297,14 +352,55 @@ def extract(pdf, out, images=True):
                     target.parent.mkdir(exist_ok=True)
                     target.write_bytes(largest.data)
                     elements[header[0]][header[1]]['image_file'] = str(target.relative_to(out))
+    for analysis in elements.get('Analysis', {}).values():
+        for file, flags in analysis.pop('item_flags', {}).items():
+            for entry in analysis.get('files', {}).get(file, {}).get('items', []):
+                if entry['name'] in flags:
+                    entry['keys'] = flags[entry['name']]
+    for window in elements.get('WINDEV window', {}).values():
+        controls = window.get('controls', {})
+        for name in [n for n, c in controls.items() if not c.get('kind')]:
+            # Control tables cut long names (31 characters): merge into the full name from the detail pages.
+            full = [n for n, c in controls.items() if c.get('kind') and n != name and n.split('.')[-1].startswith(name)]
+            if len(full) == 1:
+                truncated = controls.pop(name)
+                controls[full[0]].setdefault('flags', {}).update(truncated.get('flags', {}))
+                controls[full[0]]['raw'] = controls[full[0]].get('raw', []) + truncated.get('raw', [])
     for kind, items in elements.items():
         folder = out / re.sub(r'\W+', '-', kind.lower()).strip('-')
         folder.mkdir(exist_ok=True)
         for element, item in items.items():
             (folder / f'{element}.json').write_text(json.dumps(item, indent=1, ensure_ascii=False), encoding='utf-8')
     summary = {kind: len(items) for kind, items in elements.items()}
-    (out / 'index.json').write_text(json.dumps({'pages': len(texts), 'elements': summary}, indent=2), encoding='utf-8')
-    return summary
+    coverage = parsed_coverage(elements)
+    (out / 'index.json').write_text(json.dumps({'pages': len(texts), 'elements': summary, 'coverage': coverage},
+                                               indent=2), encoding='utf-8')
+    for warning in coverage['warnings']:
+        print(f'warning: {warning}', file=sys.stderr)
+    return {'elements': summary, 'coverage': coverage}
+
+
+def parsed_coverage(elements):
+    """How much of each kind the parser recognised, so a dossier with another layout or UI language
+    fails loudly instead of yielding silently empty fields."""
+    windows = {k: v for k, v in elements.get('WINDEV window', {}).items() if k != '_general'}
+    controls = [c for w in windows.values() for c in w.get('controls', {}).values() if c.get('kind')]
+    items = [e for a in elements.get('Analysis', {}).values() for f in a.get('files', {}).values() for e in f['items']]
+    queries = {k: v for k, v in elements.get('Query', {}).items() if k != '_general'}
+    counts = {
+        'windows_with_flags': f"{sum(1 for w in windows.values() if w.get('flags'))}/{len(windows)}",
+        'controls_with_caption': f"{sum(1 for c in controls if c.get('caption'))}/{len(controls)}",
+        'controls_with_flags': f"{sum(1 for c in controls if c.get('flags'))}/{len(controls)}",
+        'analysis_items_with_keys': f"{sum(1 for e in items if 'keys' in e)}/{len(items)}",
+        'queries_with_sql': f"{sum(1 for q in queries.values() if q.get('sql'))}/{len(queries)}",
+    }
+    warnings = []
+    for name, value in counts.items():
+        found, total = map(int, value.split('/'))
+        if total and found < total / 2:
+            warnings.append(f'{name} {value}: layout or labels not recognised (see CONTROL_TABLE, KEY_TABLE, '
+                            'GRID_OFFSETS in dossier_extract.py); treat the missing fields as not extracted, not as false')
+    return {**counts, 'warnings': warnings}
 
 
 def main():

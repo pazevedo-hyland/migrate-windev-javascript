@@ -132,7 +132,7 @@ def arguments(code, start):
 
 
 def calls(inspect_dir):
-    """{function: [(element, line, first literal argument)]} across all code blocks."""
+    """{function: [(element, line, first literal argument, source path)]} across all code blocks."""
     names = {n.lower(): n for group in CATEGORIES.values() for n in group}
     pattern = re.compile(r'\b(' + '|'.join(sorted(names, key=len, reverse=True)) + r')\s*\(', re.I)
     found = collections.defaultdict(list)
@@ -145,7 +145,7 @@ def calls(inspect_dir):
                     found_args = arguments(code, match.end())
                     index = LITERALS.get(function)
                     literal = found_args[index] if index is not None and index < len(found_args) else ''
-                    found[function].append((name, block['start_line'] + offset, literal))
+                    found[function].append((name, block['start_line'] + offset, literal, data.get('path', name)))
     return found
 
 
@@ -154,13 +154,15 @@ def text_in(labels, language):
 
 
 def callers(used):
-    """{element: [caller element:line (function)]}: who opens each window and prints each report."""
+    """{element: ['<source path>:<line> (<function> in <caller>)']}: who opens each window and prints each report.
+
+    Paths are relative to the folder the inspector read (prefix it, e.g. `legacy/code/`)."""
     index = collections.defaultdict(list)
     for function in ('Open', 'OpenChild', 'OpenSister', 'iPrintReport', 'ExecuteProcess'):
-        for element, line, literal in used.get(function, []):
+        for element, line, literal, *path in used.get(function, []):
             target = re.match(r'[A-Za-z_][\w$]*', literal or '')
             if target:
-                index[target[0]].append(f'{element}:{line} ({function})')
+                index[target[0]].append(f'{path[0] if path else element}:{line} ({function} in {element})')
     # WLanguage names are case-insensitive: open(win_sistema) opens WIN_sistema.
     merged = collections.defaultdict(set)
     spelling = {}
@@ -251,6 +253,9 @@ def main():
     used = calls(args.inspect_dir)
     questions = runtime_questions(args.inspect_dir, args.dossier, args.language)
     caller_index = callers(used)
+    # Key the JSON by each element's real name, not by the spelling of its first call site.
+    known = {row['element'].lower(): row['element'] for row in rows}
+    caller_index = CaseInsensitive({known.get(name.lower(), name): sites for name, sites in caller_index.items()})
     first = first_window(args.dossier)
     for row in rows:
         if row['kind'] in ('window', 'report') and not caller_index.get(row['element']) and row['element'] != first:

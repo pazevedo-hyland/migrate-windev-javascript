@@ -23,10 +23,11 @@ class EvidenceReportTests(unittest.TestCase):
                          ['"db"', '"server"', '""', 'CompleteDir(fExeDir())+"servidor.ini"'])
 
     def test_caller_index_is_case_insensitive(self):
-        used = {'Open': [('WIN_MENU', 10, 'win_sistema'), ('WIN_A', 5, 'WIN_Sistema')], 'iPrintReport': [('WIN_A', 7, 'RPT_X')]}
+        used = {'Open': [('WIN_MENU', 10, 'win_sistema', 'WIN_MENU.wdw'), ('WIN_A', 5, 'WIN_Sistema', 'WIN_WIN_A.wdw')],
+                'iPrintReport': [('WIN_A', 7, 'RPT_X', 'WIN_WIN_A.wdw')]}
         index = module.callers(used)
-        self.assertEqual(index.get('WIN_sistema'), ['WIN_A:5 (Open)', 'WIN_MENU:10 (Open)'])
-        self.assertEqual(index.get('rpt_x'), ['WIN_A:7 (iPrintReport)'])
+        self.assertEqual(index.get('WIN_sistema'), ['WIN_MENU.wdw:10 (Open in WIN_MENU)', 'WIN_WIN_A.wdw:5 (Open in WIN_A)'])
+        self.assertEqual(index.get('rpt_x'), ['WIN_WIN_A.wdw:7 (iPrintReport in WIN_A)'])
 
     def test_coverage_usage_and_grouped_questions(self):
         with tempfile.TemporaryDirectory() as directory:
