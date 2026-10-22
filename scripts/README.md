@@ -42,6 +42,14 @@ python3 scripts/parity_check.py docs/parity/parity.csv [--seed analysis-local/in
 
 Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). With `--seed`, every seed row must still exist. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
 
+## `plan_capture.py` — unattended capture plan
+
+```sh
+python3 scripts/plan_capture.py analysis-local/inspect-1 --out analysis-local/capture-plan.json
+```
+
+Lists every window, every route that opens it (menu option or button, call and arguments, evidence) and classifies routes and windows: `navigation` / `review` / `writes` for clicks, and whether the window writes on open or close. Writes `capture-plan.json` and a `capture-plan.md` checklist. Used by the [Windows capture kit](windows/README.md), which also contains `capture_app.py` (screens) and `export_odbc.py` (data).
+
 ## `compare_exports.py` — golden master and reconciliation
 
 ```sh

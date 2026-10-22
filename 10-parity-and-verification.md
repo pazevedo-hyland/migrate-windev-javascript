@@ -30,6 +30,8 @@ The only robust proof that totals, rounding, statuses and reports match is to **
 4. **Replay** in the target from the same "before" state, through the use cases (fast tests) and end to end (slower).
 5. **Compare** with `scripts/compare_exports.py`: keys, renames, ignored technical columns and **declared** normalizations (decimal comma, date formats, trimming). Any undeclared difference fails.
 
+**No legacy runs available?** Historical data is a golden dataset too: wherever the legacy app stored a derived value (order totals, stock levels, durations, statuses) next to its inputs, the target's domain functions must reproduce it from those inputs. Every disagreement is either a rule not yet understood or a data-quality issue to record.
+
 Choose scenarios for: every workflow's happy path, each boundary (zero, negative, maximum, empty date), each error message, rounding with many lines, and every report. Record them early (stage 0–3), while the legacy app and its experts are available.
 
 ## 3. UI fidelity

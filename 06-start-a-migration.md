@@ -24,6 +24,10 @@ Add `--fallback-encoding cp1252` for older non-Unicode sources, `--extra-ext .ww
 
 The inspector is deliberately shallow: it extracts code blocks with their window/control path and raw event code, raw XDD metadata, a **parity seed** (one row per block, table and unresolved export), and secret locations. It never guesses meanings. See [scripts/README](scripts/README.md).
 
+## 4b. Capture runtime evidence
+
+Screenshots, control trees, tab order and a full data export come from one unattended session with the [Windows capture kit](scripts/windows/README.md): `plan_capture.py` classifies every route to every window from the code, and the crawler only follows routes that cannot write, stopping if any data file changes.
+
 ## 5. Map the legacy application (before coding)
 
 The first prompt to the implementer is the **mapping** ([templates/mapping-prompt.md](templates/mapping-prompt.md)):

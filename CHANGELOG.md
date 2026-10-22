@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-22 — unattended capture without WINDEV
+
+### Added
+- `scripts/plan_capture.py`: classifies every route to every window from the code (only-opens / review / writes) and whether windows write on open or close. On the test project: 22 windows reachable automatically, 42 with the review pass, 3 manual.
+- Windows capture kit (`scripts/windows/`): `capture_app.py` drives the running app through UI Automation on a marked copy (screenshots, control trees, tab order, data-file hash guard); `export_odbc.py` exports every table to CSV through PC SOFT's HFSQL ODBC driver; step-by-step runbook.
+- Chapter 10: historical data as golden checks when the legacy app cannot be run.
+
 ## 2026-10-22 — mapping skill tested on a real project
 
 ### Changed
