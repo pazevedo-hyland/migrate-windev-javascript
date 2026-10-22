@@ -39,10 +39,14 @@ def classify(code, query_writes=()):
     return 'review'
 
 
+LAYOUTS = {}
+
+
 def load_blocks(inspect_dir):
     for path in sorted(Path(inspect_dir, 'code').rglob('*.json')):
         data = json.loads(path.read_text(encoding='utf-8'))
         element = Path(data['path']).stem
+        LAYOUTS[element.lower()] = data.get('layout', [])
         for block in data['blocks']:
             yield element, data['path'], block
 
@@ -55,6 +59,7 @@ def plan(inspect_dir):
     for element, path, block in blocks:
         if path.lower().endswith('.wdw'):
             windows.setdefault(element.lower(), {'window': element, 'source': path, 'entries': [],
+                                                 'layout': LAYOUTS.get(element.lower(), []),
                                                  'opening_code': [], 'opening': 'no-writes'})
     for element, path, block in blocks:
         names = block['context']['names']

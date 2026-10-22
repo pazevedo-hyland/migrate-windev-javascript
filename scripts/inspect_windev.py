@@ -151,19 +151,47 @@ def extract_blocks(text, keys=('code',)):
     return blocks
 
 
-def control_names(text):
-    """Every control and table column declared in a window/report, in source order."""
+def control_layout(text):
+    """Every control and table column in source order, with its position inside the window.
+
+    Readable `properties` x/y/width/height are relative to the parent control; nested controls
+    get their parents' offsets added. Missing x or y means 0 (as WINDEV omits them).
+    """
     lines = text.splitlines()
     parsed = structure(lines, literal_mask(lines))
-    names = []
+    items, stack = [], []  # stack: (indent, absolute x, absolute y) of enclosing controls
     for i, entry in enumerate(parsed):
         if not entry or entry[1] != 'name' or not entry[2]:
             continue
         # The nearest less-indented key is the list holding this item (bare `-` lines are not keys).
         parent = next((parsed[j] for j in range(i - 1, -1, -1) if parsed[j] and parsed[j][0] < entry[0]), None)
-        if parent and parent[1] in ('controls', 'columns'):
-            names.append(entry[2])
-    return names
+        if not parent or parent[1] not in ('controls', 'columns'):
+            continue
+        indent = entry[0]
+        geometry, in_properties = {}, None
+        for j in range(i + 1, len(parsed)):
+            line = parsed[j]
+            if not line:
+                continue
+            if line[0] < indent or (line[0] == indent and line[3]):
+                break
+            if line[0] == indent:
+                in_properties = line[0] if line[1] == 'properties' else None
+            elif in_properties is not None and line[1] in ('x', 'y', 'width', 'height') and line[2].lstrip('-').isdigit():
+                geometry.setdefault(line[1], int(line[2]))
+        while stack and stack[-1][0] >= indent:
+            stack.pop()
+        base_x, base_y = (stack[-1][1], stack[-1][2]) if stack else (0, 0)
+        x, y = base_x + geometry.get('x', 0), base_y + geometry.get('y', 0)
+        items.append({'name': entry[2], 'kind': 'column' if parent[1] == 'columns' else 'control',
+                      'x': x, 'y': y, 'width': geometry.get('width'), 'height': geometry.get('height')})
+        stack.append((indent, x, y))
+    return items
+
+
+def control_names(text):
+    """Every control and table column declared in a window/report, in source order."""
+    return [item['name'] for item in control_layout(text)]
 
 
 def literal_keys(text):
@@ -294,8 +322,10 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
                     blocks = extract_blocks(text, literal_block_keys)
                     destination = output / 'code' / (relative + '.json')
                     destination.parent.mkdir(parents=True, exist_ok=True)
-                    controls = control_names(text)
-                    destination.write_text(json.dumps({'path': relative, 'controls': controls, 'blocks': blocks},
+                    layout = control_layout(text)
+                    controls = [item['name'] for item in layout]
+                    destination.write_text(json.dumps({'path': relative, 'controls': controls, 'layout': layout,
+                                                       'blocks': blocks},
                                                       indent=2, ensure_ascii=False), encoding='utf-8')
                     entry.update(status='text', code_blocks=len(blocks), controls=len(controls),
                                  literal_keys=literal_keys(text),

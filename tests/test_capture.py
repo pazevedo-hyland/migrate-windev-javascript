@@ -69,6 +69,21 @@ class CrawlerLogicTests(unittest.TestCase):
         self.assertIsNone(crawler.best_match('OPT_Estados', elements[:2]))
         self.assertIsNone(crawler.best_match('BTN_Unknown', elements))
 
+    def test_layout_matching_on_real_login_geometry(self):
+        # Positions observed on a real WINDEV 28 login window (relative to the window) and its .wdw layout.
+        elements = [(1, (192, 229, 350, 271)), (2, (28, 229, 186, 271)), (3, (290, 74, 350, 114)),
+                    (6, (28, 167, 350, 207)), (7, (28, 75, 284, 115)), (12, (330, 0, 374, 19)), (9, (0, 0, 5, 5))]
+        layout = [{'name': 'EDT_utilizador', 'x': 28, 'y': 75, 'width': 256, 'height': 40},
+                  {'name': 'EDT_palavra_passe', 'x': 28, 'y': 167, 'width': 322, 'height': 40},
+                  {'name': 'BTN_NoName1', 'x': 290, 'y': 74, 'width': 60, 'height': 40},
+                  {'name': 'BTN_Confirmar', 'x': 28, 'y': 229, 'width': 158, 'height': 42},
+                  {'name': 'BTN_Cancelar', 'x': 192, 'y': 229, 'width': 158, 'height': 42},
+                  {'name': 'BTN_SYST_FERMER', 'x': 330, 'y': 0, 'width': 44, 'height': 19},
+                  {'name': 'RADTitle', 'x': 9, 'y': 4, 'width': None, 'height': None}]
+        self.assertEqual(crawler.match_layout(elements, layout),
+                         {1: 'BTN_Cancelar', 2: 'BTN_Confirmar', 3: 'BTN_NoName1', 6: 'EDT_palavra_passe',
+                          7: 'EDT_utilizador', 12: 'BTN_SYST_FERMER'})
+
     def test_data_guard(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -61,6 +61,29 @@ def best_match(control, elements):
     return elements[scored[0][1]][0]
 
 
+def match_layout(elements, layout, tolerance=3):
+    """Pair UI Automation elements with legacy controls by position inside the window.
+
+    elements: [(index, (left, top, right, bottom) relative to the window)]; layout: inspector items.
+    Returns {index: legacy name}; each legacy control is used once, closest match first.
+    """
+    candidates = []
+    for index, (left, top, right, bottom) in elements:
+        for item in layout:
+            if item.get('width') is None or item.get('height') is None:
+                continue
+            delta = max(abs(left - item['x']), abs(top - item['y']),
+                        abs((right - left) - item['width']), abs((bottom - top) - item['height']))
+            if delta <= tolerance:
+                candidates.append((delta, index, item['name']))
+    result, used = {}, set()
+    for delta, index, name in sorted(candidates):
+        if index not in result and name not in used:
+            result[index] = name
+            used.add(name)
+    return result
+
+
 def menu_steps(path):
     """WIN_MENU/MENU__Menu/OPT_Tabelas/OPT_Clientes -> ['OPT_Tabelas', 'OPT_Clientes']."""
     parts = path.split('/')[1:]
@@ -100,6 +123,8 @@ def changed(before, after):
 
 class Desktop:
     """Thin pywinauto wrapper; everything Windows-specific lives here."""
+
+    layouts = {}
 
     def __init__(self, exe, work_dir, timeout):
         from pywinauto import Application  # imported lazily so the planner runs anywhere
@@ -142,7 +167,60 @@ class Desktop:
             except Exception:
                 continue
 
-    def click(self, window, control):
+    def legacy_names(self, window, layout_name):
+        """{element: legacy control name} for a window whose legacy layout is known."""
+        layout = self.layouts.get((layout_name or '').lower())
+        if not layout:
+            return {}
+        origin = window.rectangle()
+        elements = [window] + window.descendants()
+        positions = [(i, (r.left - origin.left, r.top - origin.top, r.right - origin.left, r.bottom - origin.top))
+                     for i, r in ((i, e.rectangle()) for i, e in enumerate(elements))]
+        return {elements[i]: name for i, name in match_layout(positions, layout).items()}
+
+    def identify(self, window):
+        """The legacy window whose layout matches the most elements (at least 3), or None."""
+        best = max(((len(self.legacy_names(window, name)), name) for name in self.layouts), default=(0, None))
+        return best[1] if best[0] >= 3 else None
+
+    def find_window(self, legacy_name):
+        """The visible window or owned dialog that is this legacy window, by layout."""
+        for window in self.windows():
+            for target in [window] + [c for c in window.children() if c.element_info.control_type == 'Window']:
+                if self.identify(target) == legacy_name:
+                    return target
+        return None
+
+    def run_steps(self, steps):
+        """Scripted interaction by legacy names, e.g. a login: [{window, click|type, env|text}]."""
+        for number, step in enumerate(steps, start=1):
+            deadline, window = time.time() + self.timeout, None
+            while window is None and time.time() < deadline:
+                window = self.find_window(step['window'])
+                time.sleep(0.3)
+            if window is None:
+                raise LookupError(f"step {number}: window {step['window']} not found")
+            name = step.get('click') or step.get('type')
+            element = self.by_position(window, name, step['window'])
+            if element is None:
+                raise LookupError(f"step {number}: {name} not found in {step['window']}")
+            if 'click' in step:
+                self.activate(element, True)
+            else:
+                value = os.environ.get(step['env'], '') if 'env' in step else step.get('text', '')
+                try:
+                    element.set_edit_text(value)
+                except Exception:
+                    element.set_focus()
+                    self.send_keys('^a{DEL}')
+                    self.send_keys(value, with_spaces=True)
+            time.sleep(0.8)
+
+    def by_position(self, window, control, layout_name):
+        return next((e for e, name in self.legacy_names(window, layout_name).items()
+                     if name.lower() == control.lower()), None)
+
+    def click(self, window, control, layout_name=None):
         steps = [control] if not isinstance(control, list) else control
         if len(steps) > 1 or steps[0].upper().startswith(('OPT_', 'MENU_OPT_')):
             for number, step in enumerate(steps):
@@ -156,18 +234,24 @@ class Desktop:
             return None
         button = best_match(steps[0], self.elements([window], ('Button', 'Image', 'Hyperlink', 'MenuItem')))
         if button is None:
+            button = self.by_position(window, steps[0], layout_name)
+        if button is None:
             return f'control not found for {steps[0]}'
         self.activate(button, True)
         return None
 
-    @staticmethod
-    def tree(window):
+    def tree(self, window, layout_name=None):
+        names = self.legacy_names(window, layout_name)
+        origin = window.rectangle()
         out = []
         for d in [window] + window.descendants():
             r = d.rectangle()
             info = d.element_info
             out.append({'type': info.control_type, 'name': d.window_text(), 'automation_id': info.automation_id,
-                        'class': info.class_name, 'rect': [r.left, r.top, r.right, r.bottom],
+                        'legacy_name': names.get(d), 'class': info.class_name,
+                        'rect': [r.left, r.top, r.right, r.bottom],
+                        'rect_in_window': [r.left - origin.left, r.top - origin.top,
+                                           r.right - origin.left, r.bottom - origin.top],
                         'enabled': d.is_enabled(), 'visible': d.is_visible()})
         return out
 
@@ -244,9 +328,10 @@ def startup(args, desktop):
                     continue
                 seen.add(target.handle)
                 time.sleep(1)  # let the window finish drawing
-                name = f'{len(captured):02d}-' + re.sub(r'[^\w-]+', '_', target.window_text() or 'untitled')[:40]
-                capture(desktop, target, args.out / '_startup' / name, False)
-                captured.append({'folder': name, 'title': target.window_text(),
+                legacy = desktop.identify(target)
+                name = f'{len(captured):02d}-' + (legacy or re.sub(r'[^\w-]+', '_', target.window_text() or 'untitled')[:40])
+                capture(desktop, target, args.out / '_startup' / name, False, legacy)
+                captured.append({'folder': name, 'title': target.window_text(), 'legacy_window': legacy,
                                  'controls': len(target.descendants())})
         time.sleep(0.5)
     desktop.kill()
@@ -274,10 +359,11 @@ def probe(desktop, main_window, chains, main_name):
             'routes': routes}
 
 
-def capture(desktop, window, folder, tabs):
+def capture(desktop, window, folder, tabs, layout_name=None):
     folder.mkdir(parents=True, exist_ok=True)
     window.capture_as_image().save(folder / 'screenshot.png')
-    (folder / 'tree.json').write_text(json.dumps(Desktop.tree(window), indent=1, ensure_ascii=False), encoding='utf-8')
+    (folder / 'tree.json').write_text(json.dumps(desktop.tree(window, layout_name), indent=1, ensure_ascii=False),
+                                      encoding='utf-8')
     if tabs:
         (folder / 'tab-order.json').write_text(json.dumps(desktop.tab_order(window), indent=1, ensure_ascii=False),
                                                encoding='utf-8')
@@ -296,6 +382,9 @@ def main():
     parser.add_argument('--no-tab-order', action='store_true', help='skip tab-order capture (Tab can fire exit events)')
     parser.add_argument('--login', action='store_true',
                         help='type MIGRATION_APP_USER / MIGRATION_APP_PASSWORD into the first window, then Enter')
+    parser.add_argument('--login-steps', type=Path,
+                        help='JSON list of steps by legacy names, e.g. [{"window": "WIN_Acesso", "type": "EDT_x", '
+                             '"env": "MIGRATION_APP_PASSWORD"}, {"window": "WIN_Acesso", "click": "BTN_OK"}]')
     parser.add_argument('--timeout', type=float, default=15)
     parser.add_argument('--dry-run', action='store_true', help='print the routes and exit')
     parser.add_argument('--startup-only', action='store_true',
@@ -305,6 +394,7 @@ def main():
     args = parser.parse_args()
 
     plan = json.loads(args.plan.read_text(encoding='utf-8'))
+    Desktop.layouts = {w['window'].lower(): w.get('layout', []) for w in plan['windows']}
     chains = routes(plan, args.main_window, args.allow_review)
     if args.dry_run:
         for window, chain in chains.items():
@@ -323,7 +413,14 @@ def main():
     def start():
         desktop = Desktop(args.app_dir / args.exe, args.app_dir, args.timeout)
         first = desktop.wait_new_window(set())
-        if args.login and first is not None:
+        if args.login_steps and first is not None:
+            capture(desktop, first, args.out / '_startup', False, desktop.identify(first))
+            desktop.run_steps(json.loads(args.login_steps.read_text(encoding='utf-8')))
+            deadline = time.time() + args.timeout
+            while time.time() < deadline and desktop.find_window(args.main_window) is None:
+                time.sleep(0.5)
+            first = desktop.find_window(args.main_window)
+        elif args.login and first is not None:
             # No tab-order capture here: moving focus before typing would put the user name in the wrong field.
             capture(desktop, first, args.out / '_startup', False)
             desktop.login(first, os.environ.get('MIGRATION_APP_USER', ''), os.environ.get('MIGRATION_APP_PASSWORD', ''))
@@ -339,7 +436,7 @@ def main():
     desktop, main_window = start()
     if main_window is None:
         parser.exit(1, 'main window did not appear\n')
-    capture(desktop, main_window, args.out / args.main_window, False)
+    capture(desktop, main_window, args.out / args.main_window, False, args.main_window)
     if args.probe:
         result = probe(desktop, main_window, chains, args.main_window)
         (args.out / 'probe.json').write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding='utf-8')
@@ -354,14 +451,14 @@ def main():
             for entry in chain:
                 known = {w.handle for w in desktop.windows()}
                 steps = menu_steps(entry['path']) or [entry['control']]
-                problem = desktop.click(current, steps)
+                problem = desktop.click(current, steps, entry['from'])
                 if problem:
                     raise LookupError(problem)
                 current = desktop.wait_new_window(known)
                 if current is None:
                     raise TimeoutError('no new window after click')
                 opened.append(current)
-            status['title'] = capture(desktop, current, args.out / target, not args.no_tab_order)
+            status['title'] = capture(desktop, current, args.out / target, not args.no_tab_order, target)
             status['result'] = 'captured'
             for window in reversed(opened):
                 surprise = desktop.close(window)

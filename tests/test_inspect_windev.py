@@ -91,6 +91,39 @@ class InspectionTests(unittest.TestCase):
 '''
         self.assertEqual(module.control_names(text), ['TABLE_X', 'COL_Code', 'BTN_Ok', 'EDT_Inner'])
 
+    def test_control_layout_adds_parent_offsets(self):
+        text = '''window :
+ name : WIN_A
+ properties :
+  width : 380
+ controls :
+  -
+    name : SC_Box
+    properties :
+     x : 246
+     y : 1
+     width : 128
+    controls :
+     -
+       name : BTN_Close
+       properties :
+        x : 84
+        y : -1
+        width : 44
+        height : 19
+  -
+    name : EDT_User
+    properties :
+     x : 28
+     y : 75
+     width : 256
+     height : 40
+'''
+        layout = {i['name']: i for i in module.control_layout(text)}
+        self.assertEqual((layout['BTN_Close']['x'], layout['BTN_Close']['y']), (330, 0))
+        self.assertEqual(layout['EDT_User'], {'name': 'EDT_User', 'kind': 'control', 'x': 28, 'y': 75,
+                                              'width': 256, 'height': 40})
+
     def test_real_shape_bare_list_items(self):
         blocks = module.extract_blocks(REAL_SHAPE)
         got = [('/'.join(b['context']['names']), b['context']['siblings'].get('type')) for b in blocks]
