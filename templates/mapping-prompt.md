@@ -7,7 +7,7 @@ Read AGENTS.md (or this prompt if it does not exist yet), docs/wlanguage-traps.m
 
 Goal: map the whole legacy application into docs/mapping/ and docs/parity/parity.csv. Do not write application code.
 
-1. Event-code legend first: create docs/mapping/event-codes.md. For the most frequent raw event codes in the inspector output, infer the meaning from evidence across many windows (control type, code content), label each inferred, and keep it shared so every mapper uses the same meanings.
+1. Event-code legend first: if the project's compile folder (`<project>.cpl/`) was collected, run `python3 scripts/event_legend.py legacy/code --compile-dir legacy/code/<project>.cpl --out docs/mapping/event-codes.md` — meanings come from WINDEV's own compiled event labels and count as verified. For codes it does not cover, infer from evidence across many windows (control type, code content), label each inferred, and keep the legend shared so every mapper uses the same meanings.
 2. Plan the split: one unit per window, report, query, procedure set, class and table group (≈5–10 tables). List units in docs/mapping/README.md with their parity-seed row counts.
 3. Fan out: one unit per sub-agent in parallel (or per parallel session, or sequentially if your agent has no sub-agents). Each follows skills/map-element/SKILL.md and writes docs/mapping/<unit>.md, docs/screens/<unit>.md and docs/parity/<unit>.csv, validated with parity_check.py --element <unit>. Sub-agents only read legacy/ and analysis-local/.
 4. Cross-review: use different sub-agents or sessions (ideally a different model) to review each note against the sources and screenshots. They report missing events, misread rules, unresolved references and wrong confidence labels. Apply the corrections.

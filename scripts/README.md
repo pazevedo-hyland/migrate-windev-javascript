@@ -44,6 +44,14 @@ python3 scripts/parity_check.py docs/parity/parity.csv [--seed analysis-local/in
 
 Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). With `--seed`, every seed row must still exist. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
 
+## `event_legend.py` — event codes verified from the compile folder
+
+```sh
+python3 scripts/event_legend.py legacy/code --compile-dir legacy/code/<project>.cpl --out docs/mapping/event-codes.md
+```
+
+The text sources store events as raw codes (18, 17, 34…). The compiled per-window files in the project's `.cpl` folder contain WINDEV's own label for each coded event ("Click BTN_Save", "Exit from EDT_Name"). Pairing them where unambiguous gives a legend backed by the compiler, with evidence counts and conflicts. On a real WINDEV 28 project: 18 Click (293 matches, no conflict), 17 Whenever modifying, 16 Exit, 15 Entry, 21 Display a row, 33 Select a row, 34 End of initialization, no code = Global declarations. The inspector itself skips `.cpl` folders (they are build output, not sources).
+
 ## `render_layouts.py` — every legacy window drawn from source
 
 ```sh

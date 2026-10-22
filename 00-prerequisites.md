@@ -53,7 +53,7 @@ Create `legacy/` (ignored by Git) with a fixed layout. The quality of the analys
 
 | Folder | Content | How to obtain |
 |---|---|---|
-| `legacy/code/` | Project in **text format** (`.wdp`, `.wdw`, `.wde`, `.wdr`, `.wdg`, `.wdc`, WebDev pages…) | Switch the project to text backup format, then copy |
+| `legacy/code/` | Project in **text format** (`.wdp`, `.wdw`, `.wde`, `.wdr`, `.wdg`, `.wdc`, WebDev pages…), **including the `<project>.cpl/` compile folder** (it holds WINDEV's event labels, used to verify event codes) | Switch the project to text backup format, then copy |
 | `legacy/schema/` | Analysis export (XDD) and the **generated SQL script** | Generate from the analysis |
 | `legacy/queries/` | SQL and parameters of every query, especially binary ones | Export from the query editor |
 | `legacy/data/` | Sanitized CSV per table + manifest (encoding, delimiter, decimal and date format, row counts) | HFSQL export tools |

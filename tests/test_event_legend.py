@@ -1,0 +1,65 @@
+from pathlib import Path
+import tempfile
+import unittest
+
+from helpers import load
+
+module = load('scripts/event_legend.py')
+
+WINDOW = '''window :
+ name : WIN_A
+ controls :
+  -
+    name : BTN_Save
+    code_elements :
+     p_codes :
+      -
+        code : |1-
+         Save()
+        type : 18
+  -
+    name : EDT_Name
+    code_elements :
+     p_codes :
+      -
+        code : |1-
+         Check()
+        type : 16
+ code_elements :
+  p_codes :
+   -
+     code : |1-
+      PROCEDURE MyWindow()
+   -
+     code : |1-
+      Init()
+     type : 34
+   -
+     code : |1-
+      PROCEDURE Helper()
+     type : 458752
+'''
+
+
+def compiled(*labels):
+    return b'PCS\x00\x01\x01' + b'\x00\x01'.join(label.encode('utf-16-le') for label in labels)
+
+
+class EventLegendTests(unittest.TestCase):
+    def test_legend_from_compiled_labels(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'src').mkdir()
+            (root / 'src/WIN_A.wdw').write_text(WINDOW, encoding='utf-8')
+            (root / 'cpl/user').mkdir(parents=True)
+            (root / 'cpl/user/WIN_A.1234ABCD.wdw.wcw').write_bytes(compiled(
+                'Global declarations of WIN_A', 'End of initialization of WIN_A', 'Initialization of BTN_Save',
+                'Click BTN_Save', 'Initialization of EDT_Name', 'Exit from EDT_Name'))
+            data = module.legend(root / 'src', root / 'cpl')
+        events = {code: item['event'] for code, item in data['codes'].items()}
+        self.assertEqual(events, {'18': 'Click', '16': 'Exit', 'none': 'Global declarations', '34': 'End of initialization'})
+        self.assertIn('| 18 | Click | 1 | — |', module.markdown(data))
+
+
+if __name__ == '__main__':
+    unittest.main()
