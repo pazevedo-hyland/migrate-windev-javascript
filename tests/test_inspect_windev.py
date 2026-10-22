@@ -135,7 +135,10 @@ class InspectionTests(unittest.TestCase):
             for folder in ('Backup', 'Bkp_20261022', 'project.cpl', 'Exe'):
                 (source / folder).mkdir()
                 (source / folder / 'copy.wdw').write_text('skip')
-            (source / 'link.wdw').symlink_to(source / 'window.wdw')
+            try:
+                (source / 'link.wdw').symlink_to(source / 'window.wdw')
+            except OSError:
+                pass  # Windows without symlink privilege: nothing to skip
             out = source / 'analysis-local'
             manifest = module.inspect(source, out, extra_extensions=['wwh'])
             self.assertEqual(len(manifest['files']), 6)

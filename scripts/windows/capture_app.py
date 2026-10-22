@@ -120,28 +120,43 @@ class Desktop:
             time.sleep(0.3)
         return None
 
+    def elements(self, scopes, control_types):
+        """(element, caption, automation id) for matching, de-duplicated across overlapping scopes."""
+        found, seen = [], set()
+        for scope in scopes:
+            for d in scope.descendants():
+                info = d.element_info
+                key = tuple(info.runtime_id or ()) or id(d)
+                if info.control_type in control_types and key not in seen:
+                    seen.add(key)
+                    found.append((d, d.window_text(), info.automation_id))
+        return found
+
+    @staticmethod
+    def activate(element, leaf):
+        for action in (('invoke',) if leaf else ('expand', 'invoke')) + ('click_input',):
+            try:
+                getattr(element, action)()
+                return
+            except Exception:
+                continue
+
     def click(self, window, control):
         steps = [control] if not isinstance(control, list) else control
         if len(steps) > 1 or steps[0].upper().startswith(('OPT_', 'MENU_OPT_')):
-            items = []
-            for step in steps:
-                scope = items[-1] if items else window
-                item = best_match(step, [(d, d.window_text(), d.element_info.automation_id)
-                                         for d in scope.descendants(control_type='MenuItem')])
+            for number, step in enumerate(steps):
+                # Submenus open as separate popup windows: search every window of the app after the first level.
+                scopes = [window] if number == 0 else self.windows()
+                item = best_match(step, self.elements(scopes, ('MenuItem',)))
                 if item is None:
                     return f'menu item not found for {step}'
-                item.select() if hasattr(item, 'select') else item.click_input()
-                items.append(item)
-                time.sleep(0.3)
+                self.activate(item, number == len(steps) - 1)
+                time.sleep(0.4)
             return None
-        button = best_match(steps[0], [(d, d.window_text(), d.element_info.automation_id) for d in window.descendants()
-                                       if d.element_info.control_type in ('Button', 'Image', 'Hyperlink', 'MenuItem')])
+        button = best_match(steps[0], self.elements([window], ('Button', 'Image', 'Hyperlink', 'MenuItem')))
         if button is None:
             return f'control not found for {steps[0]}'
-        try:
-            button.invoke()
-        except Exception:
-            button.click_input()
+        self.activate(button, True)
         return None
 
     @staticmethod
@@ -164,7 +179,8 @@ class Desktop:
             from pywinauto.uia_element_info import UIAElementInfo
             from pywinauto.uia_defines import IUIA
             info = UIAElementInfo(IUIA().iuia.GetFocusedElement())
-            key = (info.control_type, info.name, tuple(info.rectangle.__dict__.values()) if info.rectangle else None)
+            r = info.rectangle
+            key = (info.control_type, info.name, (r.left, r.top, r.right, r.bottom) if r else None)
             if key in seen:
                 break
             seen.add(key)
@@ -176,6 +192,26 @@ class Desktop:
 
     def kill(self):
         self.app.kill()
+
+
+def probe(desktop, main_window, chains, main_name):
+    """Go/no-go: does UI Automation expose the controls the first hop of each route needs?"""
+    elements = [(d, d.window_text(), d.element_info.automation_id) for d in main_window.descendants()]
+    menu_items = [e for e in elements if e[0].element_info.control_type == 'MenuItem']
+    named = [e for e in elements if e[1] or e[2]]
+    routes = {}
+    for target, chain in chains.items():
+        first = chain[0]
+        if first['from'].lower() != main_name.lower():
+            continue
+        steps = menu_steps(first['path']) or [first['control']]
+        pool = menu_items if steps[0].upper().startswith(('OPT_', 'MENU_OPT_')) else elements
+        routes[target] = 'resolvable' if best_match(steps[0], pool) is not None else 'not found'
+    found = sum(1 for v in routes.values() if v == 'resolvable')
+    return {'controls': len(elements), 'named_controls': len(named), 'menu_items': len(menu_items),
+            'first_hops_resolvable': f'{found}/{len(routes)}',
+            'verdict': 'go' if routes and found >= len(routes) / 2 else 'no-go: inspect probe.json and tree.json',
+            'routes': routes}
 
 
 def capture(desktop, window, folder, tabs):
@@ -202,6 +238,8 @@ def main():
                         help='type MIGRATION_APP_USER / MIGRATION_APP_PASSWORD into the first window, then Enter')
     parser.add_argument('--timeout', type=float, default=15)
     parser.add_argument('--dry-run', action='store_true', help='print the routes and exit')
+    parser.add_argument('--probe', action='store_true',
+                        help='start the app, check which first-hop routes UI Automation can resolve, then exit')
     args = parser.parse_args()
 
     plan = json.loads(args.plan.read_text(encoding='utf-8'))
@@ -237,6 +275,12 @@ def main():
     if main_window is None:
         parser.exit(1, 'main window did not appear\n')
     capture(desktop, main_window, args.out / args.main_window, False)
+    if args.probe:
+        result = probe(desktop, main_window, chains, args.main_window)
+        (args.out / 'probe.json').write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding='utf-8')
+        desktop.kill()
+        print(json.dumps({k: v for k, v in result.items() if k != 'routes'}, indent=2, ensure_ascii=False))
+        return
     baseline = data_files(data_dir)  # after startup: first-run setup writes are not the crawler's
     for target, chain in chains.items():
         status = {'route': [f"{e['from']}:{e['control']}" for e in chain]}

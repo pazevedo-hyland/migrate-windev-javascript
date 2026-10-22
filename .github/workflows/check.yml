@@ -4,14 +4,44 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
+        os: [ubuntu-latest]
         python-version: ['3.10', '3.13']
+        include:
+          - os: windows-latest
+            python-version: '3.12'
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: python3 -m unittest discover -s tests -v
-      - run: sh -n templates/agent/pre-commit
+      - run: python -m unittest discover -s tests -v
+      - if: runner.os == 'Linux'
+        run: sh -n templates/agent/pre-commit
+
+  windows-end-to-end:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pywinauto pillow pyodbc
+      - name: Build the fake WINDEV-style app
+        run: C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /codepage:65001 /target:winexe /out:FakeApp.exe /r:System.Windows.Forms.dll /r:System.Drawing.dll tests\windows_e2e\FakeApp.cs
+      - name: Inspector, planner and crawler against the fake app
+        run: python tests\windows_e2e\run_e2e.py FakeApp.exe ${{ runner.temp }}\e2e
+      - name: Install SQLite ODBC driver
+        if: always()
+        run: choco install sqliteodbc -y --no-progress
+      - name: ODBC export against a real driver
+        if: always()
+        run: python tests\windows_e2e\odbc_e2e.py ${{ runner.temp }}\odbc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-end-to-end
+          path: ${{ runner.temp }}\e2e
+          retention-days: 7
