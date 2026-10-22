@@ -165,6 +165,29 @@ class Desktop:
     def windows(self):
         return [w for w in self.app.windows() if w.is_visible()]
 
+    @staticmethod
+    def owned(window):
+        """Dialogs nested under a window. WINDEV exposes its modal windows as titled native panes,
+        standard dialogs as Window elements."""
+        found = []
+        try:
+            children = window.children()
+        except Exception:
+            return found
+        for child in children:
+            info = child.element_info
+            if info.control_type == 'Window' or (info.control_type == 'Pane' and info.handle and child.window_text()):
+                found.append(child)
+        return found
+
+    def all_windows(self):
+        """Top-level windows and the dialogs nested under them, innermost last."""
+        result = []
+        for window in self.windows():
+            result.append(window)
+            result.extend(self.owned(window))
+        return result
+
     def wait_new_window(self, known):
         deadline = time.time() + self.timeout
         while time.time() < deadline:
@@ -231,10 +254,9 @@ class Desktop:
 
     def find_window(self, legacy_name):
         """The visible window or owned dialog that is this legacy window, by layout."""
-        for window in self.windows():
-            for target in [window] + [c for c in window.children() if c.element_info.control_type == 'Window']:
-                if (self.identify(target) or '').lower() == legacy_name.lower():
-                    return target
+        for target in reversed(self.all_windows()):
+            if (self.identify(target) or '').lower() == legacy_name.lower():
+                return target
         return None
 
     def run_steps(self, steps):
@@ -246,6 +268,8 @@ class Desktop:
                 time.sleep(0.3)
             if window is None:
                 self.diagnose(f'step-{number}')
+                if step.get('optional'):
+                    continue
                 raise LookupError(f"step {number}: window {step['window']} not found")
             name = step.get('click') or step.get('type') or step.get('click_text')
             if 'click_text' in step:  # e.g. a grid row or list item showing this text
@@ -254,6 +278,8 @@ class Desktop:
                 element = self.by_position(window, name, step['window'])
             if element is None:
                 self.diagnose(f'step-{number}')
+                if step.get('optional'):
+                    continue
                 raise LookupError(f"step {number}: {name} not found in {step['window']}")
             if 'click_text' in step:
                 element.click_input()
@@ -275,14 +301,11 @@ class Desktop:
         """Save every visible window and owned dialog (screenshot + tree) when a step fails."""
         if self.diagnostics is None:
             return
-        for n, window in enumerate(self.windows()):
-            for m, target in enumerate([window] + [c for c in window.children()
-                                                   if c.element_info.control_type == 'Window']):
-                try:
-                    capture(self, target, self.diagnostics / f'_failed-{label}' / f'{n:02d}-{m:02d}', False,
-                            self.identify(target))
-                except Exception:
-                    continue
+        for n, target in enumerate(self.all_windows()):
+            try:
+                capture(self, target, self.diagnostics / f'_failed-{label}' / f'{n:02d}', False, self.identify(target))
+            except Exception:
+                continue
 
     def by_position(self, window, control, layout_name):
         return next((e for e, name in self.legacy_names(window, layout_name).items()
@@ -370,10 +393,7 @@ class Desktop:
             if surprise:
                 return surprise[0]
             # UI Automation lists a dialog owned by the window as its child, not as a top-level window.
-            try:
-                owned = [c for c in window.children() if c.element_info.control_type == 'Window']
-            except Exception:
-                owned = []
+            owned = self.owned(window)
             if owned:
                 return owned[0]
             if not self.app.window(handle=handle).exists(timeout=0):
@@ -390,17 +410,16 @@ def startup(args, desktop):
     seen, captured = set(), []
     deadline = time.time() + args.timeout
     while time.time() < deadline:
-        for window in desktop.windows():
-            for target in [window] + [c for c in window.children() if c.element_info.control_type == 'Window']:
-                if target.handle in seen:
-                    continue
-                seen.add(target.handle)
-                time.sleep(1)  # let the window finish drawing
-                legacy = desktop.identify(target)
-                name = f'{len(captured):02d}-' + (legacy or re.sub(r'[^\w-]+', '_', target.window_text() or 'untitled')[:40])
-                capture(desktop, target, args.out / '_startup' / name, False, legacy)
-                captured.append({'folder': name, 'title': target.window_text(), 'legacy_window': legacy,
-                                 'controls': len(target.descendants())})
+        for target in desktop.all_windows():
+            if target.handle in seen:
+                continue
+            seen.add(target.handle)
+            time.sleep(1)  # let the window finish drawing
+            legacy = desktop.identify(target)
+            name = f'{len(captured):02d}-' + (legacy or re.sub(r'[^\w-]+', '_', target.window_text() or 'untitled')[:40])
+            capture(desktop, target, args.out / '_startup' / name, False, legacy)
+            captured.append({'folder': name, 'title': target.window_text(), 'legacy_window': legacy,
+                             'controls': len(target.descendants())})
         time.sleep(0.5)
     desktop.kill()
     (args.out / 'startup-report.json').write_text(json.dumps(captured, indent=2, ensure_ascii=False), encoding='utf-8')
