@@ -31,6 +31,25 @@ Keep this file short (≈60 lines). Details live in `docs/`; local rules live in
 10. Do not re-open accepted decisions without new evidence. Read whole files before concluding.
 11. A guard block (`scripts/guard.py`, pre-commit) is deliberate: report it in the handoff; never bypass it (`--no-verify`, renames, other paths).
 
+## No guessing
+
+When the evidence does not say what the legacy app does (an unresolved `U-nn` in the mapping note, encoded designer properties, an unknown event code, a binary query):
+
+- Do not pick a behavior silently. Implement the safest reversible option, mark it in code with `// UNRESOLVED U-nn: <choice>`, and list it under "Decisions needed" in the handoff with the evidence you have.
+- The parity row stays `implemented`, never `verified`, until a human decision (ADR) or new evidence resolves it. If only part of a row is unresolved, keep the whole row `implemented` or split the unresolved part into its own row.
+- Do not write tests that pin an unresolved detail (sort order, selection after delete, Esc behavior, inferred colors). Compare as sets or assert only what is known.
+- A user-facing text that does not exist in legacy (a new error message) is a choice: it needs approval before the row is `verified`.
+
+Before marking a row `verified`, check all of these and report them in the handoff:
+
+1. The cited test asserts the row's `target_behavior` and would fail if that behavior were removed (no tests that only check absence or always pass; a test that would still pass with the feature deleted is not evidence).
+2. The test exercises the real path (not a placeholder or a mock standing in for the behavior under test).
+3. No part of the behavior depends on an unresolved item or on your own choice.
+4. If the target differs from legacy, `decision` names the ADR.
+5. Re-read `docs/decisions/` at the end of the stage: ADRs added while you worked apply to your code too.
+
+Identifiers you invent (test ids for controls that do not exist in legacy, helper names) are documented in the screen spec as non-legacy.
+
 ## Project-specific rules (filled in at framing, each backed by an ADR)
 
 <Topology (local SQLite / shared server API), supported OSes, permissions model, report engine, grid/form libraries, update channel, external system access mode (read-only / limited writes / none)…>

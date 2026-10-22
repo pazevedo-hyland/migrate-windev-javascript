@@ -41,6 +41,8 @@ Each prompt is **bounded** ("do not build X yet") and lists its parity rows, evi
 
 No unrequested rewrites. The planner proposes; the human decides.
 
+Review is not optional. In the pilot (playbook validation on a real WINDEV app) the first implementation pass over-claimed 8 of 18 `verified` rows (guesses on unresolved behavior, a test that could never fail, placeholders); with the "No guessing" rules in `AGENTS.md` and one fix stage driven by the review findings, an independent audit found 2 of 17. Plan a review-fix stage after each slice, and never change ADRs while a stage is running — the implementer cannot apply decisions it never saw.
+
 **5. Decisions → ADRs**, parity and roadmap status updated, next stage.
 
 ## The handoff format

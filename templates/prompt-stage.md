@@ -13,7 +13,7 @@ Stage "<name>" (roadmap #<n>):
 - Constraints: inspect the real schema and library APIs before coding; check docs/wlanguage-traps.md for every construct you translate; <architecture constraints from ADRs>.
 - Out of scope: <explicit limits — "do not build X yet">.
 
-Done means: npm run verify passes, the golden scenarios for these rows pass, and each row you mark verified names the test that proves it. List checks you could not run (e.g. native printing on Windows).
+Done means: npm run verify passes, the golden scenarios for these rows pass, and each row you mark verified names the test that proves it. A row whose behavior includes your own choice for an unresolved legacy item stays implemented; put the choice under "Decisions needed". List checks you could not run (e.g. native printing on Windows).
 
 At the end: commit explicit files with a clear message, push, update docs/parity/parity.csv, ROADMAP.md and docs/runbooks/handoff.md (Delivered / Assumptions and differences / Checks actually executed / Remaining work / Decisions needed).
 ```

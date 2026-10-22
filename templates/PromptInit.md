@@ -38,6 +38,7 @@ Each stage prompt STARTS with "Read docs/runbooks/handoff.md, AGENTS.md, ROADMAP
 - Real data: how I provide sanitized representative data and golden scenarios for testing.
 - Tracking: tracker and project key (e.g. Jira MIG) if slices are ticketed.
 - Scope: what is excluded or deliberately changed (each exclusion needs an ADR).
+- Evidence policy: may rows be `verified` when they rely on inferred event-code meanings (docs/mapping/event-codes.md), or only after screenshots/runtime capture confirm the legend?
 - Build order: data first, a vertical workflow first, or another order (fixed in the roadmap + ADR).
 
 ## Project details

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-22 — build phase tested on a real WINDEV pilot
+
+### Changed
+- `AGENTS.template.md`: "No guessing" rules — unresolved legacy behavior is implemented as a flagged, reversible choice and its row stays `implemented`; no tests pinning unknowns or that cannot fail; new user-facing texts need approval; five checks before `verified`; re-read ADRs at the end of a stage.
+- Review skill, stage prompt and chapter 10: a row whose behavior includes an implementer's choice is not `verified`.
+- Chapter 05: mandatory review-fix stage per slice, with the pilot's numbers (8/18 over-claimed on first pass, 2/17 after rules and one fix stage); no ADR changes while a stage runs.
+- PromptInit: evidence policy question for inferred event codes.
+
 ## 2026-10-22 — unattended capture without WINDEV
 
 ### Added
