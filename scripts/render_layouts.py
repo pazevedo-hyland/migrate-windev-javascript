@@ -29,7 +29,7 @@ def captions_from_dossier(dossier_dir, language='PT'):
 
 def svg(window, layout, captions):
     items = [i for i in layout if i.get('width') and i.get('height') and i['kind'] == 'control']
-    if not items:
+    if not items or any(i['kind'] == 'band' for i in layout):  # reports: band-relative millimetres, not a screen
         return None
     width = max(i['x'] + i['width'] for i in items) + 10
     height = max(i['y'] + i['height'] for i in items) + 10

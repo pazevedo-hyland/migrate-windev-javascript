@@ -123,17 +123,35 @@ custom_note :
     def test_control_layout_reads_decimal_report_geometry(self):
         text = '''report :
  name : RPT_A
- controls :
+ blocks :
   -
-    name : ITEM_Codigo
+    name : PAGE_HEADER
+    controls :
+     -
+       name : STC_Empresa
+       properties :
+        width : 60.
+        height : 6.615
     properties :
-     x : 66.99
-     y : 0
-     width : 14.66
-     height : 6.2
+     y : 20.
+     height : 6.09
+  -
+    name : BODY
+    controls :
+     -
+       name : ITEM_Codigo
+       properties :
+        x : 66.99
+        y : 4.e-003
+        width : 14.66
+        height : 6.2
 '''
-        item = next(i for i in module.control_layout(text) if i['name'] == 'ITEM_Codigo')
-        self.assertEqual((item['x'], item['y'], item['width'], item['height']), (66.99, 0, 14.66, 6.2))
+        layout = {i['name']: i for i in module.control_layout(text)}
+        item = layout['ITEM_Codigo']
+        self.assertEqual((item['x'], item['y'], item['width'], item['height'], item['band']), (66.99, 0.004, 14.66, 6.2, 'BODY'))
+        self.assertEqual((layout['STC_Empresa']['width'], layout['STC_Empresa']['band']), (60, 'PAGE_HEADER'))
+        self.assertEqual((layout['PAGE_HEADER']['kind'], layout['PAGE_HEADER']['y']), ('band', 20))
+        self.assertEqual(module.control_names(text), ['STC_Empresa', 'ITEM_Codigo'])
 
     def test_control_layout_adds_parent_offsets(self):
         text = '''window :

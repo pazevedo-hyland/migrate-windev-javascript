@@ -173,21 +173,26 @@ def encoded_slots(text, blocks):
     return slots
 
 
+NUMBER = re.compile(r'-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?')
+
+
 def control_layout(text):
     """Every control and table column in source order, with its position inside the window.
 
     Readable `properties` x/y/width/height are relative to the parent control; nested controls
-    get their parents' offsets added. Missing x or y means 0 (as WINDEV omits them).
+    get their parents' offsets added. Missing x or y means 0 (as WINDEV omits them). A report's
+    bands (`blocks`: START_OF_DOCUMENT, PAGE_HEADER, BODY…) are items of kind `band`; their
+    controls name the band and keep band-relative positions, in millimetres.
     """
     lines = text.splitlines()
     parsed = structure(lines, literal_mask(lines))
-    items, stack = [], []  # stack: (indent, absolute x, absolute y) of enclosing controls
+    items, stack = [], []  # stack: (indent, absolute x, absolute y, band) of enclosing controls
     for i, entry in enumerate(parsed):
         if not entry or entry[1] != 'name' or not entry[2]:
             continue
         # The nearest less-indented key is the list holding this item (bare `-` lines are not keys).
         parent = next((parsed[j] for j in range(i - 1, -1, -1) if parsed[j] and parsed[j][0] < entry[0]), None)
-        if not parent or parent[1] not in ('controls', 'columns'):
+        if not parent or parent[1] not in ('controls', 'columns', 'blocks'):
             continue
         indent = entry[0]
         geometry, in_properties = {}, None
@@ -199,23 +204,31 @@ def control_layout(text):
                 break
             if line[0] == indent:
                 in_properties = line[0] if line[1] == 'properties' else None
-            elif in_properties is not None and line[1] in ('x', 'y', 'width', 'height') and re.fullmatch(r'-?\d+(\.\d+)?', line[2]):
-                # Windows use whole pixels; reports use decimals (millimetres).
-                number = float(line[2])
+            elif in_properties is not None and line[1] in ('x', 'y', 'width', 'height') and NUMBER.fullmatch(line[2]):
+                # Windows use whole pixels; reports use millimetres, written "60." or "4.e-003".
+                number = round(float(line[2]), 3)
                 geometry.setdefault(line[1], int(number) if number.is_integer() else number)
         while stack and stack[-1][0] >= indent:
             stack.pop()
-        base_x, base_y = (stack[-1][1], stack[-1][2]) if stack else (0, 0)
+        base_x, base_y, band = stack[-1][1:] if stack else (0, 0, None)
+        if parent[1] == 'blocks':
+            items.append({'name': entry[2], 'kind': 'band', 'x': 0, 'y': geometry.get('y', 0),
+                          'width': geometry.get('width'), 'height': geometry.get('height')})
+            stack.append((indent, 0, 0, entry[2]))  # band controls are positioned within the band
+            continue
         x, y = base_x + geometry.get('x', 0), base_y + geometry.get('y', 0)
-        items.append({'name': entry[2], 'kind': 'column' if parent[1] == 'columns' else 'control',
-                      'x': x, 'y': y, 'width': geometry.get('width'), 'height': geometry.get('height')})
-        stack.append((indent, x, y))
+        item = {'name': entry[2], 'kind': 'column' if parent[1] == 'columns' else 'control',
+                'x': x, 'y': y, 'width': geometry.get('width'), 'height': geometry.get('height')}
+        if band:
+            item['band'] = band
+        items.append(item)
+        stack.append((indent, x, y, band))
     return items
 
 
 def control_names(text):
     """Every control and table column declared in a window/report, in source order."""
-    return [item['name'] for item in control_layout(text)]
+    return [item['name'] for item in control_layout(text) if item['kind'] != 'band']
 
 
 def dialogs(text):
@@ -404,7 +417,7 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
                     destination.parent.mkdir(parents=True, exist_ok=True)
                     name = element_name(text, path.stem)
                     layout = control_layout(text)
-                    controls = [item['name'] for item in layout]
+                    controls = [item['name'] for item in layout if item['kind'] != 'band']
                     slots = encoded_slots(text, blocks)
                     destination.write_text(json.dumps({'path': relative, 'name': name, 'controls': controls, 'layout': layout,
                                                        'dialogs': dialogs(text), 'encoded_slots': slots, 'blocks': blocks},
