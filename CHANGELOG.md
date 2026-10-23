@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-23 — one-command evidence, unit packs, answer sheet
+
+### Added
+- `scripts/prepare_evidence.py`: inspector, dossier, legend, evidence report, navigation, schema draft and layouts in one command (15 s on the real project), paths in `analysis-local/latest.json`.
+- `scripts/unit_evidence.py`: one unit's evidence in one diffable JSON, including every slot that shares each encoded action ID.
+- `docs/evidence/encoded-actions.md` answer sheet (action groups and runtime questions), written once and never overwritten.
+- Dossier: table columns as controls (title, mask, binding, width, alignment, flags), table browsed file/items, window opening mode, size and close icon.
+- `parity_check.py` reports `SRC-` rows the current seed no longer has.
+- Skills and window spec: selection and display state, built-in control features, full dialog details, write failure paths, proposed changes kept for ADRs.
+
+### Changed
+- Chapter 06 and the mapping prompt start from `prepare_evidence.py`; the inspector runs on `legacy/` so the XDD is included.
+
 ## 2026-10-23 — rounds 4–5 of the small-scale run
 
 ### Added
