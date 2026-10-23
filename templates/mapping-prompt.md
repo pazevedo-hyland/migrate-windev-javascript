@@ -14,7 +14,7 @@ Goal: map the whole legacy application into docs/mapping/ and docs/parity/parity
 4. Cross-review: use different sub-agents or sessions (ideally a different model) to review each note against the sources and screenshots. They report missing events, misread rules, unresolved references and wrong confidence labels. Apply the corrections.
 5. Consolidate:
    - docs/legacy-inventory.md: sources, coverage, binary or missing exports to request (queries, encoded properties, reports), nested projects, external dependencies, hardcoded secrets to revoke (location only, never the value).
-   - docs/mapping/entities.md, screens.md (navigation map: menus, which window opens which, modal or not, parameters, returned values), workflows.md, permissions.md, reports.md, jobs-and-integrations.md.
+   - docs/mapping/entities.md, screens.md (navigation map: start from the generated docs/navigation.md — proven call sites — and add what it cannot see: encoded actions once answered, dynamic targets, modal or not, parameters, returned values), workflows.md, permissions.md, reports.md, jobs-and-integrations.md.
    - docs/parity/parity.csv: merge the per-unit CSVs, then import every remaining parity-seed.csv row unchanged (keep IDs), and add rows for menus, shortcuts, rights, reports, jobs and integrations not covered by code blocks.
 6. Run python3 scripts/parity_check.py docs/parity/parity.csv --seed analysis-local/parity-seed.csv and fix every error.
 7. Write the handoff: coverage numbers, unresolved items, exports needed from WINDEV, questions for the human.

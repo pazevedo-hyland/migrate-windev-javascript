@@ -29,6 +29,17 @@ class EvidenceReportTests(unittest.TestCase):
         self.assertEqual(index.get('WIN_sistema'), ['WIN_MENU.wdw:10 (Open in WIN_MENU)', 'WIN_WIN_A.wdw:5 (Open in WIN_A)'])
         self.assertEqual(index.get('rpt_x'), ['WIN_WIN_A.wdw:7 (iPrintReport in WIN_A)'])
 
+    def test_navigation_map_from_call_sites(self):
+        index = {'WIN_Form': ['WIN_List.wdw:30 (Open in WIN_List)'], 'RPT_List': ['WIN_List.wdw:41 (iPrintReport in WIN_List)'],
+                 'WIN_List': ['WIN_MENU.wdw:9 (Open in WIN_MENU)']}
+        rows = [{'element': n, 'kind': k} for n, k in (('WIN_MENU', 'window'), ('WIN_List', 'window'), ('WIN_Form', 'window'),
+                                                       ('RPT_List', 'report'), ('RPT_Orphan', 'report'))]
+        text = module.navigation(index, rows, 'WIN_MENU')
+        self.assertIn('START(( )) --> WIN_MENU', text)
+        self.assertIn('WIN_List[WIN_List] -->|iPrintReport| RPT_List[/RPT_List/]', text)
+        self.assertIn('- RPT_Orphan (report)', text)
+        self.assertNotIn('- WIN_MENU', text)  # the first window is reached at startup
+
     def test_encoded_actions_grouped_by_action_id(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
