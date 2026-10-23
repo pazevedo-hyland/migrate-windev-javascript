@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-23 — HFSQL ODBC architecture troubleshooting
+
+### Added
+- Windows capture kit guidance for matching Python and HFSQL ODBC architectures, including an observed 32-bit workaround for an unexpected 64-bit connection exit.
+
 ## 2026-10-22 — unattended capture without WINDEV
 
 ### Added

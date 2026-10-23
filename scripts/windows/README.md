@@ -41,6 +41,25 @@ py scripts\windows\export_odbc.py --dsn GestaoCopy --out C:\capture\data
 
 Every table becomes a UTF-8 CSV with `manifest.json` (row counts, column types, row hashes). This is also the "before/after" tool for golden scenarios.
 
+### ODBC architecture troubleshooting
+
+The Python process and HFSQL ODBC driver must have matching architectures. On 64-bit Windows, use `C:\Windows\System32\odbcad32.exe` to configure 64-bit drivers and `C:\Windows\SysWOW64\odbcad32.exe` for 32-bit drivers. System DSNs are architecture-specific; [Microsoft documents the ODBC administrator paths and behavior](https://learn.microsoft.com/en-us/troubleshoot/sql/database-engine/install/windows/odbc-driver-install-checking).
+
+If the exporter exits unexpectedly while opening the connection, first check the Python architecture and registered driver:
+
+```bat
+py -c "import struct, pyodbc; print(struct.calcsize('P') * 8); print(pyodbc.drivers())"
+```
+
+On one HFSQL setup, a 64-bit `pyodbc` connection terminated the process, while a 32-bit Windows PowerShell ODBC connection opened the DSN. This is an observed workaround, not a general HFSQL driver limitation. If the 32-bit driver is the working one, install 32-bit Python and `pyodbc`, create the DSN with the 32-bit ODBC administrator, and run the same exporter with the 32-bit interpreter:
+
+```bat
+py -3-32 -m pip install pyodbc
+py -3-32 scripts\windows\export_odbc.py --dsn GestaoCopy --out C:\capture\data
+```
+
+Use a new output directory for each attempt because the exporter refuses to overwrite an existing one. Confirm the architecture with `struct.calcsize('P') * 8` before retrying.
+
 ## 4. Capture the screens (unattended)
 
 ```bat
