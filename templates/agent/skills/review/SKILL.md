@@ -21,6 +21,7 @@ No unrequested rewrites. Propose; the human decides. Do not reopen accepted deci
 - No destructive schema change or edited committed migration; no secret committed.
 - Money/quantity/date semantics and IDs above 2^53 follow the ADRs.
 - Keyboard order, focus, masks and messages match `docs/screens/<WINDOW>.md`.
+- Every window and dialog the slice opens (modal forms and message boxes included) is configured in `ui-check.config.json`, scored in `docs/evidence/visual/`, and reads captions and positions from its generated layout — a caption or coordinate typed by hand is a finding.
 - Every row moved to `verified` passes the five checks in `AGENTS.md` ("No guessing"); otherwise it must be `implemented` with the choice in the handoff.
 - Checks in the handoff were actually executed (commands and output); unavailable native checks are listed. Browser mocks are not proof of packaged native behavior.
 - `parity.csv`, `ROADMAP.md` and the handoff reflect what was really delivered.

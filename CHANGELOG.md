@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-23 — lessons from building one slice in the legacy skin
+
+### Added
+- `templates/ui-kit/`: the skin as React primitives (window frame and title bar driving the native window, buttons, captioned edits, memo, message boxes) and its CSS, measured on the MediaPlayer template.
+- ROADMAP foundation slice "skin kit" before the first screen slice.
+- UI check scores every configured window against its dossier image, records it, and fails on a drop; edit captions read from their labels.
+- Evidence report asks one question for all message boxes (title, icon, labels, default button): 97 boxes on the real project.
+
+### Changed
+- A slice is done only when every window and dialog it opens is built from its generated layout with the skin kit, passes the UI check and is scored (stage prompt, review skill).
+- Framing default: visually near-identical UI with the project's own skin.
+
+### Fixed
+- `.gitignore` entries anchored to the root: an unanchored `legacy/` hid `src/ui/legacy/` from Git in the pilot.
+
 ## 2026-10-23 — screens that look like the legacy ones
 
 ### Added

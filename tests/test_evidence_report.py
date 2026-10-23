@@ -67,7 +67,7 @@ class EvidenceReportTests(unittest.TestCase):
                     'path': f'{name}.wdw', 'name': name, 'dialogs': [DIALOG],
                     'layout': [{'name': 'BTN_Ok', 'kind': 'control', 'x': 0, 'y': 0, 'width': 10, 'height': 10},
                                {'name': 'EDT_X', 'kind': 'control', 'x': 0, 'y': 20, 'width': 10, 'height': 10}],
-                    'blocks': [block([name, 'BTN_Ok'], 'iPrintReport(RPT_List)\nExeRun("tool.exe")')]}))
+                    'blocks': [block([name, 'BTN_Ok'], 'iPrintReport(RPT_List)\nExeRun("tool.exe")\nInfo("Feito")')]}))
             (root / 'dossier/windev-window').mkdir(parents=True)
             (root / 'dossier/windev-window/win_a.json').write_text(json.dumps({'image_file': 'images/WIN_A.jpg', 'controls': {
                 'BTN_Ok': {'kind': 'Button', 'caption': {'PT': 'Validar'}, 'row': 'Active Validate', 'raw': []}}}))
@@ -82,6 +82,7 @@ class EvidenceReportTests(unittest.TestCase):
         self.assertIn('Clientes: table without typed items in the dossier analysis', gaps)
         self.assertEqual({s[2] for s in used['ExeRun']}, {'"tool.exe"'})
         self.assertEqual(len([q for q in questions if q.startswith('Dialog "Apagar?"')]), 1)  # merged, pt-PT
+        self.assertIn('Message boxes (Info ×2)', ' '.join(questions))  # one question for every box
         self.assertTrue(any('Validate button "Validar"' in q for q in questions))
 
 

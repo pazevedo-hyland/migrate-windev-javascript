@@ -253,6 +253,17 @@ def runtime_questions(inspect_dir, dossier_dir, language=None):
         questions.append(f'Validate button "{caption}" with no Close() in code, in {len(used_in)} window(s): '
                          f'{", ".join(used_in[:5])}{"…" if len(used_in) > 5 else ""} — after its code succeeds, '
                          'does the window close?')
+    # Message boxes are drawn by WINDEV itself: title, icon and button labels are in no source. One screenshot of
+    # each kind settles every box of the application.
+    kinds = collections.Counter()
+    for data in elements_from_inspector(inspect_dir).values():
+        for block in data['blocks']:
+            kinds.update(m.group(1) for m in re.finditer(r'\b(Info|Error|Warning|YesNo|OKCancel|Confirm)\s*\(',
+                                                         block['code']))
+    if kinds:
+        used = ', '.join(f'{k} ×{v}' for k, v in kinds.most_common())
+        questions.append(f'Message boxes ({used}): a screenshot of one of each kind — what are the title, icon and '
+                         'button labels, and which button is the default?')
     return questions
 
 

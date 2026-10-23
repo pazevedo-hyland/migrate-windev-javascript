@@ -1,0 +1,156 @@
+/* MediaPlayer skin template (WINDEV "120 MediaPlayer"), rebuilt from its own images (public/skin/, exported by
+   scripts/skin_assets.py). 9-slice margins measured on the images: window 25/8/8/8, button 4. Font: the
+   template's Trebuchet MS, 8 pt (= 10.67 px at 96 dpi). Colors not read from the template are sampled from the
+   dossier image and marked "sampled". */
+.wd-window {
+  position: relative;
+  box-sizing: border-box;
+  font-family: "Trebuchet MS", Tahoma, sans-serif;
+  font-size: 10.67px;
+  color: #000;
+  border-style: solid;
+  border-width: 25px 8px 8px 8px;
+  border-image: url("/skin/MediaPlayer_Bg_Base.png") 25 8 8 8 fill stretch;
+}
+/* Children are positioned in window coordinates (title bar included), as WINDEV's layout is. */
+.wd-client {
+  position: absolute;
+  left: -8px;
+  top: -25px;
+  width: 800px;
+  height: 600px;
+}
+.wd-title {
+  position: absolute;
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.wd-titlebar { position: absolute; left: 0; top: 0; width: 100%; height: 25px; }
+.wd-sysbtn {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  cursor: default;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wd-btn {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 0 4px;
+  font: inherit;
+  color: inherit;
+  border-style: solid;
+  border-width: 4px;
+  border-image: url("/skin/MediaPlayer_Btn_anim.0.png") 4 fill stretch;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  line-height: 1.35;
+  cursor: default;
+}
+.wd-btn:hover { border-image-source: url("/skin/MediaPlayer_Btn_anim.1.png"); }
+.wd-btn:active { border-image-source: url("/skin/MediaPlayer_Btn_anim.2.png"); }
+.wd-btn:focus-visible { border-image-source: url("/skin/MediaPlayer_Btn_anim.3.png"); outline: none; }
+.wd-btn .wd-icon { flex: none; width: 16px; height: 16px; }
+.wd-btn.with-icon { padding-left: 4px; padding-right: 6px; }
+.wd-btn.with-icon > span { flex: 1; text-align: center; }
+.wd-edit:focus { outline: none; border-color: #7d8899; } /* sampled; the skin draws no focus ring */
+.wd-edit {
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 2px 4px;
+  font: inherit;
+  border: 1px solid #a7adb8; /* sampled */
+  background: #fff;
+  resize: none;
+}
+.wd-caption { position: absolute; line-height: 16px; }
+.wd-table {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid #a7adb8; /* sampled */
+  background: #fff;
+  overflow: hidden;
+}
+.wd-table-scroll { position: absolute; inset: 24px 17px 0 0; overflow-y: auto; overflow-x: hidden; }
+.wd-table table { border-collapse: collapse; table-layout: fixed; }
+.wd-table-head {
+  position: absolute;
+  inset: 0 17px auto 0;
+  height: 24px;
+  display: flex;
+  background: linear-gradient(#fdfdfd, #e3e5e8); /* sampled */
+  border-bottom: 1px solid #b9bec7; /* sampled */
+}
+.wd-th {
+  position: relative;
+  box-sizing: border-box;
+  flex: none;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  border-right: 1px solid #d0d4da; /* sampled */
+}
+.wd-th .sort { position: absolute; left: 3px; top: 2px; }
+.wd-th .search { position: absolute; right: 4px; top: 6px; }
+.wd-more { position: absolute; right: 3px; top: 6px; }
+.wd-td {
+  box-sizing: border-box;
+  height: 18px;
+  padding: 0 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-right: 1px solid #e3e6ea; /* sampled */
+  border-bottom: 1px dotted #d3d7dd; /* sampled */
+}
+.wd-row[aria-selected="true"] .wd-td { background: #cfe3fb; } /* sampled from the skin's selection image */
+.wd-vscroll {
+  position: absolute;
+  top: 24px;
+  right: 0;
+  bottom: 0;
+  width: 17px;
+  background:
+    url("/skin/scroll-up.png") top / 100% 16px no-repeat,
+    url("/skin/scroll-down.png") bottom / 100% 16px no-repeat,
+    url("/skin/scroll-track.png") center / 100% 100% no-repeat;
+}
+/* Empty grid lines below the last row, as WINDEV draws the whole table area. */
+.wd-grid-fill {
+  position: absolute;
+  inset: 24px 17px 0 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 17px, #d3d7dd 17px 18px);
+}
+.wd-col-line { position: absolute; top: 0; bottom: 0; width: 1px; background: #e3e6ea; } /* sampled */
+/* Modal windows and message boxes: block the window below without dimming it, centered in the parent. */
+.wd-modal-layer { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 10; }
+.wd-message .wd-msg-icon {
+  position: absolute; left: 22px; top: 42px; width: 32px; height: 32px; border-radius: 50%;
+  font: bold 20px/32px "Trebuchet MS", Tahoma, sans-serif; text-align: center; color: #fff;
+}
+/* UNRESOLVED (no skin image for message-box icons in the project): standard Windows-style icons, sampled. */
+.wd-msg-icon.info { background: #2f6fcf; } .wd-msg-icon.info::after { content: "i"; }
+.wd-msg-icon.error { background: #c62f2f; } .wd-msg-icon.error::after { content: "×"; }
+.wd-msg-icon.question { background: #2f6fcf; } .wd-msg-icon.question::after { content: "?"; }
+.wd-msg-text { position: absolute; left: 68px; top: 38px; right: 16px; }
+.wd-msg-text p { margin: 0 0 4px; white-space: pre-wrap; }
+.wd-msg-buttons { position: absolute; right: 16px; bottom: 14px; display: flex; gap: 8px; }
+.wd-msg-buttons .wd-btn { position: static; width: 80px; height: 24px; }
+.wd-memo { position: absolute; box-sizing: border-box; border: 1px solid #a7adb8; background: #fff; } /* sampled */
+.wd-memo textarea { position: absolute; inset: 0 17px 0 0; width: calc(100% - 17px); height: 100%; border: 0; padding: 2px 4px;
+  font: inherit; resize: none; outline: none; background: transparent; }
+.wd-memo .wd-vscroll { top: 0; }
+.wd-edit:disabled, .wd-edit[readonly] { color: #000; background: #fff; }

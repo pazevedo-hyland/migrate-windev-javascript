@@ -1,6 +1,9 @@
-// Automated UI parity check: every legacy control exists in the new screen, plus a
-// side-by-side screenshot report (new vs legacy). Copy templates/ui-check/ into the app.
+// Automated UI parity check: every legacy control exists in the new screen with its legacy caption, and the
+// screen is scored against the legacy image (scripts/visual_compare.py, recorded in docs/evidence/visual/ for
+// the progress page; a drop below the last score fails). Side-by-side report in ui-report/. Configure every
+// window the app can open — modal forms included — in ui-check.config.json. Copy templates/ui-check/ into the app.
 import { expect, test } from "@playwright/test";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
@@ -20,6 +23,10 @@ type Config = {
   dossierDir?: string;
   /** Caption language in the dossier, e.g. "PT"; default: the first language of each caption. */
   language?: string;
+  /** Where visual scores are recorded (scripts/visual_compare.py --record); default docs/evidence/visual. */
+  visualDir?: string;
+  /** Points of layout match (edge overlap) a window may lose against its last recorded score; default 2. */
+  visualTolerance?: number;
   windows: Record<string, WindowConfig & { captionIgnore?: Record<string, string> }>;
 };
 
@@ -30,6 +37,25 @@ const latest: { inspect?: string; dossier?: string } = existsSync(latestPath) ? 
 config.inspectDir ??= latest.inspect;
 config.dossierDir ??= latest.dossier;
 config.legacyScreenshots ??= "docs/evidence/images";
+config.visualDir ??= "docs/evidence/visual";
+
+type Score = { pixel_similarity: number; edge_overlap: number };
+const legacyImage = (window: string) =>
+  [`${window}.png`, `${window}.jpg`, join(window, "screenshot.png")]
+    .map((name) => resolve(root, config.legacyScreenshots!, name))
+    .find((path) => existsSync(path));
+
+/** Score the new screenshot against the legacy image and record it; returns [score, previous score]. */
+function visualScore(window: string, screenshot: string): [Score | null, Score | null] {
+  const legacy = legacyImage(window);
+  if (!legacy) return [null, null];
+  const record = resolve(root, config.visualDir!, `${window}.json`);
+  const previous: Score | null = existsSync(record) ? JSON.parse(readFileSync(record, "utf-8")) : null;
+  const run = spawnSync("python3", ["scripts/visual_compare.py", legacy, screenshot,
+    "--out", resolve(root, config.report, `${window}.compare.png`), "--record", record], { cwd: root, encoding: "utf-8" });
+  if (run.status !== 0) throw new Error(`visual_compare.py failed for ${window}: ${run.stderr}`);
+  return [JSON.parse(run.stdout), previous];
+}
 if (!config.inspectDir) throw new Error("no inspector output: run python3 scripts/prepare_evidence.py first");
 
 /** Legacy control names per window, from inspect_windev.py output (code/<file>.wdw.json). */
@@ -68,7 +94,7 @@ function legacyCaptions(window: string): Record<string, string> {
 const normalize = (text: string) => text.replace(/&/g, "").replace(/\s+/g, " ").trim().toLowerCase();
 
 type Mismatch = { name: string; legacy: string; actual: string };
-const results: { window: string; missing: string[]; ignored: number; total: number; captions: Mismatch[] }[] = [];
+const results: { window: string; missing: string[]; ignored: number; total: number; captions: Mismatch[]; score: Score | null }[] = [];
 
 for (const [window, settings] of Object.entries(config.windows)) {
   test(`${window}: legacy controls present`, async ({ page }) => {
@@ -86,26 +112,36 @@ for (const [window, settings] of Object.entries(config.windows)) {
       if (name in settings.ignore || name in (settings.captionIgnore ?? {})) continue;
       if ((await page.getByTestId(name).count()) === 0) continue;
       const element = page.getByTestId(name).first();
-      const actual = (await element.innerText().catch(() => "")) || (await element.getAttribute("value")) || "";
+      // An edit's caption is its associated <label> (or aria-label); a button's or static's is its own text.
+      const actual = await element.evaluate((el) => {
+        const labels = (el as HTMLInputElement).labels;
+        const label = labels && labels.length ? Array.from(labels).map((l) => l.innerText).join(" ") : "";
+        return label || el.getAttribute("aria-label") || (el as HTMLElement).innerText || "";
+      });
       if (!normalize(actual).includes(normalize(legacy))) captions.push({ name, legacy, actual: actual.trim() });
     }
     mkdirSync(resolve(root, config.report), { recursive: true });
-    await view.screenshot({ path: resolve(root, config.report, `${window}.png`) });
-    results.push({ window, missing, ignored: Object.keys(settings.ignore).length, total: expected.length, captions });
+    const screenshot = resolve(root, config.report, `${window}.png`);
+    await view.screenshot({ path: screenshot });
+    const [score, previous] = visualScore(window, screenshot);
+    results.push({ window, missing, ignored: Object.keys(settings.ignore).length, total: expected.length, captions, score });
     expect(missing, `legacy controls with no data-testid in ${window}`).toEqual([]);
     expect(captions, `captions differing from the legacy dossier in ${window}`).toEqual([]);
+    if (score && previous) {
+      expect(score.edge_overlap, `${window} looks less like the legacy screen than last time`)
+        .toBeGreaterThanOrEqual(previous.edge_overlap - (config.visualTolerance ?? 2));
+    }
   });
 }
 
 test.afterAll(() => {
   const rows = results.map((r) => {
-    const legacy = [`${r.window}.png`, `${r.window}.jpg`, join(r.window, "screenshot.png")]
-      .map((name) => resolve(root, config.legacyScreenshots!, name))
-      .find((path) => existsSync(path)) ?? "";
+    const legacy = legacyImage(r.window) ?? "";
     const legacyCell = legacy ? `<img src="file://${legacy}">` : "<em>no legacy screenshot yet</em>";
     return `<tr><td><b>${r.window}</b><br>${r.total - r.missing.length}/${r.total} controls, ${r.ignored} ignored` +
       `${r.missing.length ? `<br>missing: ${r.missing.join(", ")}` : ""}` +
-      `${r.captions.map((c) => `<br>${c.name}: “${c.actual}” ≠ legacy “${c.legacy}”`).join("")}</td>` +
+      `${r.captions.map((c) => `<br>${c.name}: “${c.actual}” ≠ legacy “${c.legacy}”`).join("")}` +
+      `${r.score ? `<br>looks like the original: layout ${r.score.edge_overlap} %, pixels ${r.score.pixel_similarity} %` : ""}</td>` +
       `<td><img src="${r.window}.png"></td><td>${legacyCell}</td></tr>`;
   });
   writeFileSync(resolve(root, config.report, "index.html"),
