@@ -44,6 +44,14 @@ python3 scripts/parity_check.py docs/parity/parity.csv [--seed docs/parity/parit
 
 Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). Confidence `assumed` marks rows built on a `proposed:` answer or a default ADR: they may be verified, are counted apart (`verified_on_assumptions`), and a row citing `proposed:` cannot claim `verified` confidence. With `--seed`, every seed row must still exist, and a matrix row the seed no longer has is matched to its new ID when one seed row has the same element, context and event ("rename it"). `--element` scopes every check to those units (a rule row belongs to the unit its context starts with); `--check-files` also resolves seed evidence under `legacy/`. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
 
+## `data_profile.py` — what the legacy data really is
+
+```sh
+python3 scripts/data_profile.py <copy.sqlite or export_odbc folder> [--schema docs/schema/schema-draft.json] [--ref T.col=U.key] [--out docs/data/profile.md]
+```
+
+Profiles a copy of the data against the schema draft: per column nulls, empty strings, distinct values, shapes, lengths against the analysis size, values not parsing as the WINDEV type, zeros, constant columns, spaces, line breaks, binary content (composite keys); duplicates per unique key; orphans per link (named after a table or its identifier, or `--ref`), `0` counted as no link. Counts and extremes only, no records. See [08 — Data](../08-data-migration.md#profile-the-data-before-deciding-the-schema).
+
 ## `prepare_evidence.py` — the whole evidence pipeline in one command
 
 ```sh

@@ -63,6 +63,30 @@ It pairs each XDD type code with the type name the dossier prints for the same i
 
 Read `.fic`/`.ndx`/`.mmo` only through supported HFSQL/WINDEV export tooling. Export explicit columns to CSV/JSON with a **manifest**: source version, export time, encoding (often Windows-1252), delimiter, decimal format, timezone/date rules and table counts. Preserve memo/blob data separately with checksums. Binary query definitions need SQL and parameter exports.
 
+## Profile the data before deciding the schema
+
+The analysis says what the data should be; only the data says what it is. On a copy (the CSV folder of `scripts/windows/export_odbc.py`, or an SQLite staging file that keeps every value as the ODBC text and nulls apart):
+
+```sh
+python3 scripts/data_profile.py <copy.sqlite or export folder> --ref ordem.matricula=Viaturas.matricula   # → docs/data/profile.md
+```
+
+Per column: nulls, empty strings, distinct values, value shapes, lengths, values that do not parse as the WINDEV type, zeros, constant columns, stray spaces and line breaks; per unique key (composite ones rebuilt from their parts): duplicates; per link (columns named after a table or its identifier, plus `--ref`): orphans, with `0` counted as "no link". The report holds counts, shapes and extremes, not records: review and commit it; mapping rows and ADRs cite `export: docs/data/profile.md#<table>`. Run it again on every new export.
+
+What it found on the real project (17 tables, 180,000 rows, 4 s) — expect the same kinds elsewhere:
+
+- **Composite keys arrive as binary columns** the analysis does not list: rebuild them as composite indexes, never import their bytes.
+- **Generated link columns can be unused**: `…ID` columns at 0 in every row while the real links run on codes (`Viaturas.Cliente → Clientes.Codigo`, not `ClientesID`). Link on what the values match, not on names.
+- **Stored totals can be always 0**: four of five totals on the repair orders were never written — the app computes them. Do not trust a stored figure the profile shows constant; find the code that computes it.
+- **0 means empty**: a year and a month at 0 in 99.6 % of vehicles. Map to NULL only if the dossier's "Blank if zero" or the code says so.
+- **Empty is not NULL**: 13 % of payment dates are `""`, 95 % of a date-time are zero dates.
+- **No relation is enforced**: 52 repair orders point to deleted vehicles, 54 material lines to deleted articles; and 2 automatic identifiers are duplicated. Quarantine or keep without the constraint — an ADR, not a silent fix.
+- **Outliers**: a mileage of 964 million, a line price of 401 million where 99 % are under 377. Keep, flag, or quarantine.
+- **Business reality**: 44 % of articles have negative stock — a check constraint would reject real data.
+- Text read through ODBC was clean UTF-8 (no mojibake); memos use CR LF; thousands of descriptions carry trailing spaces (decide trim or keep: WLanguage compares strings including them unless the code trims).
+
+Feed the findings into the database ADR, the import's quarantine rules, the mapping notes (a constant column is a behavior question) and the golden data (its shapes and edge cases).
+
 ## Transformation checklist
 
 - Preserve identifiers and foreign keys; represent 64-bit identifiers as decimal strings across JSON/TypeScript boundaries when needed.
