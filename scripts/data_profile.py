@@ -31,7 +31,7 @@ def load(source):
     """An SQLite connection on the data: the file itself (read-only) or the CSV folder loaded in memory."""
     source = Path(source)
     if source.is_file():
-        return sqlite3.connect(f'file:{source}?mode=ro', uri=True)
+        return sqlite3.connect(source.resolve().as_uri() + '?mode=ro', uri=True)  # read-only, any OS
     connection = sqlite3.connect(':memory:')
     for path in sorted(source.glob('*.csv')):
         with path.open(newline='', encoding='utf-8') as handle:
@@ -246,7 +246,11 @@ def main():
     parser.add_argument('--out', type=Path, default=Path('docs/data/profile.md'), help='Markdown (a .json sibling is written)')
     args = parser.parse_args()
     schema = json.loads(args.schema.read_text(encoding='utf-8'))['tables']
-    report = profile(load(args.data), schema, args.ref)
+    connection = load(args.data)
+    try:
+        report = profile(connection, schema, args.ref)
+    finally:
+        connection.close()
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(markdown(report, args.data.name), encoding='utf-8')
     args.out.with_suffix('.json').write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding='utf-8')

@@ -49,7 +49,9 @@ class DataProfileTests(unittest.TestCase):
         self.directory.cleanup()
 
     def test_findings_keys_and_links(self):
-        report = module.profile(module.load(self.db), SCHEMA)
+        connection = module.load(self.db)
+        self.addCleanup(connection.close)  # Windows cannot delete an open database file
+        report = module.profile(connection, SCHEMA)
         notes = lambda table, column: ' '.join(report['tables'][table]['columns'][column]['findings'])
         self.assertIn('leading or trailing spaces', notes('Clientes', 'Nome'))
         self.assertNotIn('longer than', notes('Clientes', 'Obs'))  # a memo's size is not a length
@@ -77,7 +79,9 @@ class DataProfileTests(unittest.TestCase):
         folder.mkdir()
         with (folder / 'Clientes.csv').open('w', newline='', encoding='utf-8') as handle:
             csv.writer(handle).writerows([['Codigo', 'Nome', 'Obs'], ['1', 'Ana', ''], ['x', 'Rui', '']])
-        report = module.profile(module.load(folder), SCHEMA)
+        connection = module.load(folder)
+        self.addCleanup(connection.close)
+        report = module.profile(connection, SCHEMA)
         self.assertEqual(report['tables']['Clientes']['columns']['Codigo']['invalid'], 1)
         self.assertIn('Viaturas (whole table)', report['missing_columns'])
 
