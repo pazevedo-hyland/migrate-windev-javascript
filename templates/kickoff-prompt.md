@@ -1,10 +1,11 @@
 # Kickoff prompt (autonomous migration)
 
-For one coding agent (Claude Code, Codex…) that runs the whole migration with as little human help as possible. Open the agent in the **empty application folder** whose `legacy/` is filled as in [00 §E](../00-prerequisites.md#e-collect-the-legacy-material), fill in the first two lines, paste the block. The same prompt resumes a stopped session: the agent picks up from `ROADMAP.md` and the handoff.
+For one coding agent (Claude Code, Codex…) that runs the whole migration with as little human help as possible. Open the agent in the **empty application folder** whose `legacy/` is filled as in [00 §E](../00-prerequisites.md#e-collect-the-legacy-material), fill in the first three lines, paste the block. To check the analysis before any code is written, start with "Stop after: framing", review the roadmap and mapping, then paste the prompt again with "Stop after: everything". The same prompt resumes a stopped session: the agent picks up from `ROADMAP.md` and the handoff.
 
 ```text
 Playbook: <path to the migrate-windev-javascript checkout> (read-only for you).
 Data in legacy/data/: <demo or test data — may be used anywhere | personal data — counts and patterns only outside legacy/>
+Stop after: <framing (no application code) | foundation | everything>
 
 You are migrating the WINDEV application in legacy/ to TypeScript + Tauri with full feature parity, following the
 playbook. Work autonomously: never stop to ask. Where a human is needed, use the playbook's proposals and defaults
@@ -36,11 +37,14 @@ continue with the first slice not Done. Otherwise start at step 1.
    sheet. Then ROADMAP.md from templates/ROADMAP.template.md: foundation rows first (scaffold and npm run verify,
    schema v1 and the data import with dry run, quarantine and reconciliation, skin kit), then slices from the
    leaves of docs/navigation.md towards the workflows that use them.
+   With "Stop after: framing", stop here: commit, and leave the handoff with what was found, the decisions taken by
+   default and what the owner should check before the foundation starts.
 6. Slices, in ROADMAP order, one at a time, each as templates/prompt-stage.md says: write the stage brief into
    docs/runbooks/stage-<n>.md, build, verify (npm run verify, UI check and click-through flows, parity check), update
    docs/parity/parity.csv, ROADMAP.md and the handoff, regenerate the progress page
    (scripts/progress_dashboard.py), commit. Each slice gets an independent review (two when it is risky) and one fixer, as
    the stage prompt says. Then the next slice.
+   With "Stop after: foundation", stop once the foundation rows are Done.
 7. Stop only when every parity row is verified or excluded, or when every remaining slice waits on a decision
    no default covers; the handoff then lists exactly what is needed from whom.
 

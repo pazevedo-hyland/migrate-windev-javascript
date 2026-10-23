@@ -75,9 +75,11 @@ Identifiers you invent (test ids for controls that do not exist in legacy, helpe
 
 ## Commands
 
+Python scripts run as `python3` on macOS/Linux and `py` on Windows (npm scripts use `node scripts/py.mjs`).
+
 ```sh
 npm run verify          # typecheck + lint + unit + parity check: must pass before every commit
-npm run test:e2e        # browser workflow tests with mocked IPC
+npm run ui:check        # UI check and click-through flows, browser preview with mocked IPC
 npm run tauri -- build  # native package for this OS
 python3 scripts/parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv   # parity progress and validity
 python3 scripts/progress_dashboard.py --title "<App>"   # docs/progress/index.html for non-technical readers

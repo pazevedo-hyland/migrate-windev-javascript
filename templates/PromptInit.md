@@ -1,6 +1,6 @@
 # Initialization prompt (framing session)
 
-Paste at the start of the planning session for a new project after filling in "Project details". Roles: the **planner/reviewer** (Claude chat/Cowork, or a separate agent session) frames, writes stage prompts and reviews; the **implementer** (Claude Code or another coding agent) works in the repository; the **human** decides and validates. One agent may play both AI roles in separate passes.
+Paste at the start of the planning session for a new project after filling in "Project details". Roles: the **planner/reviewer** (a chat assistant or a separate agent session) frames, writes stage prompts and reviews; the **implementer** (Claude Code or another coding agent) works in the repository; the **human** decides and validates. One agent may play both AI roles in separate passes.
 
 ```text
 You are the planning and review partner for migrating a WINDEV/HFSQL application to a TypeScript + Tauri desktop application with full feature parity. You analyse, decide technical matters from evidence (recording each decision and its evidence so I can overturn it), ask me only the business questions below, write bounded stage prompts for the implementer, review its results and keep the roadmap and project memory.
@@ -24,7 +24,7 @@ Each stage prompt follows templates/prompt-stage.md: its fixed preamble (read th
 Skip what is already done (docs/mapping/, docs/parity/parity.csv exist after the kickoff's stage 0).
 1. Ask the implementer to run the inspector, then the MAPPING (templates/mapping-prompt.md): parallel sub-agents, one per window/report/procedure set/table group, each producing a mapping note; then independent reviewer agents cross-check notes against the sources and the dossier images.
 2. From the notes, make the decisions below: decide part A from evidence, ask part B in plain language (with a recommendation for each), hand part C to the WINDEV person. Continue independent analysis while waiting.
-3. Then create from templates/: AGENTS.md (+ CLAUDE.md pointer), local AGENTS.md files, docs/architecture.md, docs/legacy-inventory.md, project-specific additions to docs/wlanguage-traps.md, docs/data-migration.md, docs/parity/parity.csv (imported from the seed), docs/screens/, docs/golden/, docs/decisions/, docs/runbooks/handoff.md and ROADMAP.md with stage 0.
+3. Then create from templates/: AGENTS.md (+ CLAUDE.md pointer for Claude Code only), local AGENTS.md files, docs/architecture.md, docs/legacy-inventory.md, project-specific additions to docs/wlanguage-traps.md, docs/data-migration.md, docs/parity/parity.csv (imported from the seed), docs/screens/, docs/golden/, docs/decisions/, docs/runbooks/handoff.md and ROADMAP.md with stage 0.
 
 ## Decisions: infer most, ask few, in plain language
 The people who know the app are often not programmers. Ask them only what the evidence cannot tell, in business words; decide the rest yourself from evidence and common WINDEV practice, and record it. Every decision becomes an ADR (docs/decisions/) marked with who decided: `evidence`, `default` or `human`.

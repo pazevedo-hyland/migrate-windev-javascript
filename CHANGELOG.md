@@ -5,10 +5,12 @@
 A fresh agent given only the kickoff prompt and the guide, on a folder with the project dropped in as is, found 21 problems the earlier runs' detailed briefs had hidden. Fixed:
 
 ### Added
+- Kickoff prompt: "Stop after: framing | foundation | everything", to review the analysis before any code is written.
 - 06 §7 "wiring every later step relies on": scaffold, the `package.json` scripts (`verify`, `ui:check`, `parity`…), where the UI check, its config and the skin kit go, the browser-preview fake backend, CI once a remote exists.
 - `scripts/py.mjs`: runs Python as `python3` or `py` so npm scripts, the UI check and the commit hook work on Windows.
 
 ### Fixed
+- Agent-neutral wording: `AGENTS.md` lists `npm run ui:check` (not an undefined `test:e2e`) and says `py` on Windows; `CLAUDE.md` only for Claude Code.
 - Commands that failed as written: map-element's validate block, two `parity_check.py` calls without the matrix, the skin-asset command in the roadmap.
 - map-element covers table groups and queries (no evidence pack for them); specs go to `docs/screens/` or `docs/reports/`.
 - Paths assumed `legacy/code/` and `legacy/docs/`; the project folder can sit anywhere under `legacy/`.
