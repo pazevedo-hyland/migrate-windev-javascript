@@ -23,7 +23,7 @@ The principle: **separate** the central memory, detailed documentation, decision
 ├── src-tauri/migrations/AGENTS.md   ← local rules (templates/local-instructions/)
 ├── src/bindings/AGENTS.md
 ├── src/domain/AGENTS.md
-├── skills/                    ← agent-neutral playbooks: review, map-element (templates/agent/skills/)
+├── skills/                    ← agent-neutral playbooks: review, map-element, review-mapping (templates/agent/skills/)
 ├── scripts/                   ← inspector, parity gate, status, comparator, guard.py (shared guardrails)
 ├── .githooks/pre-commit       ← runs scripts/guard.py --staged for every agent and human
 └── .claude/settings.json      ← optional Claude Code adapter: hook → scripts/guard.py --hook; skills copied to .claude/skills/
@@ -72,6 +72,7 @@ Encapsulate stable methods instead of repeating instructions. Copy [templates/ag
 
 - **review** — the four-category review checklist with systematic checks.
 - **map-element** — map one legacy element into a mapping note and parity rows (used by parallel sub-agents in stage 0).
+- **review-mapping** — cross-review one unit's mapping against the evidence in six categories, before any code (stage 0, another model or session).
 
 The handoff format is fixed by [templates/handoff.md](templates/handoff.md): Delivered / Assumptions and differences / Checks actually executed / Remaining work / Decisions needed.
 

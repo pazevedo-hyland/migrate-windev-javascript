@@ -68,6 +68,7 @@ python3 scripts/parity_check.py docs/parity/parity.csv   # parity progress and v
 
 - Review a stage → `skills/review/SKILL.md`
 - Map a legacy element → `skills/map-element/SKILL.md`
+- Review a unit's mapping → `skills/review-mapping/SKILL.md`
 
 ## Work tracking
 

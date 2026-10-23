@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Inspect WINDEV text sources and raw XDD metadata; never execute legacy code."""
 import argparse
+import collections
 import csv
 import hashlib
 import json
@@ -342,19 +343,35 @@ def seed_row(row_id, kind, element, evidence, context='', event=''):
     return row
 
 
-def seed_rows(relative, kind, blocks, element=None):
+def seed_rows(relative, kind, blocks, element=None, key=None):
     rows, seen = [], {}
     element = element or Path(relative).stem
     for block in blocks:
         names = '/'.join(block['context']['names'])
         event = block['context']['siblings'].get('type', '')
-        base = (relative, names, event)
+        base = (key or relative, names, event)
         seen[base] = seen.get(base, 0) + 1
         evidence = f"{relative}:{block['start_line']}-{block['end_line']}"
         procedures = ', '.join(block['procedures'])
         rows.append(seed_row(seed_id(*base, str(seen[base])), kind, element, evidence,
                              names + (f' [{procedures}]' if procedures else ''), event))
     return rows
+
+
+def source_files(source, output, extensions):
+    """Files to inspect, in a stable order: backups, compile folders, symlinks and the output are skipped."""
+    files = []
+    for current, dirs, names in os.walk(source, followlinks=False):
+        dirs[:] = sorted(d for d in dirs if d.lower() not in SKIP
+                         and not d.lower().startswith('bkp_')
+                         and not d.lower().endswith('.cpl')
+                         and not (Path(current) / d).is_symlink()
+                         and (Path(current) / d).resolve() != output)
+        for name in sorted(names):
+            path = Path(current) / name
+            if not path.is_symlink() and path.suffix.lower() in extensions:
+                files.append(path)
+    return files
 
 
 def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal_block_keys=('code',)):
@@ -369,76 +386,72 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
     output.mkdir(parents=True, exist_ok=False)
     inventory, seeds, hints = [], [], []
     seen_digests = {}
-    for current, dirs, names in os.walk(source, followlinks=False):
-        dirs[:] = sorted(d for d in dirs if d.lower() not in SKIP
-                         and not d.lower().startswith('bkp_')
-                         and not d.lower().endswith('.cpl')
-                         and not (Path(current) / d).is_symlink()
-                         and (Path(current) / d).resolve() != output)
-        for name in sorted(names):
-            path = Path(current) / name
-            suffix = path.suffix.lower()
-            if path.is_symlink() or suffix not in extensions:
-                continue
-            relative = path.relative_to(source).as_posix()
-            kind = KINDS.get(suffix, suffix.lstrip('.'))
-            data = path.read_bytes()
-            digest = hashlib.sha256(data).hexdigest()
-            entry = {'path': relative, 'kind': kind, 'bytes': len(data), 'sha256': digest}
-            if digest in seen_digests:
-                # Identical copies (e.g. the analysis folder's XDD) must not double the parity seed.
-                entry.update(status='duplicate', duplicate_of=seen_digests[digest])
-                inventory.append(entry)
-                continue
-            seen_digests[digest] = relative
-            if suffix == '.xdd':
-                try:
-                    schema = raw_schema(data)
-                    destination = output / 'schema' / (relative + '.json')
-                    destination.parent.mkdir(parents=True, exist_ok=True)
-                    destination.write_text(json.dumps(schema, indent=2, ensure_ascii=False), encoding='utf-8')
-                    entry.update(status='schema', tables=len(schema['tables']))
-                    for table in schema['tables']:
-                        table_name = table['attributes'].get('Nom') or table['attributes'].get('Name', '')
-                        seeds.append(seed_row(seed_id(relative, 'table', table_name), 'table', table_name,
-                                              relative, 'data mapping and reconciliation'))
-                except (ET.ParseError, ValueError) as error:
-                    entry.update(status='unresolved-schema', reason=str(error))
-                    seeds.append(seed_row(seed_id(relative, 'export'), 'export-needed', path.stem, relative))
-            else:
-                try:
-                    text = decode_text(data, fallback_encoding)
-                except UnicodeError:
-                    text = None
-                if text is None:
-                    entry.update(status='binary-or-unsupported',
-                                 reason='Requires WINDEV export; no decoding or behavior inferred.')
-                    seeds.append(seed_row(seed_id(relative, 'export'), 'export-needed', path.stem, relative))
-                else:
-                    blocks = extract_blocks(text, literal_block_keys)
-                    destination = output / 'code' / (relative + '.json')
-                    destination.parent.mkdir(parents=True, exist_ok=True)
-                    name = element_name(text, path.stem)
-                    layout = control_layout(text)
-                    controls = [item['name'] for item in layout if item['kind'] != 'band']
-                    slots = encoded_slots(text, blocks)
-                    destination.write_text(json.dumps({'path': relative, 'name': name, 'controls': controls, 'layout': layout,
-                                                       'dialogs': dialogs(text), 'encoded_slots': slots, 'blocks': blocks},
-                                                      indent=2, ensure_ascii=False), encoding='utf-8')
-                    entry.update(status='text', name=name, code_blocks=len(blocks), controls=len(controls),
-                                 literal_keys=literal_keys(text),
-                                 encoded_properties='internal_properties' in text,
-                                 encoded_actions=sum(1 for s in slots if not s['has_code']))
-                    seeds.extend(seed_rows(relative, kind, blocks, name))
-                    # A code-less slot with encoded properties is behavior too (a predefined action): seed it.
-                    for slot in slots:
-                        if not slot['has_code']:
-                            names = '/'.join(slot['names'])
-                            seeds.append(seed_row(seed_id(relative, names, slot['event'], 'encoded'), 'encoded-action',
-                                                  name, f"{relative}:{slot['line']}", f"{names} [encoded action {slot['action']}]",
-                                                  slot['event']))
-                    hints.extend(secret_hints(relative, blocks))
+    files = source_files(source, output, extensions)
+    # Seed IDs key on the file name, so they do not change with the folder the inspector is pointed at
+    # (legacy/ or legacy/code/); the relative path only when two files share a name.
+    file_names = collections.Counter(path.name.lower() for path in files)
+    for path in files:
+        suffix = path.suffix.lower()
+        relative = path.relative_to(source).as_posix()
+        key = path.name if file_names[path.name.lower()] == 1 else relative
+        kind = KINDS.get(suffix, suffix.lstrip('.'))
+        data = path.read_bytes()
+        digest = hashlib.sha256(data).hexdigest()
+        entry = {'path': relative, 'kind': kind, 'bytes': len(data), 'sha256': digest}
+        if digest in seen_digests:
+            # Identical copies (e.g. the analysis folder's XDD) must not double the parity seed.
+            entry.update(status='duplicate', duplicate_of=seen_digests[digest])
             inventory.append(entry)
+            continue
+        seen_digests[digest] = relative
+        if suffix == '.xdd':
+            try:
+                schema = raw_schema(data)
+                destination = output / 'schema' / (relative + '.json')
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_text(json.dumps(schema, indent=2, ensure_ascii=False), encoding='utf-8')
+                entry.update(status='schema', tables=len(schema['tables']))
+                for table in schema['tables']:
+                    table_name = table['attributes'].get('Nom') or table['attributes'].get('Name', '')
+                    seeds.append(seed_row(seed_id(key, 'table', table_name), 'table', table_name,
+                                          relative, 'data mapping and reconciliation'))
+            except (ET.ParseError, ValueError) as error:
+                entry.update(status='unresolved-schema', reason=str(error))
+                seeds.append(seed_row(seed_id(key, 'export'), 'export-needed', path.stem, relative))
+        else:
+            try:
+                text = decode_text(data, fallback_encoding)
+            except UnicodeError:
+                text = None
+            if text is None:
+                entry.update(status='binary-or-unsupported',
+                             reason='Requires WINDEV export; no decoding or behavior inferred.')
+                seeds.append(seed_row(seed_id(key, 'export'), 'export-needed', path.stem, relative))
+            else:
+                blocks = extract_blocks(text, literal_block_keys)
+                destination = output / 'code' / (relative + '.json')
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                name = element_name(text, path.stem)
+                layout = control_layout(text)
+                controls = [item['name'] for item in layout if item['kind'] != 'band']
+                slots = encoded_slots(text, blocks)
+                destination.write_text(json.dumps({'path': relative, 'name': name, 'controls': controls, 'layout': layout,
+                                                   'dialogs': dialogs(text), 'encoded_slots': slots, 'blocks': blocks},
+                                                  indent=2, ensure_ascii=False), encoding='utf-8')
+                entry.update(status='text', name=name, code_blocks=len(blocks), controls=len(controls),
+                             literal_keys=literal_keys(text),
+                             encoded_properties='internal_properties' in text,
+                             encoded_actions=sum(1 for s in slots if not s['has_code']))
+                seeds.extend(seed_rows(relative, kind, blocks, name, key))
+                # A code-less slot with encoded properties is behavior too (a predefined action): seed it.
+                for slot in slots:
+                    if not slot['has_code']:
+                        names = '/'.join(slot['names'])
+                        seeds.append(seed_row(seed_id(key, names, slot['event'], 'encoded'), 'encoded-action',
+                                              name, f"{relative}:{slot['line']}", f"{names} [encoded action {slot['action']}]",
+                                              slot['event']))
+                hints.extend(secret_hints(relative, blocks))
+        inventory.append(entry)
     with (output / 'parity-seed.csv').open('w', newline='', encoding='utf-8') as handle:
         writer = csv.DictWriter(handle, fieldnames=SEED_COLUMNS)
         writer.writeheader()

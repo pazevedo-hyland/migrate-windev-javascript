@@ -230,6 +230,21 @@ custom_note :
                          [('WIN_Form/BTN_Ok', '18', True), ('WIN_Form/BTN_Cancel', '18', False)])
         self.assertTrue(blocks[0]['encoded_properties'])
 
+    def test_seed_ids_do_not_depend_on_the_inspected_folder(self):
+        text = REAL_SHAPE.replace("        type : 18\n  -\n    name : BTN_Save",
+                                  "        type : 18\n      -\n        internal_properties : QQQQ\n        type : 16\n  -\n    name : BTN_Save")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'legacy/code').mkdir(parents=True)
+            (root / 'legacy/code/WIN_Order.wdw').write_text(text, encoding='utf-8')
+            ids = []
+            for source, out in (('legacy', 'out-a'), ('legacy/code', 'out-b')):
+                module.inspect(root / source, root / out)
+                with (root / out / 'parity-seed.csv').open(encoding='utf-8') as handle:
+                    ids.append({row['id']: row['kind'] for row in csv.DictReader(handle)})
+        self.assertEqual(ids[0], ids[1])
+        self.assertIn('encoded-action', ids[0].values())
+
     def test_literal_blocks_keep_lines_and_stop_at_sibling(self):
         text = 'name : Save\n  code : |1-\n   IF stock < 0 THEN\n   \tError("Stock")\n   END\n  type : 14\n'
         blocks = module.extract_blocks(text)

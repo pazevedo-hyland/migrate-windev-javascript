@@ -48,7 +48,7 @@ def check(matrix, seed=None, require_complete=False, element=None):
                 errors.append(f'{where}: evidence "{item}" is not path:line, dossier: <unit>/<control>, '
                               'analysis: <file>.<item>, export:/golden:/runtime: <ref> or a file')
         legacy = (row.get('legacy_behavior') or '').strip()
-        if value['status'] == 'unmapped' and legacy and not re.search(r'\bU-\d+', legacy):
+        if value['status'] == 'unmapped' and legacy and not re.search(r'\bU-(?:[A-Z0-9]+-)?\d+', legacy):
             errors.append(f'{where}: an unmapped row with described behavior must cite the unresolved item (U-nn) blocking it')
         if value['status'] in ('specified', 'implemented', 'verified') and not value['target_behavior']:
             errors.append(f'{where}: {value["status"]} rows need target_behavior')

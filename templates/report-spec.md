@@ -1,5 +1,6 @@
 # Report spec — <RPT_Name>
 
+A spec handed to an implementer is self-contained: copy the report image next to it and quote every value it prints (global constants, preset formats), not only where they live.
 Evidence: `legacy/code/<file>.wde`, dossier extract `<dossier>/report/<RPT_Name>.json` and image `<dossier>/images/<RPT_Name>.*`, mapping note `docs/mapping/<unit>.md`.
 Printed by: <callers from docs/evidence-report.json, with parameters — or "no caller found" and what that means>.
 Destination: <preview (`iPreview`), printer, PDF, file>. Parameters: <…>.
@@ -37,6 +38,14 @@ Text source: `dossier` (parsed field), `image` (read from the dossier image: say
 
 | Control | Kind | Formula / preset | Reset on | Mask | Parity ID |
 |---|---|---|---|---|---|
+
+## Data edge cases
+
+| Case | Legacy behavior | Evidence or U-id |
+|---|---|---|
+| No rows | | |
+| Empty / NULL values in a column | | |
+| Text longer than its cell (`Divisible`, `Auto.Resiz` flags) | | |
 
 ## Acceptance checks
 

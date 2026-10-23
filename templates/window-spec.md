@@ -1,12 +1,30 @@
 # Screen spec — <WIN_Name>
 
-Evidence: `legacy/code/<file>.wdw`, `legacy/screenshots/<WIN_Name>*.png`, mapping note `docs/mapping/<unit>.md`.
-Opened from: <menu path / window + event>. Mode: <modal / non-modal / child / internal window>. Parameters: <…>. Returns: <…>.
-Size/resizing: <fixed / anchors>. Default button (Enter): <…>. Cancel button (Esc): <…>.
+Evidence: `legacy/code/<file>.wdw`, dossier image `<dossier>/images/<WIN_Name>.*`, layout drawing `<layouts dir>/<WIN_Name>.svg` (`scripts/render_layouts.py`), mapping note `docs/mapping/<unit>.md`. A spec handed to an implementer is self-contained: copy the images it cites next to it, and quote every value it relies on (global constants, masks, message texts) instead of naming where it lives.
+Opened from: <menu path / window + event, from docs/navigation.md>. Mode: <modal / non-modal / child / internal window>.
+Size/resizing: <width × height, minimum size, resizable, anchors; saved position vs opening position — which wins>. Default button (Enter): <…>. Cancel button (Esc): <…>. Focus on open: <control, per mode>.
+
+## Contract
+
+What the window needs and leaves behind, including what WINDEV passes implicitly. The target turns implicit state into explicit inputs and outputs.
+
+| Direction | What | How in legacy | Evidence |
+|---|---|---|---|
+| in | <record to edit, or new> | <parameter / shared file buffer (`Clientes` current record, `..NewRecord`) / global> | <path:line> |
+| out | <saved: yes/no> | <`MyWindow..ReturnedValue` / buffer the caller reads afterwards / global> | <caller path:line> |
+
+## Layout
+
+From the inspector `layout` (pixels, absolute in the window) and the dossier (anchoring, images, skin). Fonts and colors come from the skin template: name it, and read them from the dossier image.
+
+| Legacy name | x | y | width | height | Anchoring | Image / skin |
+|---|---|---|---|---|---|---|
 
 ## Controls (in tab order)
 
-| # | Legacy name (= `data-testid`) | Type | Caption | Linked item | Mask / format | Required | Max len | Initial state | Rules (visible / enabled / read-only) | Shortcut | Parity IDs |
+`tab_order` counts within each container (a supercontrol has its own sequence): write the effective order across the window.
+
+| # | Legacy name (= `data-testid`) | Type | Caption | Linked item | Mask / format | Required | Max len | Initial state | Rules (visible / enabled / read-only, tab stop when disabled) | Shortcut | Parity IDs |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | EDT_Customer | edit | Customer | CUSTOMER.Name | uppercase | yes | 50 | empty | read-only when order closed | Alt+C | SRC-… |
 
@@ -17,10 +35,21 @@ Size/resizing: <fixed / anchors>. Default button (Enter): <…>. Cancel button (
 
 ## Messages
 
-| Trigger | Exact legacy text | Type (Info/Error/YesNo/Dialog) | Buttons and result | Parity ID |
+| Trigger | Exact legacy text (with placeholders resolved: what each `+ x` prints) | Type (Info/Error/YesNo/Dialog) and title | Buttons and result | Parity ID |
 |---|---|---|---|---|
+
+## Data edge cases
+
+| Case | Legacy behavior | Evidence or U-id |
+|---|---|---|
+| Empty vs NULL written for blank fields | | |
+| Text with spaces only, maximum length, accents/case in keys | | |
+| Number range actually supported (mask, item type, code variables) | | |
+| No rows / first record / concurrent users | | |
 
 ## Acceptance checks
 
 - Keyboard-only walkthrough: <sequence of keys and expected focus/results>.
-- Visual comparison with screenshot approved by: <human, date>.
+- Visual comparison with the dossier image approved by: <human, date>.
+
+Every open point is a `U-<UNIT>-nn` item in the mapping note — never a bare "check" or "untested".
