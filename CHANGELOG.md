@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-23 — drop the project folder in as is
+
+### Changed
+- `prepare_evidence.py` finds the dossier PDF and the `.cpl` compile folder anywhere under `legacy/` (fixed layout first); `skin_assets.py` searches `legacy/` for images. The WINDEV project folder can be put in `legacy/` unchanged: on the real project, the same evidence as the structured layout (125 elements, 12 questions, 17 encoded actions).
+
 ## 2026-10-23 — lessons from a large agent-driven port (Bun, Zig → Rust) and a mapping review
 
 ### Added

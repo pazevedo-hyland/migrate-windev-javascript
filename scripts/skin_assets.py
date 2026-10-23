@@ -57,8 +57,8 @@ def export(layouts, project, out):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('layouts', nargs='+', type=Path, help='screen_layout.py outputs')
-    parser.add_argument('--project', type=Path, default=Path('legacy/images'),
-                        help="the WINDEV project's images and skin template (default legacy/images)")
+    parser.add_argument('--project', type=Path, default=Path('legacy'),
+                        help="where the project's images and skin template are, searched recursively (default legacy/)")
     parser.add_argument('--out', type=Path, required=True, help='e.g. public/skin')
     args = parser.parse_args()
     layouts = [json.loads(p.read_text(encoding='utf-8')) for p in args.layouts]

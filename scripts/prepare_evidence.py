@@ -52,8 +52,11 @@ def publish_images(dossier, layouts, target):
 def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language=None, images=True):
     legacy, analysis, docs = Path(legacy), Path(analysis), Path(docs)
     stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
-    dossier_pdf = dossier_pdf or next(iter(sorted(Path(legacy, 'docs').glob('*[Dd]ocumentation*.pdf'))), None)
-    compile_dir = compile_dir or next(iter(sorted(p for p in Path(legacy, 'code').glob('*.cpl') if p.is_dir())), None)
+    # The fixed layout first (00 §E), else anywhere under legacy/: the WINDEV project folder can be dropped in as is.
+    find = lambda pattern, preferred: next(iter(sorted(preferred)), None) or next(iter(sorted(Path(legacy).rglob(pattern))), None)
+    dossier_pdf = dossier_pdf or find('*[Dd]ocumentation*.pdf', Path(legacy, 'docs').glob('*[Dd]ocumentation*.pdf'))
+    compile_dir = compile_dir or next(iter(sorted(p for p in [*Path(legacy, 'code').glob('*.cpl'), *Path(legacy).rglob('*.cpl')]
+                                                   if p.is_dir())), None)
     paths = {'stamp': stamp, 'legacy': str(legacy), 'inspect': str(analysis / f'inspect-{stamp}')}
     (docs / 'mapping').mkdir(parents=True, exist_ok=True)
     (docs / 'schema').mkdir(parents=True, exist_ok=True)
@@ -74,7 +77,7 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
     else:
         print('no dossier PDF in legacy/docs: captions, tab order, masks and checkbox properties stay unknown')
     if compile_dir:
-        run('event_legend.py', Path(legacy, 'code'), '--compile-dir', compile_dir, '--out', docs / 'mapping/event-codes.md')
+        run('event_legend.py', Path(compile_dir).parent, '--compile-dir', compile_dir, '--out', docs / 'mapping/event-codes.md')
         paths['event_legend'] = str(docs / 'mapping/event-codes.md')
     else:
         print('no <project>.cpl compile folder in legacy/code: event codes stay inferred')

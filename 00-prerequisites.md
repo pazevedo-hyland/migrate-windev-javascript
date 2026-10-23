@@ -52,7 +52,7 @@ Use a native Windows VM when you must test Windows-specific behavior (printing, 
 
 ## E. Collect the legacy material
 
-Create `legacy/` (ignored by Git, but copied privately to every machine where agents work: parity evidence cites `legacy/<path>:<line>`) with a fixed layout. The quality of the analysis depends on it.
+Create `legacy/` (ignored by Git, but copied privately to every machine where agents work: parity evidence cites `legacy/<path>:<line>`). **Simplest: put the WINDEV project folder in it as is** (text-format sources with the `.cpl` compile folder, the analysis export, the dossier PDF and the images inside): the tools search `legacy/` for the sources, the `.xdd`, the `*Documentation*.pdf`, the `.cpl` folder and the images. Add what the project folder does not hold — `legacy/data/` above all. The layout below is where each kind of material goes when it comes from elsewhere; the quality of the analysis depends on having it.
 
 | Folder | Content | How to obtain |
 |---|---|---|
