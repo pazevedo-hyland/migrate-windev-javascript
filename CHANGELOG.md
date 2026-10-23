@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-23 — rounds 4–5 of the small-scale run
+
+### Added
+- `scripts/schema_draft.py`: XDD + dossier → type legend, draft SQLite DDL, per-column decisions.
+- Encoded actions: code-less event slots with encoded properties listed per file, seeded as `encoded-action` rows and grouped by opaque action ID in the evidence report.
+- `docs/navigation.md` generated from proven call sites (Mermaid), with unreached windows and reports listed.
+- `review-mapping` skill (six ordered checks); window spec contract, layout and data edge cases; report spec edge cases.
+- Dossier: report control checkboxes, margins, calculations and presets; analysis keys on wrapped rows; composite keys; `button_type`.
+- Inspector: report bands in the layout; WINDEV number forms (`60.`, `4.e-003`).
+
+### Fixed
+- Seed IDs no longer depend on the folder given to the inspector (a root change orphaned every mapping row).
+- Event legend: optional-event labels and Initialization (code 14).
+- Window flags no longer polluted by headings and dates; tables continued on a new section page.
+
+### Changed
+- `parity_check.py`: evidence must be `path:line`, a dossier/analysis/runtime reference or a file (JSON with its field); an `unmapped` row with described behavior must cite its `U-` item. Unresolved items are unit-scoped (`U-WFC-01`).
+
 ## 2026-10-23 — extraction fixes from the small-scale run
 
 ### Added

@@ -90,7 +90,10 @@ Tested on a real WINDEV 28 project (51 windows, 17 tables):
 - **Mapping skill:** 3 windows mapped by parallel agents; an independent cross-review confirmed 14 of 15 key claims.
 - **Build loop:** the client list and form built in Tauri through 4 stages with independent reviews. The first pass over-claimed 8 of 18 `verified` rows; after the "No guessing" rules and one fix stage, the final audit found 2 of 17.
 - **Dossier extraction:** WINDEV's 2,303-page project documentation turned into per-element JSON (captions, tab order, masks, 29 queries' SQL) and 106 window/report images.
-- **Event legend:** event codes verified from the project's compile folder (18 = Click, 293 matches, no conflict).
+- **Event legend:** 15 event codes verified from the project's compile folder (18 = Click, 293 matches; also Initialization, optional mouse and keyboard events, report Open/Before/After printing), no conflict.
+- **Schema draft:** 17 tables, 135 items from the XDD, type codes named by pairing with the dossier (14 codes, no conflict), a draft SQLite DDL that loads, 35 per-column decisions. The cross-check exposed dossier items the PDF parser dropped; all 133 keyed items now agree between XDD and dossier.
+- **Encoded actions:** 402 code-less event slots whose predefined action WINDEV encrypts, made visible as parity rows and grouped by equal encoded value into 80 distinct actions (nothing decoded): one human answer per group.
+- **Small-scale mapping runs (5 rounds):** dossier-aware mapping of a form and a report cut open questions from 10 to 5 (form), all remaining ones runtime-only; each round's harness feedback went into the tools. A docs-only implementer test and a cross-review shaped the spec templates and the review-mapping skill.
 - **Not yet:** the ODBC export against the HFSQL driver, and golden scenarios recorded from the legacy app.
 - **Tried and removed:** an automated UI crawler driving the running app through Windows UI Automation. On the real app it logged in but WINDEV exposed no menu items, so it captured no windows; the dossier provides that evidence instead.
 
