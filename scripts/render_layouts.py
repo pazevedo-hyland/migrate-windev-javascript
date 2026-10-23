@@ -20,7 +20,7 @@ def captions_from_dossier(dossier_dir, language='PT'):
         return captions
     for path in Path(dossier_dir, 'windev-window').glob('*.json'):
         for name, control in json.loads(path.read_text(encoding='utf-8')).get('controls', {}).items():
-            caption = control.get('caption')
+            caption = control.get('caption') or control.get('title')  # table columns have a title
             caption = caption.get(language) if isinstance(caption, dict) else caption
             if caption:
                 captions.setdefault(path.stem, {})[name] = caption

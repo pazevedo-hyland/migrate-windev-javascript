@@ -132,6 +132,25 @@ class DossierExtractTests(unittest.TestCase):
         self.assertEqual(coverage['windows_with_flags'], '0/2')
         self.assertTrue(any('windows_with_flags' in w for w in coverage['warnings']))
 
+    def test_table_columns_details_rows_and_flags(self):
+        window = module.collect([page('WINDEV window', 'WIN_T', 'Information on controls', body=(
+            'Table : TABLE_Clientes\nTable column\nType\nWidth\nCOL_Codigo\n 80 Active Right Center Numeric\n'
+            'Caption PT: x\nTitle angle 0\nBrowsed file Clientes\n'
+            'Table column : TABLE_Clientes.COL_Codigo (1)\nTitle PT: Código\nInput mask PT: 9 999\n'
+            'Data binding Clientes.Codigo\n'))])['WINDEV window']['WIN_T']['controls']
+        column, table = window['COL_Codigo'], window['TABLE_Clientes']
+        self.assertEqual((column['kind'], column['column_index'], column['title'], column['linked_item'], column['width'],
+                          column['h_align']), ('Table column', 1, {'PT': 'Código'}, 'Clientes.Codigo', 80, 'Right'))
+        self.assertNotIn('title', table)  # "Title angle 0" is another property
+        self.assertNotIn('input_mask', table)  # the column's mask stays on the column
+        self.assertEqual(table['browsed_file'], 'Clientes')
+        tick = lambda x, y: f'{x} {y} m {x + 2.84} {y - 2.83} l S\n{x + 2.84} {y - 2.83} m {x + 8.5} {y + 2.84} l S\n'
+        content = ("BT 46.72 410.7 Td (Table column)' ET\nBT 242.2 410.7 Td (Width)' ET\nBT 277.0 410.7 Td (Visible)' ET\n"
+                   "BT 442.4 410.7 Td (Sortable column)' ET\nBT 512.0 410.7 Td (Horz. alignment)' ET\n"
+                   "BT 46.72 405.0 Td (COL_Codigo)' ET\nBT 258.0 405.0 Td (80)' ET\nBT 508.4 405.0 Td (Right)' ET\n"
+                   + tick(277.5, 408.2))
+        self.assertEqual(module.checkboxes(content)[1], {'COL_Codigo': {'Visible': True, 'Sortable column': False}})
+
     def test_query_sql_parameters_and_conditions(self):
         pages = [
             page('Query', 'QRY_cliente', 'Information on the result', body='Query parameters\nParamCodigo\n'),

@@ -15,14 +15,17 @@ import re
 import sys
 
 # Properties whose names start with a FIELDS key but mean something else.
-LONGER = ('Image handling menu', 'Caption + Time left', 'Tab order (input)', 'Input mask (display)')
+LONGER = ('Image handling menu', 'Caption + Time left', 'Tab order (input)', 'Input mask (display)', 'Title angle')
 HEADER = re.compile(r'^Part (\d+)\s+(.*)$')
 DETAIL = re.compile(r'^(Button|Edit control|Caption|Image|Supercontrol|Table|Column|Combo box|List box|Check box|'
                     r'Radio button|Tab|Static|Progress bar|Looper|Internal window|Layout|Spin|Slider|Scrollbar|'
                     r'Rating|Calendar|Chart|Toolbar|Menu option|Cell|Tree view|Rich text|HTML|Zone|Sidebar|'
-                    r'Organizer|Scheduler|Shape|Splitter|[A-Z][A-Za-z]+(?: [A-Za-z]+)*) : ([A-Za-z_][\w$]*(?:\.[A-Za-z_][\w$]*)*)$')
+                    r'Organizer|Scheduler|Shape|Splitter|[A-Z][A-Za-z]+(?: [A-Za-z]+)*) : ([A-Za-z_][\w$]*(?:\.[A-Za-z_][\w$]*)*)'
+                    r'(?: \((\d+)\))?$')  # table columns carry their position: "Table column : TABLE_X.COL_Y (1)"
 # Control table rows: "EDT_Codigo 14 31 158 25 0 Active Numeric" (windows, pixels) or
 # "STC_Codigo Caption 0.00 0.00 6.09 14.66 0.10 Solid TBL-" (reports, millimetres).
+COLUMN_ROW = re.compile(r'^(\d+) (Active|Read-only|Read-onl|Grayed|Inactive) (Left|Right|Center|Justified) '
+                        r'(Top|Center|Bottom) (.+)$')
 WINDOW_ROW = re.compile(r'^([A-Za-z_][\w$]*) (-?\d+) (-?\d+) (\d+) (\d+) (\d+)(?: (.*))?$')
 REPORT_ROW = re.compile(r'^([A-Za-z_][\w$]*) ([A-Z][a-z]+(?: [a-z]+)*) (-?\d+\.\d+) (-?\d+\.\d+) (\d+\.\d+) (\d+\.\d+)(?: (.*))?$')
 STATES = ('Active', 'Read-only', 'Read-onl', 'Grayed', 'Inactive')
@@ -31,7 +34,8 @@ INPUT_TYPES = ('Text', 'Numeric', 'Date', 'Time', 'Currency', 'Duration', 'Date 
 FIELDS = {'Caption': 'caption', 'Tab order': 'tab_order', 'Input mask': 'input_mask', 'Input size': 'input_size',
           'Image': 'image', 'Background image': 'background_image', 'Initial value': 'initial_value',
           'Anchoring': 'anchoring', 'Title': 'title', 'Linked item': 'linked_item', 'File link': 'linked_item',
-          'Input type': 'input_type', 'Button type': 'button_type'}
+          'Input type': 'input_type', 'Button type': 'button_type', 'Data binding': 'linked_item',
+          'Browsed file': 'browsed_file', 'Browsed item': 'browsed_item', 'Stored item': 'stored_item'}
 
 
 def drawn_images(page):
@@ -61,9 +65,11 @@ def ticks(content):
 # words: add them here (the coverage summary of extract() shows when nothing was recognised).
 CONTROL_TABLE = {'X position', 'Height (mm)'}  # header that starts a table of controls (windows; reports)
 KEY_TABLE = {'Unique Key'}              # header that starts an analysis item table with key columns
+COLUMN_TABLE = {'Sortable column'}       # header of a table control's column list (anchored on its "Width")
 # Table columns that hold words or numbers, even when every cell of a page happens to be empty.
 TEXT_COLUMNS = {'X position', 'Y position', 'Width', 'Height', 'Plane', 'Initial state', 'Button type', 'Input type',
-                'Caption', 'Type', 'Direction', 'Default value', 'Height (mm)', 'Width (mm)', 'Thick.', 'Line', 'Position'}
+                'Caption', 'Type', 'Direction', 'Default value', 'Height (mm)', 'Width (mm)', 'Thick.', 'Line', 'Position',
+                'Horz. alignment', 'Vert. alignment'}
 COUNT_COLUMN = re.compile(r'^Nb\.')    # "Nb. columns", "Nb. tabs/row": numbers, not checkboxes
 TYPE_WORDS = re.compile(r'integer|String|Memo|Boolean|Date|Time|real|Decimal|identifier|key|Currency|Duration')
 
@@ -90,9 +96,9 @@ def checkboxes(content, carry=None):
     left = min(words or [x for x, _, _ in runs])
     margin = max(x for x in words or [left] if x < left + 10)
     grid = [margin + offset for offset in GRID_OFFSETS]
-    anchors = sorted({(y, 'control' if t in CONTROL_TABLE else 'key') for x, y, t in runs
-                      if t in CONTROL_TABLE | KEY_TABLE and not any(abs(ly - y) < 2 and numeric(lt) for lx, ly, lt in runs)},
-                     reverse=True)
+    kinds = {**dict.fromkeys(CONTROL_TABLE, 'control'), **dict.fromkeys(KEY_TABLE, 'key'), **dict.fromkeys(COLUMN_TABLE, 'column')}
+    anchors = sorted({(y, kinds[t]) for x, y, t in runs
+                      if t in kinds and not any(abs(ly - y) < 2 and numeric(lt) for lx, ly, lt in runs)}, reverse=True)
     tables = [(anchors[i + 1][0] if i + 1 < len(anchors) else -1, y, kind, None) for i, (y, kind) in enumerate(anchors)]
     if carry is not None and carry.get('headers'):
         # Rows above the first header of this page continue the previous page's table.
@@ -116,7 +122,8 @@ def checkboxes(content, carry=None):
     rows = {}
     for floor, header_y, kind, carried in tables:
         headers = carried or sorted((x, t) for x, y, t in runs if abs(y - header_y) < 0.5 and x > margin + 50)
-        anchor_x = next((x for x, t in headers if t in (CONTROL_TABLE if kind == 'control' else KEY_TABLE)), None)
+        anchor_words = {'control': CONTROL_TABLE, 'key': KEY_TABLE, 'column': {'Width'}}[kind]
+        anchor_x = next((x for x, t in headers if t in anchor_words), None)
         if anchor_x is None:
             continue  # the header word sits in the label column: a property, not a table
         if carry is not None:
@@ -134,6 +141,8 @@ def checkboxes(content, carry=None):
                 continue  # code is drawn token by token ("IF", " ", "Timer"…); table values start far right
             if kind == 'control' and sum(1 for lx, lt in same_row if anchor_x - 20 < lx < anchor_x + 150 and numeric(lt)) < 2:
                 continue  # not a control row: detail keys ("Opacity 100") have no X and Y coordinates
+            if kind == 'column' and not any(abs(lx - anchor_x) < 30 and numeric(lt) for lx, lt in same_row):
+                continue  # a column row has its width under "Width"
             if kind == 'key' and not any(TYPE_WORDS.search(lt) for _, lt in same_row):
                 continue
             candidates.append((y, name))
@@ -144,7 +153,7 @@ def checkboxes(content, carry=None):
             # A check mark is drawn just right of its column header's x, centred on its row (lower when the row wraps).
             values = {t: any(-3 <= tx - hx <= 8 and -4 <= ty - y <= 7 for tx, ty in marks)
                       for hx, _, right, t in columns if t not in text_columns and not COUNT_COLUMN.match(t)
-                      and (kind == 'control' or right > anchor_x)}  # analysis: only the key columns
+                      and (kind != 'key' or right > anchor_x)}  # analysis: only the key columns
             if values:
                 rows[name] = values
     return properties, rows
@@ -179,6 +188,8 @@ def parse_details(lines):
             current = controls.setdefault(path.rsplit('.', 1)[-1], {'kind': match[1], 'raw': []})
             if '.' in path:
                 current['path'] = path
+            if match[3]:
+                current['column_index'] = int(match[3])
             continue
         if line.startswith(('Window :', 'Supercontrol :')):
             current = None
@@ -230,8 +241,9 @@ def parse_items(lines):
 
 
 def parse_rows(lines, report=False):
-    """Control table rows: position, size, state, input type (windows) or type and bound item (reports)."""
-    rows, previous = {}, None
+    """Control table rows: position, size, state, input type (windows) or type and bound item (reports), and table
+    column rows ("COL_Codigo" then "80 Active Right Center Numeric": width, state, alignments, input type)."""
+    rows, previous, previous_name = {}, None, None
     for line in lines:
         line = line.strip()
         if report:
@@ -243,6 +255,13 @@ def parse_rows(lines, report=False):
             elif previous and line.startswith('Item '):
                 previous['item'] = line[5:].strip()
             continue
+        column = COLUMN_ROW.match(line)
+        if column and previous_name:
+            rows[previous_name] = {'width': int(column[1]), 'state': column[2], 'h_align': column[3],
+                                   'v_align': column[4], 'input_type': column[5]}
+            previous_name = None
+            continue
+        previous_name = line if re.fullmatch(r'COL_\w+|[A-Za-z_]\w*', line) else None
         match = WINDOW_ROW.match(line)
         if match:
             rest = (match[7] or '').split()
@@ -429,7 +448,7 @@ def parsed_coverage(elements):
     queries = {k: v for k, v in elements.get('Query', {}).items() if k != '_general'}
     counts = {
         'windows_with_flags': f"{sum(1 for w in windows.values() if w.get('flags'))}/{len(windows)}",
-        'controls_with_caption': f"{sum(1 for c in controls if c.get('caption'))}/{len(controls)}",
+        'controls_with_caption': f"{sum(1 for c in controls if c.get('caption') or c.get('title'))}/{len(controls)}",
         'controls_with_flags': f"{sum(1 for c in controls if c.get('flags'))}/{len(controls)}",
         'analysis_items_with_keys': f"{sum(1 for e in items if 'keys' in e)}/{len(items)}",
         'queries_with_sql': f"{sum(1 for q in queries.values() if q.get('sql'))}/{len(queries)}",
