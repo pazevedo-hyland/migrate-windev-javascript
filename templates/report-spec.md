@@ -1,7 +1,6 @@
 # Report spec — <RPT_Name>
 
-A spec handed to an implementer is self-contained: copy the report image next to it and quote every value it prints (global constants, preset formats), not only where they live.
-Evidence: `legacy/code/<file>.wde`, dossier extract `<dossier>/report/<RPT_Name>.json` and image `<dossier>/images/<RPT_Name>.*`, mapping note `docs/mapping/<unit>.md`.
+Evidence: `legacy/code/<file>.wde`, `dossier: <RPT_Name>`, image `docs/evidence/images/<RPT_Name>.*`, mapping note `docs/mapping/<RPT_Name>.md`. Write it so an implementer can build from it without opening the legacy sources (they verify against them): quote every value it prints (constants, preset formats).
 Printed by: <callers from docs/evidence-report.json, with parameters — or "no caller found" and what that means>.
 Destination: <preview (`iPreview`), printer, PDF, file>. Parameters: <…>.
 

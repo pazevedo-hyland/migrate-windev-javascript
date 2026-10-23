@@ -12,8 +12,15 @@ The principle: **separate** the central memory, detailed documentation, decision
 │   ├── legacy-inventory.md    ← sources, coverage, missing exports, secrets to revoke
 │   ├── wlanguage-traps.md     ← chapter 09 + project-specific traps found
 │   ├── data-migration.md      ← mappings, transformations, reconciliation, recovery
-│   ├── mapping/               ← one note per legacy window/report/procedure set/table group
+│   ├── evidence-report.md     ← generated: coverage, gaps, platform calls, runtime questions, encoded actions
+│   ├── navigation.md          ← generated: who opens or prints what, from code
+│   ├── evidence/
+│   │   ├── encoded-actions.md ← answer sheet filled by someone with WINDEV or the running app (never regenerated)
+│   │   └── images/            ← generated: dossier image and layout drawing per window/report (committed)
+│   ├── schema/schema-draft.*  ← generated: draft SQLite schema + decisions for the database ADR
+│   ├── mapping/               ← one note per legacy unit; event-codes.md (generated) + event-codes-inferred.md
 │   ├── screens/               ← one spec per window (templates/window-spec.md)
+│   ├── reports/               ← one spec per report (templates/report-spec.md)
 │   ├── golden/                ← golden scenarios + compare.json
 │   ├── parity/parity.csv      ← behavior parity matrix: the definition of done
 │   ├── decisions/             ← ADRs: one decision = one file
@@ -24,7 +31,7 @@ The principle: **separate** the central memory, detailed documentation, decision
 ├── src/bindings/AGENTS.md
 ├── src/domain/AGENTS.md
 ├── skills/                    ← agent-neutral playbooks: review, map-element, review-mapping (templates/agent/skills/)
-├── scripts/                   ← inspector, parity gate, status, comparator, guard.py (shared guardrails)
+├── scripts/                   ← evidence pipeline, parity gate, comparator, guard.py (shared guardrails)
 ├── .githooks/pre-commit       ← runs scripts/guard.py --staged for every agent and human
 └── .claude/settings.json      ← optional Claude Code adapter: hook → scripts/guard.py --hook; skills copied to .claude/skills/
 ```

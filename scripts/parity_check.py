@@ -48,6 +48,10 @@ def check(matrix, seed=None, require_complete=False, element=None, check_files=F
                 path = re.split(r':\d|\s\(', item)[0]
                 if not Path(path).exists():
                     errors.append(f'{where}: evidence file not found: {path}')
+            if 'analysis-local/' in item:
+                errors.append(f'{where}: evidence "{item[:80]}" points into analysis-local/ (dated, not committed): cite '
+                              '"dossier: <unit>/<field>", the legacy/ source line, or docs/evidence/images/<file>')
+                continue
             if not EVIDENCE.fullmatch(item):
                 errors.append(f'{where}: evidence "{item}" is not path:line, dossier: <unit>/<control>, '
                               'analysis: <file>.<item>, export:/golden:/runtime: <ref> or a file')

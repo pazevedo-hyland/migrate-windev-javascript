@@ -74,6 +74,11 @@ class ParityCheckTests(unittest.TestCase):
                                    seed=[row('SRC-new', 'unmapped', confidence='unresolved')])
         self.assertEqual(errors, ['matrix row not in the current seed (stale evidence): SRC-old'])
 
+    def test_evidence_must_not_point_into_analysis_local(self):
+        errors, _ = self.run_check([row('R1', 'specified', target_behavior='same',
+                                        evidence='analysis-local/dossier-20261023/windev-window/WIN_A.json (flags)')])
+        self.assertIn('points into analysis-local/', errors[0])
+
     def test_note_lint(self):
         note = self.root / 'WIN_A.md'
         note.write_text('Font read from the image (U-WA-03).\nMax length not extracted.\nCaption: Cancelar\n', encoding='utf-8')

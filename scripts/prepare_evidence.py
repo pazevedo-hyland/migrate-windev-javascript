@@ -7,6 +7,7 @@
   evidence_report.py                       -> docs/evidence-report.md, docs/navigation.md
   schema_draft.py                          -> docs/schema/schema-draft.md, .sql
   render_layouts.py                        -> analysis-local/layouts-<stamp>/
+  images                                   -> docs/evidence/images/  (dossier images + layout drawings, committed)
 
 Every run writes fresh dated folders (the inspector refuses to reuse one) and records them in
 analysis-local/latest.json, so prompts can say "the paths in latest.json". Generated docs are overwritten.
@@ -15,6 +16,7 @@ import argparse
 from datetime import datetime
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -30,6 +32,20 @@ def run(script, *args):
         sys.stdout.write(result.stdout)
         raise SystemExit(f'{script} failed (exit {result.returncode})')
     return result.stdout
+
+
+def publish_images(dossier, layouts, target):
+    """Copy the visual evidence specs cite into docs/ (committed), so agents on other machines see it: the dossier
+    image of each window, report and query, and each window's layout drawing. Raw extracts stay in analysis-local/:
+    they hold code and are regenerated from legacy/."""
+    target.mkdir(parents=True, exist_ok=True)
+    sources = list(Path(dossier, 'images').glob('*')) if dossier else []
+    sources += [p for p in Path(layouts).glob('*.svg')]
+    for source in sources:
+        destination = target / source.name
+        if not destination.exists() or destination.read_bytes() != source.read_bytes():
+            shutil.copyfile(source, destination)
+    return str(target)
 
 
 def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language='pt-PT', images=True):
@@ -64,6 +80,7 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
         print('no .xdd in legacy/: no schema draft (export the analysis to legacy/schema/)')
     paths['layouts'] = str(analysis / f'layouts-{stamp}')
     run('render_layouts.py', paths['inspect'], '--out', paths['layouts'], *(['--dossier', dossier] if dossier else []))
+    paths['images'] = publish_images(dossier, paths['layouts'], docs / 'evidence/images')
     paths['summary'] = report.strip().splitlines()[-1] if report.strip() else ''
     analysis.mkdir(parents=True, exist_ok=True)
     (analysis / 'latest.json').write_text(json.dumps(paths, indent=2), encoding='utf-8')

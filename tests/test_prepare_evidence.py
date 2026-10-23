@@ -40,11 +40,13 @@ class PrepareEvidenceTests(unittest.TestCase):
             report = (root / 'docs/evidence-report.md').read_text(encoding='utf-8')
             navigation = (root / 'docs/navigation.md').read_text(encoding='utf-8')
             sheet = (root / 'docs/evidence/encoded-actions.md').read_text(encoding='utf-8')
+            images = [p.name for p in (root / 'docs/evidence/images').iterdir()]
         self.assertEqual(latest['inspect'], paths['inspect'])
         self.assertNotIn('dossier', latest)
         self.assertIn('Encoded actions (1 distinct, 1 slots)', report)
         self.assertIn('WIN_A[WIN_A] --> WIN_B[WIN_B]', navigation)
         self.assertIn('| A-', sheet)
+        self.assertTrue(images)  # the layout drawing is published to docs/evidence/images/
 
     def test_answer_sheet_is_never_overwritten(self):
         with tempfile.TemporaryDirectory() as directory:

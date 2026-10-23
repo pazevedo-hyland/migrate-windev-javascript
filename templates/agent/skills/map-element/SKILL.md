@@ -1,59 +1,59 @@
 ---
 name: map-element
-description: Map one legacy WINDEV element (window, report, query, procedure set, class or table group) into a mapping note, a screen spec and parity rows. Use during stage 0 mapping or when a new legacy source appears.
+description: Map one legacy WINDEV element (window, report, query, procedure set, class or table group) into a mapping note, a screen or report spec and parity rows. Use during stage 0 mapping or when a new legacy source appears.
 ---
 
 # Map one legacy element
 
-Input: one unit name. Paths are relative to the repository root; the locations named here are the defaults — when your stage prompt gives other paths, use those. Read in full: the unit's dossier extract if present (`<dossier dir>/<kind>/<unit>.json`: captions, tab order, masks, query SQL — cite it as `dossier: <unit>/<control>`), the unit's source in `legacy/`, its extracted blocks in the inspector output (`<inspect dir>/code/<path under legacy/>.json`, e.g. `code/code/WIN_X.wdw.json`), `docs/wlanguage-traps.md`, `docs/mapping/event-codes.md` and `docs/mapping/event-codes-inferred.md`. Never modify legacy files, never run anything from them, never copy credential values (locations only). Do not write application code.
+Input: one unit name. Paths below are defaults; a stage prompt may give others. Never modify or run anything in `legacy/`, never copy credential values (locations only), do not write application code.
 
-Start from the unit's evidence pack: `python3 scripts/unit_evidence.py <unit> --out analysis-local/units/<unit>.json` — its seed rows, blocks with event meanings, encoded actions with every other slot holding the same action ID (often what settles one), parsed dossier fields, callers, calls out, gaps and runtime questions. Keep the pack: the reviewer diffs it against a newer one.
+## Read
 
-Read the parsed fields of the dossier extract first (`title`, `controls.<name>.caption`, `tab_order`, `input_mask`, `input_type`, `state`, `flags` — checkbox properties such as `Indep. HFSQL ctx.`, `Required input`, `Multiline` — for analysis items `keys` (`Unique Key`, `Key with Duplicates`), for reports `margins_mm`, per control `flags` (`Divisible`, `Auto.Resiz`, `Border`), `calculation` and `preset`, and for queries `sql`). `tab_order` numbers count within their parent container (a supercontrol has its own sequence). A field missing from the extract is "not extracted", never false: check `index.json` → `coverage` and its warnings; open `lines` only for what the parsed fields do not cover.
+1. The unit's evidence pack: `python3 scripts/unit_evidence.py <unit> --out analysis-local/units/<unit>.json` (keep it: the reviewer diffs it later). It holds the seed rows, code blocks with event meanings, encoded actions with every other slot sharing the same action ID, the parsed dossier fields, callers, calls out, gaps and runtime questions.
+2. The unit's source in `legacy/` in full, and the callers' and callees' code one level out (call sites are in the pack).
+3. `docs/wlanguage-traps.md`, `docs/mapping/event-codes.md` (generated, verified), `docs/mapping/event-codes-inferred.md`, `docs/evidence/encoded-actions.md` (answers), the images `docs/evidence/images/<unit>.*`.
+
+Dossier fields: a field missing from the extract is "not extracted", never false (the extract's `index.json` → `coverage` says what was recognised). `tab_order` counts within each container. Open the extract's raw `lines` only for what parsed fields lack.
 
 ## Scope
 
-- **Rows of the unit**: seed rows whose `element` column equals the unit name — not every row that mentions it. Keep every `SRC-*` ID.
-- **A block** is a non-empty code block (one seed row). Empty event slots are not rows; mention them only when meaningful.
-- **An encoded action** is an event slot with no code but encoded `internal_properties` (seed `kind` = `encoded-action`, listed in the inspector output's `encoded_slots`): WINDEV keeps a button's predefined action there (close, validate, print a report, open a window). It is behavior: keep its row, describe what the evidence proves (button type from the dossier, caption, what the window offers otherwise), and leave the action itself `unmapped` with a `U-<UNIT>-nn` naming its action ID (`A-xxxxxx`, in the seed `context`) — unless `docs/evidence/encoded-actions.md` already answers that ID: then the row is `specified`, `inferred` or `verified` as the answer says, with evidence `runtime: A-xxxxxx`. Blocks with `encoded_properties: true` may run such an action besides their code. Template system buttons repeated on every window (`BTN_SYST_FERMER`, `BTN_SYST_MINIMIZE`…) may all cite one shared rule row.
-- **Follow one level of callers and callees**: take the callers from `docs/evidence-report.json` (`callers.<unit>`: `<source file>:<line> (<function> in <caller>)`, relative to the inspected folder) instead of searching, and read those call sites, plus the windows, procedures and queries the unit opens or calls. Cross-window behavior (shared file buffers and filters, globals, parameters, returned values) is where the risky rules are: a window without an independent HFSQL context (`Indep. HFSQL ctx.` false in the dossier `flags`) shares file positions and filters with the windows it opens and is opened from — read their file loops and searches for the effect.
+- **Rows**: seed rows whose `element` is the unit. Keep every `SRC-*` ID.
+- **Block**: a non-empty code block, one seed row.
+- **Encoded action** (seed `kind` `encoded-action`): an event slot with no code whose predefined action (close, validate, print, open) WINDEV keeps encoded. It is behavior: describe what the evidence proves (caption, button type, the same action ID next to code elsewhere) and leave the action `unmapped` with a `U-` item naming its ID — unless the answer sheet answers that ID: then cite `runtime: A-xxxxxx`. Blocks with `encoded_properties: true` may run an action besides their code. Template system buttons on every window may share one rule row.
+- **Cross-window behavior** is where the risky rules are: shared file buffers and filters, globals, parameters, returned values. A window without an independent HFSQL context (`Indep. HFSQL ctx.` false) shares file positions and filters with the windows it opens and is opened from.
 
 ## Write `docs/mapping/<unit>.md`
 
-1. **Purpose** — what the user does here, from evidence.
-2. **Entry and exit** — callers (`path:line`), parameters, modal or not, returned value, what it opens, how it closes, and the **implicit contract**: shared file buffers, filters and globals the window reads on entry or leaves for its callers (read the callers' code after the call returns).
-3. **Events** — one entry per block: control path, raw event code and its legend meaning (or "unknown"), `path:line`, behavior in plain language, HFSQL calls (files, keys, filters, locks, transactions, error handlers), calls out.
-4. **Rules** — each business rule: inputs, outputs, rounding/date/text semantics, exact message texts, one concrete example, and the traps from `docs/wlanguage-traps.md` it involves. Quote literal values (a global constant's value, a mask), not only where they are defined: the implementer will not have the legacy sources. Explain each WLanguage function you cite in plain words once (`HReset(Clientes)`: clears the file's current record buffer).
-5. **Data** — files/tables read and written, keys, implicit current-record use, queries and their parameters (binary queries: intent inferred from name, call sites and schema — marked inferred).
-6. **Before you list what is unresolved**, answer for this unit: what is selected and shown on open, after a search, after a mode change, after add or delete (including a record that no longer matches the active filter), when the result is empty, and when the user moves rows with the keyboard; whether it refreshes when other windows or users change its data, and what happens with two instances open at once; what built-in control features are on (table sort, per-column search, saved column configuration, Enter handling: dossier `flags`) and how they meet the code's filters; every dialog's title, default button, Esc result and labels in each language; every write's failure path (query error, lock, duplicate); numbers turned into text for SQL or display (masks, separators); and what callers do with each returned value. Each answer is evidence or a `U-` item.
-7. **Proposed changes** — anything you think the target should do differently (a bug to fix, a parameterized query): listed here for an ADR, never written as the row's `target_behavior`, which stays `Preserve legacy behavior` until the ADR exists.
-8. **Unresolved** — numbered `U-<UNIT>-01…` with the same abbreviation as the unit's rule rows (`U-WFC-01`), so IDs stay unique when notes are merged: binary parts, encoded designer properties, unknown codes, missing references, and every point you would otherwise mark "check", "untested" or "probably". For each: the evidence that would resolve it (designer export, query SQL export, running the legacy app), whether it blocks implementation, and the interim default an implementer may use meanwhile — the most likely **legacy** behavior, never an improvement (that goes to Proposed changes), or "none: must be answered". Every "not extracted", "unknown" or "read from the image" in your documents is one of these items.
+1. **Purpose** — what the user does here.
+2. **Entry and exit** — callers (`path:line`), parameters, modal or not, returned value and what callers do with it, what it opens, how it closes; the implicit contract (buffers, filters, globals read on entry or left behind).
+3. **Events** — per block: control, raw event code and meaning, `path:line`, behavior in plain words, HFSQL calls (files, keys, filters, locks, transactions, error handling), calls out.
+4. **Rules** — inputs, outputs, rounding/date/text semantics, exact message texts, a concrete example, traps involved. Quote literal values (a constant's value, a mask), and explain each WLanguage function once in plain words: the implementer will not read the legacy sources.
+5. **Data** — files read and written, keys, current-record use, queries and parameters.
+6. **Behavior checklist** — answer each, with evidence or a `U-` item: what is selected and shown on open, after a search or mode change, after add/modify/delete (also a record leaving the filter), on an empty result, on keyboard row moves; refresh when other windows or users change the data; two instances open; built-in control features (sort, per-column search, saved columns, Enter handling — dossier `flags`) and how they meet the code's filters; each dialog's title, default button, Esc result and labels per language; each write's failure path; numbers turned into text for SQL or display.
+7. **Proposed changes** — what the target might do differently (a bug fix, a parameterized query), for an ADR. Never written as `target_behavior`.
+8. **Unresolved** — `U-<UNIT>-nn` (same abbreviation as the rule rows, e.g. `U-WFC-01`). Every "not extracted", "unknown", "read from the image", "check" or "probably" in your documents is one. Each says what would resolve it, whether it blocks implementation, and the interim default: the most likely legacy behavior, or "none: must be answered".
 
-Controls go **only** in the screen spec, not in the note.
+Controls go only in the screen spec.
 
-## Write `docs/screens/<unit>.md` (windows only)
+## Write the spec
 
-Follow `templates/window-spec.md`. Captions, masks, tab order and button types come from the dossier extract when it exists; the text sources keep them in encrypted `internal_properties`. Without a dossier, fill what readable text and code prove, otherwise write `unresolved (encoded)` once per column rather than guessing, and list the evidence needed.
-
-## Reports
-
-For a report (`.wde`), write `docs/reports/<unit>.md` from `templates/report-spec.md` instead of a screen spec: page format and the printable-width check, data source and sort, bands, columns with bound items (`controls.<name>.item` in the dossier extract, geometry in millimetres), calculations and presets. Report captions are usually visible only in the dossier image: read them there and say so. A report with no caller in `callers` is a finding (how is it printed today?), not an omission of yours: confirm it with a case-insensitive search of the sources for the report name (e.g. `grep -rni "RPT_List_Clientes" legacy/code`; a hit outside the report itself and the project file `.wdp`, which lists every element, is a caller the index missed — report it) before writing "no caller found".
+- **Window** → `docs/screens/<unit>.md` from `templates/window-spec.md`. Captions, masks, tab order, flags and button types come from the dossier; without one, write `unresolved (encoded)` per column instead of guessing.
+- **Report** → `docs/reports/<unit>.md` from `templates/report-spec.md`: bands and geometry (inspector `layout`, millimetres), bound items, calculations, presets, page fit. Captions are often only in the image: say so. No caller in the pack is a finding: confirm with `grep -rni "<unit>" legacy/code` (a hit outside the report and the `.wdp` project file is a missed caller).
 
 ## Write `docs/parity/<unit>.csv`
 
-Exact columns of `templates/parity.template.csv`.
+Columns of `templates/parity.template.csv`.
 
-- `evidence`: `;`-separated items, each a repository-relative `path:line` (seed evidence is relative to the inspected folder: prefix it, e.g. `legacy/code/`), a JSON file with the field (`<dossier dir>/windev-window/WIN_X.json (controls.BTN_Ok.flags)`), or a screenshot/export file. `parity_check.py` rejects anything vaguer.
-- `confidence`: `verified` (read directly in code/schema), `inferred` (reasoned; say how in `legacy_behavior`), `unresolved`.
-- `status`: `specified` with `target_behavior` = `Preserve legacy behavior` when the legacy behavior is understood; `unmapped` when an unresolved item blocks it — cite its `U-<UNIT>-nn` in `legacy_behavior` (the validator requires it). Changes to legacy behavior are decided later by ADR, not here.
-- A block whose code is clear but whose outcome depends on an unresolved item (e.g. the window may or may not close afterwards): keep the block's `SRC-*` row `specified` for what the code does, and put the unresolved part in its own `RULE-*` row, `unmapped`, citing the `U-<UNIT>-nn`.
-- New rule rows: `RULE-<UNIT-ABBREVIATION>-NNN` (e.g. `RULE-ORF-001`), for rules spanning several blocks or windows.
-- New event-code meanings you infer: add them to `docs/mapping/event-codes-inferred.md` with the evidence (`docs/mapping/event-codes.md` is generated by `event_legend.py` and would overwrite them).
+- `evidence`: `;`-separated, each `legacy/<path>:<line>` (seed evidence is relative to `legacy/`: prefix it), `dossier: <unit>/<field>` (e.g. `dossier: WIN_X/controls.BTN_Ok.flags`), `runtime: A-xxxxxx`, or a committed file. Never a path inside `analysis-local/`.
+- `confidence`: `verified` (read in code, schema, dossier or an answer), `inferred` (reasoning written in `legacy_behavior`), `unresolved`. A row mixing both is split.
+- `status`: `specified` with `target_behavior` = `Preserve legacy behavior` when understood; `unmapped` when a `U-` item blocks it, citing the item in `legacy_behavior`. A clear block with an unresolved outcome stays `specified`, the outcome in its own `RULE-*` row, `unmapped`.
+- New rows: `RULE-<ABBR>-NNN`. New event-code meanings: `docs/mapping/event-codes-inferred.md`, with evidence.
 
-Validate before finishing:
+Validate:
 
 ```sh
-python3 scripts/parity_check.py docs/parity/<unit>.csv --seed <inspect dir>/parity-seed.csv --element <unit> --check-files --note docs/mapping/<unit>.md --note docs/screens/<unit>.md
+python3 scripts/parity_check.py docs/parity/<unit>.csv --seed <inspect dir>/parity-seed.csv --element <unit> \
+  --check-files --note docs/mapping/<unit>.md --note docs/screens/<unit>.md   # or docs/reports/<unit>.md
 ```
 
-Finish with: blocks covered / total, rows written, the top risky rules, the unresolved list, and questions for the human.
+Finish with: blocks and encoded actions covered / total, rows written, the riskiest rules, the unresolved list (blocking ones first), questions for the human.

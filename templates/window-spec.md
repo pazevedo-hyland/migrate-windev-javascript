@@ -1,6 +1,6 @@
 # Screen spec — <WIN_Name>
 
-Evidence: `legacy/code/<file>.wdw`, dossier image `<dossier>/images/<WIN_Name>.*`, layout drawing `<layouts dir>/<WIN_Name>.svg` (`scripts/render_layouts.py`), mapping note `docs/mapping/<unit>.md`. A spec handed to an implementer is self-contained: copy the images it cites next to it, include the contract sections of the windows and reports it opens, and quote every value it relies on (global constants, masks, message texts) instead of naming where it lives.
+Evidence: `legacy/code/<file>.wdw`, `dossier: <WIN_Name>`, images `docs/evidence/images/<WIN_Name>.jpg` (designer) and `.svg` (layout drawing), mapping note `docs/mapping/<WIN_Name>.md`. Write it so an implementer can build from it without opening the legacy sources (they verify against them): quote every value it relies on (constants, masks, texts) and include the contract of each window or report it opens.
 Opened from: <menu path / window + event, from docs/navigation.md>. Mode: <modal / non-modal / child / internal window>.
 Size/resizing: <width × height, minimum size, resizable, anchors; saved position vs opening position — which wins>. Default button (Enter): <…>. Cancel button (Esc): <…>. Focus on open: <control, per mode>.
 

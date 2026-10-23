@@ -15,7 +15,12 @@ Keep this file short (≈60 lines). Details live in `docs/`; local rules live in
 - `src-tauri/migrations/` — ordered SQL migrations; committed ones are immutable. See local `AGENTS.md`.
 - `docs/parity/parity.csv` — behavior parity matrix: the definition of done.
 - `legacy/`, `analysis-local/` — private, ignored, read-only evidence. Never execute legacy code.
-- `skills/` — playbooks to follow; `scripts/` — inspector, parity gate, status, comparator, guard. Humans own `scripts/guard.py`, `.githooks/` and agent configuration: do not modify them.
+- `skills/` — playbooks to follow; `scripts/` — evidence pipeline, parity gate, comparator, guard. Humans own `scripts/guard.py`, `.githooks/` and agent configuration: do not modify them.
+
+## Where the legacy evidence is
+
+For a slice touching window or report `<X>`, read: `docs/screens/<X>.md` or `docs/reports/<X>.md` (what to build), `docs/mapping/<X>.md` (behavior, rules, `U-` items), its rows in `docs/parity/`, and the images `docs/evidence/images/<X>.*` (designer image and layout drawing). Shared: `docs/schema/schema-draft.md` and the database ADR, `docs/navigation.md` (who opens what), `docs/evidence/encoded-actions.md` (answered runtime questions), `docs/mapping/event-codes.md`.
+Need more: `python3 scripts/prepare_evidence.py` regenerates `analysis-local/` from `legacy/` (paths in `analysis-local/latest.json`) and `python3 scripts/unit_evidence.py <X>` gathers everything about one unit. Cite evidence as `legacy/<path>:<line>`, `dossier: <X>/<field>` or a committed file — never a path inside `analysis-local/`.
 
 ## Non-negotiable rules
 
