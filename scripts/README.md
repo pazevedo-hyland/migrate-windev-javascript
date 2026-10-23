@@ -39,10 +39,10 @@ Outputs contain business logic and possibly secrets: keep them local (`analysis-
 ## `parity_check.py` — the parity gate
 
 ```sh
-python3 scripts/parity_check.py docs/parity/parity.csv [--seed docs/parity/parity-seed.csv] [--element <unit>] [--require-complete] [--check-files] [--note <md>]
+python3 scripts/parity_check.py docs/parity/parity.csv [--seed docs/parity/parity-seed.csv] [--element <unit>[,<unit>…]] [--require-complete] [--check-files] [--note <md>]
 ```
 
-Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). With `--seed`, every seed row must still exist. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
+Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). Confidence `assumed` marks rows built on a `proposed:` answer or a default ADR: they may be verified, are counted apart (`verified_on_assumptions`), and a row citing `proposed:` cannot claim `verified` confidence. With `--seed`, every seed row must still exist, and a matrix row the seed no longer has is matched to its new ID when one seed row has the same element, context and event ("rename it"). `--element` scopes every check to those units (a rule row belongs to the unit its context starts with); `--check-files` also resolves seed evidence under `legacy/`. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
 
 ## `prepare_evidence.py` — the whole evidence pipeline in one command
 
@@ -72,7 +72,7 @@ One self-contained HTML page from what the process already maintains — parity 
 
 ```sh
 python3 scripts/screen_layout.py WIN_Table_Clientes --out src/ui/legacy/WIN_Table_Clientes.layout.json
-python3 scripts/skin_assets.py src/ui/legacy/*.layout.json --project <WINDEV project folder> --out public/skin
+python3 scripts/skin_assets.py src/ui/legacy/*.layout.json --out public/skin   # images from legacy/images/ (00 §E); fails if one is missing
 python3 scripts/visual_compare.py docs/evidence/images/WIN_Table_Clientes.jpg ui-report/WIN_Table_Clientes.png \
   --out docs/evidence/visual/WIN_Table_Clientes.compare.png --record docs/evidence/visual/WIN_Table_Clientes.json
 ```

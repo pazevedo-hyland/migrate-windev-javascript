@@ -61,8 +61,10 @@ def layout(unit, latest, language=None):
                  'background_image': background, 'background_states': raw_value(raw, 'Nb. background states'),
                  'background_stretch': raw_value(raw, 'Stretch background image')}
         inside = raw_value(raw, 'Inside width')
-        if inside and entry['width'] and entry['caption'] and details.get('kind') == 'Edit control':
-            entry['caption_width'] = entry['width'] - int(inside)  # caption drawn left of the input box
+        if inside and inside.isdigit() and entry['width'] and entry['caption']:
+            # Edits, combos, lists: the caption is drawn left of the input box, which is the last `Inside width`.
+            entry['caption_width'] = entry['width'] - int(inside)
+        entry['displayed_item'] = details.get('displayed_item')
         if item['kind'] == 'column':
             columns[item['name']] = {'name': item['name'], 'title': entry['caption'], 'width': details.get('width'),
                                      'h_align': details.get('h_align'), 'input_type': details.get('input_type'),

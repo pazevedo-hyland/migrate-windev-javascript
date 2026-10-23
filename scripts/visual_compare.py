@@ -11,6 +11,7 @@ rank screens and show progress; a human approves the final look from the side-by
 import argparse
 from datetime import date
 import json
+import os
 from pathlib import Path
 
 
@@ -54,8 +55,9 @@ def main():
     result = compare(args.legacy, args.new, args.out)
     if args.record:
         args.record.parent.mkdir(parents=True, exist_ok=True)
-        args.record.write_text(json.dumps({**result, 'legacy': str(args.legacy), 'new': str(args.new),
-                                           'side_by_side': str(args.out) if args.out else None,
+        here = lambda path: os.path.relpath(path) if path else None  # repository-relative: no machine paths
+        args.record.write_text(json.dumps({**result, 'legacy': here(args.legacy), 'new': here(args.new),
+                                           'side_by_side': here(args.out),
                                            'date': date.today().isoformat()}, indent=1) + '\n', encoding='utf-8')
     print(json.dumps(result, indent=1))
 

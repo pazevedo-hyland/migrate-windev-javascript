@@ -1,6 +1,6 @@
 // Automated UI parity check: every legacy control exists in the new screen with its legacy caption, and the
 // screen is scored against the legacy image (scripts/visual_compare.py, recorded in docs/evidence/visual/ for
-// the progress page; a drop below the last score fails). Side-by-side report in ui-report/. Configure every
+// the progress page; a score below the floor or a drop below the last score fails; so does a failed image request). Side-by-side report in ui-report/. Configure every
 // window the app can open — modal forms included — in ui-check.config.json. Copy templates/ui-check/ into the app.
 import { expect, test } from "@playwright/test";
 import { spawnSync } from "node:child_process";
@@ -27,6 +27,8 @@ type Config = {
   visualDir?: string;
   /** Points of layout match (edge overlap) a window may lose against its last recorded score; default 2. */
   visualTolerance?: number;
+  /** Scores every window must reach, also on its first record; default { pixel: 90, edge: 60 }. */
+  visualFloor?: { pixel: number; edge: number };
   windows: Record<string, WindowConfig & { captionIgnore?: Record<string, string> }>;
 };
 
@@ -38,6 +40,11 @@ config.inspectDir ??= latest.inspect;
 config.dossierDir ??= latest.dossier;
 config.legacyScreenshots ??= "docs/evidence/images";
 config.visualDir ??= "docs/evidence/visual";
+for (const [key, path] of Object.entries({ inspectDir: config.inspectDir, dossierDir: config.dossierDir,
+  legacyScreenshots: config.legacyScreenshots })) {
+  // Evidence of another checkout would be compared silently: every path stays inside this repository.
+  if (path && !resolve(root, path).startsWith(root)) throw new Error(`${key} points outside the repository: ${path}`);
+}
 
 type Score = { pixel_similarity: number; edge_overlap: number };
 const legacyImage = (window: string) =>
@@ -98,6 +105,10 @@ const results: { window: string; missing: string[]; ignored: number; total: numb
 
 for (const [window, settings] of Object.entries(config.windows)) {
   test(`${window}: legacy controls present`, async ({ page }) => {
+    // A missing skin image or icon renders as a blank: every request must succeed.
+    const failed: string[] = [];
+    page.on("requestfailed", (request) => failed.push(request.url()));
+    page.on("response", (response) => { if (response.status() >= 400) failed.push(`${response.status()} ${response.url()}`); });
     await page.goto("/");
     for (const id of settings.open) await page.getByTestId(id).first().click();
     const view = page.getByTestId(window).first();
@@ -127,6 +138,28 @@ for (const [window, settings] of Object.entries(config.windows)) {
     results.push({ window, missing, ignored: Object.keys(settings.ignore).length, total: expected.length, captions, score });
     expect(missing, `legacy controls with no data-testid in ${window}`).toEqual([]);
     expect(captions, `captions differing from the legacy dossier in ${window}`).toEqual([]);
+    // Dev servers answer a missing file with the app's HTML (200): fetch every image the window uses and check it is one.
+    const images = await view.evaluate((root) => {
+      const urls = new Set<string>();
+      for (const el of [root, ...Array.from(root.querySelectorAll("*"))]) {
+        if (el instanceof HTMLImageElement && el.src) urls.add(el.src);
+        const style = getComputedStyle(el);
+        for (const value of [style.backgroundImage, style.borderImageSource]) {
+          for (const match of value.matchAll(/url\("?([^")]+)"?\)/g)) urls.add(new URL(match[1], location.href).href);
+        }
+      }
+      return [...urls];
+    });
+    for (const url of images) {
+      const response = await page.request.get(url);
+      if (!response.ok() || !(response.headers()["content-type"] ?? "").startsWith("image/")) failed.push(url);
+    }
+    expect(failed, `images or requests that failed while showing ${window}`).toEqual([]);
+    const floor = config.visualFloor ?? { pixel: 90, edge: 60 };
+    if (score) {
+      expect(score.pixel_similarity, `${window}: pixel similarity below the floor`).toBeGreaterThanOrEqual(floor.pixel);
+      expect(score.edge_overlap, `${window}: layout match below the floor`).toBeGreaterThanOrEqual(floor.edge);
+    }
     if (score && previous) {
       expect(score.edge_overlap, `${window} looks less like the legacy screen than last time`)
         .toBeGreaterThanOrEqual(previous.edge_overlap - (config.visualTolerance ?? 2));

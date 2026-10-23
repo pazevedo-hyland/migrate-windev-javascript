@@ -35,7 +35,8 @@ FIELDS = {'Caption': 'caption', 'Tab order': 'tab_order', 'Input mask': 'input_m
           'Image': 'image', 'Background image': 'background_image', 'Initial value': 'initial_value',
           'Anchoring': 'anchoring', 'Title': 'title', 'Linked item': 'linked_item', 'File link': 'linked_item',
           'Input type': 'input_type', 'Button type': 'button_type', 'Data binding': 'linked_item',
-          'Browsed file': 'browsed_file', 'Browsed item': 'browsed_item', 'Stored item': 'stored_item'}
+          'Browsed file': 'browsed_file', 'Browsed item': 'browsed_item', 'Stored item': 'stored_item',
+          'Displayed item': 'displayed_item', 'Display mask': 'display_mask'}
 
 
 def drawn_images(page):

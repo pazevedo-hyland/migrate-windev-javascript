@@ -45,6 +45,8 @@ TEMPLATE_BUTTONS = [(r'SYST_?(FERMER|CLOSE)', 'Close the window'), (r'SYST_?MINI
                                    'propose to exclude')]
 RETURNS = re.compile(r'\.\.ReturnedValue\s*=', re.I)
 CLOSES = re.compile(r'\bClose\s*\(', re.I)
+CLOSES_AFTER = ('closes when its code runs to the end; stays open when the code stops early with RETURN '
+                '(a failed check)')
 
 
 class CaseInsensitive(dict):
@@ -273,10 +275,10 @@ def runtime_questions(inspect_dir, dossier_dir, language=None, actions=(), skinn
                 continue
             action = closing.get((name.lower(), short.lower()))
             if action:
-                proposal = ('closes after its code', f"its predefined action {action['action']} closes the window")
+                proposal = (CLOSES_AFTER, f"its predefined action {action['action']} closes the window")
             elif RETURNS.search(code):
-                proposal = ('closes after its code', 'the code sets ..ReturnedValue, which reaches the caller only '
-                                                     'when the window closes')
+                proposal = (CLOSES_AFTER, 'the code sets ..ReturnedValue, which reaches the caller only '
+                                          'when the window closes')
             else:
                 proposal = ('stays open', 'WINDEV closes a window only by Close() or a predefined action; '
                                           'neither is there')
@@ -302,7 +304,8 @@ def runtime_questions(inspect_dir, dossier_dir, language=None, actions=(), skinn
         questions.append((f'Message boxes ({used}): a screenshot of one of each kind — what are the title, icon and '
                           'button labels, and which button is the default?',
                           {'answer': f'{look}; title: the application\'s title; standard Info/Error/Question icons; '
-                                     'OK, or Yes/No for YesNo; the first button is the default',
+                                     'OK, or Yes/No for YesNo; the first button is the default, except on a '
+                                     'confirmation that deletes or overwrites: the safe one until confirmed',
                            'basis': 'WINDEV default message boxes' + (' customized by the skin template' if skinned else '')}))
     return questions
 

@@ -48,15 +48,31 @@ async function appWindow() {
 export const box = (c: LegacyControl): CSSProperties => ({ left: c.x, top: c.y, width: c.width, height: c.height });
 const stem = (file?: string) => file?.replace(/\.[^.]+$/, "");
 
-/** The window frame, title and system buttons of the skin template. */
-export function WdWindow({ layout, children, style }: { layout: LegacyLayout; children: ReactNode; style?: CSSProperties }) {
+/** The window frame, title and system buttons of the skin template. Every window but the main one passes
+ *  `onClose`: its close box then closes that window only, not the application's native window. */
+export function WdWindow({
+  layout,
+  children,
+  style,
+  onClose,
+}: {
+  layout: LegacyLayout;
+  children: ReactNode;
+  style?: CSSProperties;
+  onClose?: () => void;
+}) {
   const control = controlsOf(layout);
   const size = layout.window.size ?? { width: 800, height: 600 };
   const title = control("RADTitle");
   // ADR-007: no native title bar; the skin's title is the drag area and its system buttons drive the window.
   // UNRESOLVED A-48d568 / A-ff0b05 / A-2b6ca2 (answer sheet): minimize, maximize/restore and close are the
   // template's usual actions, inferred.
-  const sys = (name: string, background: string, action: (w: NonNullable<Awaited<ReturnType<typeof appWindow>>>) => Promise<void>) => {
+  const sys = (
+    name: string,
+    background: string,
+    action: (w: NonNullable<Awaited<ReturnType<typeof appWindow>>>) => Promise<void>,
+    local?: () => void,
+  ) => {
     const c = control(name);
     if (c.visible === false) return null;
     return (
@@ -67,7 +83,8 @@ export function WdWindow({ layout, children, style }: { layout: LegacyLayout; ch
         className="wd-sysbtn"
         style={{ ...box(c), backgroundImage: `url("/skin/${background}.0.png")` }}
         onClick={() => {
-          appWindow().then((w) => w && action(w)).catch(() => undefined);
+          if (local) local();
+          else appWindow().then((w) => w && action(w)).catch(() => undefined);
         }}
       >
         {c.image && <img src={`/skin/${stem(c.image)}.png`} alt="" />}
@@ -83,7 +100,7 @@ export function WdWindow({ layout, children, style }: { layout: LegacyLayout; ch
         </div>
         {sys("BTN_SYST_MINIMIZE", "MediaPlayer_Btn_Minimize_Anim", (w) => w.minimize())}
         {sys("BTN_Syst_Maximize", "MediaPlayer_Btn_Maximize_Anim", (w) => w.toggleMaximize())}
-        {sys("BTN_SYST_FERMER", "MediaPlayer_Btn_Close_Anim", (w) => w.close())}
+        {sys("BTN_SYST_FERMER", "MediaPlayer_Btn_Close_Anim", (w) => w.close(), onClose)}
         {children}
       </div>
     </div>

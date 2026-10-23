@@ -40,7 +40,17 @@ def matrix_rows(files):
     else:
         rows = [r for name, text in named.items() if name not in ('parity-seed.csv',) for r in read_rows(text)]
     ids = {r['id'] for r in rows}
-    rows += [r for r in read_rows(named.get('parity-seed.csv', '')) if r['id'] not in ids]
+    # A seed row whose block the matrix already holds under an older name is not a second behavior.
+    blocks = {(r.get('element', '').lower(), r.get('context', ''), r.get('event', '')) for r in rows}
+    seed = read_rows(named.get('parity-seed.csv', ''))
+    rows += [r for r in seed if r['id'] not in ids
+             and (r.get('element', '').lower(), r.get('context', ''), r.get('event', '')) not in blocks]
+    units = {r['element'].lower(): r['element'] for r in seed if r.get('element')}
+    for row in rows:
+        # A rule row may carry a free title as element: it belongs to the unit its context starts with.
+        first = (row.get('context') or '').split('/')[0].split('.')[0].strip().lower()
+        if (row.get('element') or '').lower() not in units and first in units:
+            row['element'] = units[first]
     return rows
 
 
@@ -58,10 +68,12 @@ def unit_kind(name, kinds):
 
 
 def summarize(rows, docs):
-    units = collections.defaultdict(lambda: {'statuses': collections.Counter(), 'kinds': set()})
+    units = collections.defaultdict(lambda: {'statuses': collections.Counter(), 'kinds': set(), 'assumed': 0})
     for row in rows:
         unit = units[row.get('element') or '?']
-        unit['statuses'][(row.get('status') or 'unmapped').strip()] += 1
+        status = (row.get('status') or 'unmapped').strip()
+        unit['statuses'][status] += 1
+        unit['assumed'] += status == 'verified' and (row.get('confidence') or '').strip() == 'assumed'
         unit['kinds'].add(row.get('kind', ''))
     result = []
     for name, unit in units.items():
@@ -81,6 +93,7 @@ def summarize(rows, docs):
         visual = docs / 'evidence' / 'visual' / f'{name}.json'
         looks = json.loads(visual.read_text(encoding='utf-8')) if visual.exists() else None
         result.append({'name': name, 'kind': kind, 'total': total, 'done': done, 'stage': stage, 'spec': spec,
+                       'assumed': unit['assumed'],
                        'statuses': {s: counts[s] for s in STATUS_ORDER},
                        'looks': looks and {'pixel': looks.get('pixel_similarity'), 'layout': looks.get('edge_overlap')}})
     order = {'building': 0, 'mapped': 1, 'done': 2, 'not started': 3}
@@ -164,6 +177,7 @@ def render(units, questions, points, commits, title, generated):
     for u in units:
         by_kind[u['kind']][u['stage']] += 1
     percent = round(100 * done / rows, 1) if rows else 0.0
+    assumed = sum(u['assumed'] for u in units)
 
     def tile(kind, label):
         counts = by_kind.get(kind, collections.Counter())
@@ -220,7 +234,7 @@ ul{{padding-left:18px}}li{{margin:3px 0}}
 <h1>{escape(title)} · WINDEV → new app · migration progress</h1>
 <div class="hero"><div class="pct">{percent}%</div>
 <div><div>of the old app's behaviors are rebuilt <b>and proven</b> in the new app</div>
-<div class="muted">{done} of {rows} behaviors · updated {generated}</div></div></div>
+<div class="muted">{done} of {rows} behaviors{f" · {assumed} of them on assumptions still to confirm" if assumed else ""} · updated {generated}</div></div></div>
 <div class="tiles">{tile("screen", "screens")}{tile("report", "reports")}
 <div class="tile"><div class="big">{questions["answer_sheet_open"]}</div><div>assumptions to confirm with the WINDEV expert (work does not wait)</div>
 <div class="muted">{questions["answer_sheet_done"]} answered · {questions["unresolved_items"]} open points in the analysis</div></div>

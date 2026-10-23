@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-23 — fixes from a fresh agent building a slice alone
+
+A fresh agent with no human mapped, built and scored the vehicle list and form on the pilot (verify green, pixels 97.8 %, layout 76 % / 89 %) and reported 20 frictions. Fixed here:
+
+### Changed
+- One rule for silent evidence (`AGENTS.md`): an answer, else a proposal (confidence `assumed`, may be verified, counted apart on the progress page), else the safest option with a `U-` item. A proposal that makes something destructive easier takes the safe choice until answered. Never stop for a question.
+- ADRs decided by evidence or default are Accepted at once; the owner may supersede them.
+- `parity_check.py`: confidence `assumed`; renamed seed rows matched to their new ID; `--element A,B` scopes every check (rule rows by context); `--check-files` resolves seed paths under `legacy/`; note summaries printed.
+- Progress page: rule rows counted under their screen; a block renamed by newer tools is not counted twice; "on assumptions" shown.
+- UI check: score floor (pixels 90 %, layout 60 %); fails on an image that does not load (fetched and type-checked: dev servers answer missing files with HTML 200); refuses evidence paths outside the repository. Visual records store relative paths.
+- Skin kit: `WdWindow onClose` — a child window's close box closes that window, not the application.
+- `legacy/images/` (00 §E): the project's images; `skin_assets.py` reads it by default and fails on a missing asset.
+- Dossier: `Displayed item`, `Display mask`; layouts give combos and lists their caption width.
+- Roadmap template: schema v1 and golden data cover every column; the skin-kit slice provides a temporary menu; deferred items name their slice. Map-element: where rows go (per unit in stage 0, then `parity.csv`); `element` is the unit on rule rows.
+- Tool updates (06): re-run evidence, verify and the parity check before committing. CLAUDE template no longer claims hooks that are optional.
+- Validate-button proposal says what an early `RETURN` does; the delete-confirmation default is the safe button until answered.
+
 ## 2026-10-23 — nothing waits for the human
 
 ### Added

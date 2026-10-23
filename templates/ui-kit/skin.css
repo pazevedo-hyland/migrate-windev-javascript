@@ -154,3 +154,4 @@
   font: inherit; resize: none; outline: none; background: transparent; }
 .wd-memo .wd-vscroll { top: 0; }
 .wd-edit:disabled, .wd-edit[readonly] { color: #000; background: #fff; }
+.wd-combo { padding: 0 2px; appearance: auto; }

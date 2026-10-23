@@ -57,6 +57,7 @@ Create `legacy/` (ignored by Git, but copied privately to every machine where ag
 | Folder | Content | How to obtain |
 |---|---|---|
 | `legacy/code/` | Project in **text format** (`.wdp`, `.wdw`, `.wde`, `.wdr`, `.wdg`, `.wdc`, WebDev pages…), **including the `<project>.cpl/` compile folder** (it holds WINDEV's event labels, used to verify event codes) | Switch the project to text backup format, then copy |
+| `legacy/images/` | Every image file of the WINDEV project folder and its skin template folder (`*.gif`, `*.png`, `*.jpg`, `*.bmp`, `*.ico`): window backgrounds, button strips, icons | Copy from the project folder (images named in the dossier, e.g. `C:\My Projects\<project>\Btn_Cancel.gif`) |
 | `legacy/schema/` | Analysis export (XDD) and the **generated SQL script** | Generate from the analysis |
 | `legacy/queries/` | SQL and parameters of every query, especially binary ones | Export from the query editor |
 | `legacy/data/` | Sanitized CSV per table + manifest (encoding, delimiter, decimal and date format, row counts) | HFSQL export tools |

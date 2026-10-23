@@ -22,7 +22,7 @@ One command runs the whole evidence pipeline in order — inspector, dossier ext
 python3 scripts/prepare_evidence.py
 ```
 
-It finds `legacy/docs/*Documentation*.pdf` and `legacy/code/<project>.cpl` itself (`--dossier-pdf`, `--compile-dir` to override) and says what is missing. Pass `--language <code>` (WINDEV's language code of the app's texts, e.g. `pt-PT`, `fr-FR`) when the app is multilingual; otherwise each text's first language is used. Re-run it whenever `legacy/` changes: seed IDs do not change, so mapping rows stay attached. The steps below explain each part and its options; run one alone only to debug it.
+It finds `legacy/docs/*Documentation*.pdf` and `legacy/code/<project>.cpl` itself (`--dossier-pdf`, `--compile-dir` to override) and says what is missing. Pass `--language <code>` (WINDEV's language code of the app's texts, e.g. `pt-PT`, `fr-FR`) when the app is multilingual; otherwise each text's first language is used. Re-run it whenever `legacy/` changes: seed IDs do not change, so mapping rows stay attached. **Updating the tools** from a newer playbook (copy `scripts/`, `skills/`, `templates/ui-kit/`): re-run `prepare_evidence.py`, then `npm run verify` and `parity_check.py --seed docs/parity/parity-seed.csv --check-files` before committing; fix what they report (renamed seed rows, stricter evidence forms — the playbook's CHANGELOG lists format changes) in the same commit. The steps below explain each part and its options; run one alone only to debug it.
 
 ```sh
 python3 scripts/inspect_windev.py legacy --out analysis-local/inspect-$(date +%Y%m%d)

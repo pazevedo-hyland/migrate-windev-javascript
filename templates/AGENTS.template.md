@@ -47,18 +47,20 @@ Run the stage end to end without asking for confirmation. Stop and ask (or recor
 
 ## No guessing
 
-When the evidence does not say what the legacy app does (an unresolved `U-nn` in the mapping note, encoded designer properties, an unknown event code, a binary query):
+When the evidence does not say what the legacy app does (encoded designer properties, an unknown event code, a binary query), take the first of these that exists:
 
-- Do not pick a behavior silently. Implement the safest reversible option, mark it in code with `// UNRESOLVED U-nn: <choice>`, and list it under "Decisions needed" in the handoff with the evidence you have.
-- The parity row stays `implemented`, never `verified`, until a human decision (ADR) or new evidence resolves it. If only part of a row is unresolved, keep the whole row `implemented` or split the unresolved part into its own row.
-- Do not write tests that pin an unresolved detail (sort order, selection after delete, Esc behavior, inferred colors). Compare as sets or assert only what is known.
+1. **An answer** in `docs/evidence/encoded-actions.md`: it is evidence (`runtime: A-xxxxxx`).
+2. **A proposal**: the answer sheet's `Proposed` column, a `proposed:` line in `docs/evidence-report.md`, or an ADR decided by default. Build it; the row's `confidence` is `assumed` and cites it (`proposed: A-xxxxxx`, `proposed: Q-nn`, the ADR). Tests may pin it and the row may reach `verified`; the progress page counts it as "on assumptions" until a person confirms it. **Exception:** when the proposal makes something destructive easier (the default button of a delete confirmation, an overwrite), use the safe choice instead and keep the row `implemented` with a `U-` item until it is answered.
+3. **Nothing**: implement the safest reversible option, mark it in code with `// UNRESOLVED U-nn: <choice>`, list it under "Decisions needed" in the handoff, and keep the row `implemented` (or split the unresolved part into its own row). Do not write tests that pin it (sort order, selection after delete, Esc behavior, inferred colors): compare as sets or assert only what is known.
+
+Never stop for an unanswered question: one of the three always applies.
 - A user-facing text that does not exist in legacy (a new error message) is a choice: it needs approval before the row is `verified`.
 
 Before marking a row `verified`, check all of these and report them in the handoff:
 
 1. The cited test asserts the row's `target_behavior` and would fail if that behavior were removed (no tests that only check absence or always pass; a test that would still pass with the feature deleted is not evidence).
 2. The test exercises the real path (not a placeholder or a mock standing in for the behavior under test).
-3. No part of the behavior depends on an unresolved item or on your own choice.
+3. No part of the behavior depends on an unresolved item or on a choice of yours that no proposal or ADR covers (`assumed` rows cite theirs).
 4. If the target differs from legacy, `decision` names the ADR.
 5. Re-read `docs/decisions/` at the end of the stage: ADRs added while you worked apply to your code too.
 

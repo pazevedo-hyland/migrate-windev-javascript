@@ -51,6 +51,16 @@ class ProgressDashboardTests(unittest.TestCase):
         self.assertIn('<polyline', page)  # two commits touched the parity files
         self.assertIn('stage 1', page)
 
+    def test_rule_rows_join_their_unit_and_renamed_seed_rows_count_once(self):
+        header = 'id,kind,element,context,event,status,confidence\n'
+        files = {'parity.csv': header + 'SRC-old,window,WIN_A,WIN_A/BTN_X,18,verified,assumed\n'
+                                         'RULE-1,rule,Delete guard,WIN_A/BTN_Y,,implemented,inferred\n',
+                 'parity-seed.csv': header + 'SRC-new,window,WIN_A,WIN_A/BTN_X,18,unmapped,unresolved\n'
+                                             'SRC-z,window,WIN_A,WIN_A/BTN_Z,18,unmapped,unresolved\n'}
+        rows = module.matrix_rows(files)
+        self.assertEqual(sorted(r['id'] for r in rows), ['RULE-1', 'SRC-old', 'SRC-z'])
+        units = module.summarize(rows, Path('/nonexistent'))
+        self.assertEqual([(u['name'], u['total'], u['assumed']) for u in units], [('WIN_A', 3, 1)])
 
 if __name__ == '__main__':
     unittest.main()

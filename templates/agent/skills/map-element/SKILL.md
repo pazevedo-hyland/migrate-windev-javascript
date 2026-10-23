@@ -11,7 +11,7 @@ Input: one unit name. Paths below are defaults; a stage prompt may give others. 
 
 1. The unit's evidence pack: `python3 scripts/unit_evidence.py <unit> --out analysis-local/units/<unit>.json` (keep it: the reviewer diffs it later). It holds the seed rows, code blocks with event meanings, encoded actions with every other slot sharing the same action ID, the parsed dossier fields, callers, calls out, gaps and runtime questions.
 2. The unit's source in `legacy/` in full, and the callers' and callees' code one level out (call sites are in the pack).
-3. `docs/wlanguage-traps.md`, `docs/mapping/event-codes.md` (generated, verified), `docs/mapping/event-codes-inferred.md`, `docs/evidence/encoded-actions.md` (answers), the images `docs/evidence/images/<unit>.*`.
+3. `docs/wlanguage-traps.md`, `docs/mapping/event-codes.md` (generated, verified), `docs/evidence/encoded-actions.md` (answers, or proposals until answered), the images `docs/evidence/images/<unit>.*`.
 
 Dossier fields: a field missing from the extract is "not extracted", never false (the extract's `index.json` → `coverage` says what was recognised). `tab_order` counts within each container. Open the extract's raw `lines` only for what parsed fields lack.
 
@@ -40,19 +40,19 @@ Controls go only in the screen spec.
 - **Window** → `docs/screens/<unit>.md` from `templates/window-spec.md`. Captions, masks, tab order, flags and button types come from the dossier; without one, write `unresolved (encoded)` per column instead of guessing.
 - **Report** → `docs/reports/<unit>.md` from `templates/report-spec.md`: bands and geometry (inspector `layout`, millimetres), bound items, calculations, presets, page fit. Captions are often only in the image: say so. No caller in the pack is a finding: confirm with `grep -rnil "<unit>" legacy/code` (a hit outside the report and the `.wdp` project file is a missed caller; a hit in a compiled file of `<project>.cpl` names the window whose predefined action likely prints it — the evidence report already lists those).
 
-## Write `docs/parity/<unit>.csv`
+## Write the parity rows
 
-Columns of `templates/parity.template.csv`.
+Columns of `templates/parity.template.csv`. During stage 0 (parallel mapping) in `docs/parity/<unit>.csv`, merged into `docs/parity/parity.csv` at its end; once `parity.csv` exists, directly in it. `element` is the unit's name, also on `RULE-*` rows (put the rule's title in `legacy_behavior`).
 
 - `evidence`: `;`-separated, each `legacy/<path>:<line>` (seed evidence is relative to `legacy/`: prefix it), `dossier: <unit>/<field>` (e.g. `dossier: WIN_X/controls.BTN_Ok.flags`), `runtime: A-xxxxxx` (answered), `proposed: A-xxxxxx` or `proposed: Q-nn` (assumed until answered), or a committed file. Never a path inside `analysis-local/`.
-- `confidence`: `verified` (read in code, schema, dossier or an answer), `inferred` (reasoning written in `legacy_behavior`), `unresolved`. A row mixing both is split.
+- `confidence`: `verified` (read in code, schema, dossier or an answer), `inferred` (reasoning written in `legacy_behavior`), `assumed` (a `proposed:` answer or an ADR decided by default), `unresolved`. A row mixing them is split.
 - `status`: `specified` with `target_behavior` = `Preserve legacy behavior` when understood; `unmapped` when a `U-` item blocks it, citing the item in `legacy_behavior`. A clear block with an unresolved outcome stays `specified`, the outcome in its own `RULE-*` row, `unmapped`.
-- New rows: `RULE-<ABBR>-NNN`. New event-code meanings: `docs/mapping/event-codes-inferred.md`, with evidence.
+- New rows: `RULE-<ABBR>-NNN`. A new event-code meaning goes in the mapping note, with its evidence.
 
 Validate:
 
 ```sh
-python3 scripts/parity_check.py docs/parity/<unit>.csv --seed docs/parity/parity-seed.csv --element <unit> \
+python3 scripts/parity_check.py docs/parity/<unit>.csv --seed docs/parity/parity-seed.csv --element <unit> \   # or parity.csv
   --check-files --note docs/mapping/<unit>.md --note docs/screens/<unit>.md   # or docs/reports/<unit>.md
 ```
 

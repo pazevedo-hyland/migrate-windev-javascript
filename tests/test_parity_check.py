@@ -72,7 +72,30 @@ class ParityCheckTests(unittest.TestCase):
                                     row('SRC-new', 'specified', target_behavior='same'),
                                     row('RULE-X-001', 'specified', target_behavior='same')],
                                    seed=[row('SRC-new', 'unmapped', confidence='unresolved')])
-        self.assertEqual(errors, ['matrix row not in the current seed (stale evidence): SRC-old'])
+        self.assertEqual(len(errors), 1)
+        self.assertTrue(errors[0].startswith('matrix row not in the current seed (stale evidence): SRC-old'))
+
+    def test_renamed_seed_rows_are_matched(self):
+        context = {'context': 'WIN_Order/BTN_Ok', 'event': '18'}
+        errors, _ = self.run_check([row('SRC-old', 'specified', target_behavior='same', **context)],
+                                   seed=[row('SRC-new', 'unmapped', confidence='unresolved', **context)])
+        self.assertEqual(errors, ['matrix row SRC-old is now seed row SRC-new (same element, context and event): '
+                                  'rename it'])  # and SRC-new is not reported missing
+
+    def test_assumed_rows_and_scoped_units(self):
+        rows = [row('R1', 'verified', confidence='assumed', evidence='proposed: A-1a2b3c', target_behavior='closes',
+                    implemented_in='a.ts', test='a.test.ts'),
+                row('R2', 'verified', evidence='proposed: Q-01', target_behavior='x', implemented_in='a.ts',
+                    test='a.test.ts'),
+                row('R3', 'bogus', element='Rule about orders', context='WIN_Other/BTN_X')]
+        errors, summary = self.run_check(rows, seed=[row('S1', 'unmapped', element='WIN_Other', confidence='unresolved'),
+                                                     row('S2', 'unmapped', confidence='unresolved')])
+        self.assertEqual(summary['verified_on_assumptions'], 1)
+        self.assertTrue(any('R2' in e and 'assumed' in e for e in errors))
+        self.assertTrue(any('R3' in e for e in errors))
+        scoped, _ = module.check(self.root / 'parity.csv', self.root / 'seed.csv', element='WIN_Order')
+        self.assertFalse(any('R3' in e or 'S1' in e for e in scoped))  # R3 belongs to WIN_Other by its context
+        self.assertTrue(any('S2' in e for e in scoped))
 
     def test_evidence_must_not_point_into_analysis_local(self):
         errors, _ = self.run_check([row('R1', 'specified', target_behavior='same',
