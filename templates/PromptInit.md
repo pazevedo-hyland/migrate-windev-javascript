@@ -32,7 +32,7 @@ A. Decide from evidence (ADR "Accepted — decided from evidence"; the human may
 - Persistence: HFSQL Classic owned by one PC (no HOpenConnection / client-server connection in the code, files next to the exe) → SQLite in the Rust core; Client/Server or files shared over the network → server API + PostgreSQL, and ask question B1 to confirm.
 - Number, money, date and ID representation: from the schema draft's decisions (decimals → integer minor units or TEXT decimals; unsigned 8-byte codes as strings across IPC; WINDEV date/time text kept until a reason to change).
 - OS: Windows first (WINDEV is Windows); others only if B1 says so.
-- UI: replica of the legacy layout, captions, tab order, keys and messages (from the screen specs and dossier images); no redesign.
+- UI: visually near-identical to the legacy app — layout, captions, tab order, keys and messages from the screen specs and dossier images, and the project's own skin template (its images, the skinned title bar instead of the native one); no redesign. Each screen records its visual score against the dossier image; the owner approves the look. A modern restyle is only done if the owner asks for it (new ADR).
 - Reports: fixed layouts as in the dossier, previewed then printed or saved as PDF.
 - Rights: what the code does (Groupware calls, login windows, user tables); no new permission model.
 - Integrations, files, INI settings, external programs, scheduled tasks: exactly those in the evidence report's platform usage; each one gets a parity row.
