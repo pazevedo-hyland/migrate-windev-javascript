@@ -1,7 +1,7 @@
 # Local legacy sources, business data and extraction results
-legacy/
-origine/
-analysis-local/
+/legacy/
+/origine/
+/analysis-local/
 .env
 .env.*
 !.env.example

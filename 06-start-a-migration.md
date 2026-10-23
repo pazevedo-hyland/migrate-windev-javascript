@@ -8,7 +8,7 @@ Accounts, tools, legacy Windows environment, isolated agent machine, test machin
 
 ## 2. Create the project repository
 
-Create a private repository for the application. Copy `templates/` and `scripts/` from this playbook, `templates/agent/skills/` to `skills/`, `templates/AGENTS.template.md` to `AGENTS.md` (framing fills in its project parts later) and chapter 09 to `docs/wlanguage-traps.md` (the mapping reads it); add the `.gitignore` entries for `legacy/`, `analysis-local/`, HFSQL data files and `.env`; `python3 -m pip install pypdf` for the dossier. Optionally install the shared guard with its pre-commit hook and your agent's adapter ([04](04-project-memory.md#claude-code-codex-and-other-agents)): recommended when agents run unattended for long stretches.
+Create a private repository for the application. Copy `templates/` and `scripts/` from this playbook, `templates/agent/skills/` to `skills/`, `templates/AGENTS.template.md` to `AGENTS.md` (framing fills in its project parts later) and chapter 09 to `docs/wlanguage-traps.md` (the mapping reads it); add the `.gitignore` entries `/legacy/` and `/analysis-local/` (anchored with a leading `/`: an unanchored `legacy/` also hides application folders such as `src/ui/legacy/`), HFSQL data files and `.env`; `python3 -m pip install pypdf` for the dossier. Optionally install the shared guard with its pre-commit hook and your agent's adapter ([04](04-project-memory.md#claude-code-codex-and-other-agents)): recommended when agents run unattended for long stretches.
 
 ## 3. Collect the sources
 

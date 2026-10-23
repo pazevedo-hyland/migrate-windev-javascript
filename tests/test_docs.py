@@ -41,5 +41,14 @@ class DocumentationTests(unittest.TestCase):
         self.assertEqual(header.split(','), load('scripts/inspect_windev.py').SEED_COLUMNS)
 
 
+class GitignoreTests(unittest.TestCase):
+    def test_evidence_ignores_are_anchored_to_the_root(self):
+        # An unanchored "legacy/" also ignores application folders such as src/ui/legacy/ (pilot incident).
+        lines = Path(__file__).resolve().parents[1].joinpath('.gitignore').read_text(encoding='utf-8').splitlines()
+        for name in ('legacy', 'analysis-local', 'origine'):
+            self.assertNotIn(f'{name}/', lines)
+            self.assertIn(f'/{name}/', lines)
+
+
 if __name__ == '__main__':
     unittest.main()
