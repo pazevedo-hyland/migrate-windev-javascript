@@ -10,6 +10,9 @@
 - `parity_check.py` reports `SRC-` rows the current seed no longer has.
 - Skills and window spec: selection and display state, built-in control features, full dialog details, write failure paths, proposed changes kept for ADRs.
 
+- `parity_check.py --note`: lints mapping notes and specs for open points written as prose ("not extracted", "unknown", "read from the image"…) without a `U-` id; `--check-files` for cited files.
+- Round 6 checklist: keyboard row moves, refresh from other windows or users, second instance, records leaving the filter; interim defaults must be legacy behavior; window spec resize and style values.
+
 ### Changed
 - Chapter 06 and the mapping prompt start from `prepare_evidence.py`; the inspector runs on `legacy/` so the XDD is included.
 

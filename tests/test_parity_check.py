@@ -74,6 +74,11 @@ class ParityCheckTests(unittest.TestCase):
                                    seed=[row('SRC-new', 'unmapped', confidence='unresolved')])
         self.assertEqual(errors, ['matrix row not in the current seed (stale evidence): SRC-old'])
 
+    def test_note_lint(self):
+        note = self.root / 'WIN_A.md'
+        note.write_text('Font read from the image (U-WA-03).\nMax length not extracted.\nCaption: Cancelar\n', encoding='utf-8')
+        self.assertEqual(module.lint_note(note), ['WIN_A.md:2: open point without a U- id: Max length not extracted.'])
+
     def test_evidence_rules(self):
         errors, _ = self.run_check([
             row('R1', 'verified', target_behavior='same', implemented_in='src/a.ts'),

@@ -1,6 +1,6 @@
 # Screen spec — <WIN_Name>
 
-Evidence: `legacy/code/<file>.wdw`, dossier image `<dossier>/images/<WIN_Name>.*`, layout drawing `<layouts dir>/<WIN_Name>.svg` (`scripts/render_layouts.py`), mapping note `docs/mapping/<unit>.md`. A spec handed to an implementer is self-contained: copy the images it cites next to it, and quote every value it relies on (global constants, masks, message texts) instead of naming where it lives.
+Evidence: `legacy/code/<file>.wdw`, dossier image `<dossier>/images/<WIN_Name>.*`, layout drawing `<layouts dir>/<WIN_Name>.svg` (`scripts/render_layouts.py`), mapping note `docs/mapping/<unit>.md`. A spec handed to an implementer is self-contained: copy the images it cites next to it, include the contract sections of the windows and reports it opens, and quote every value it relies on (global constants, masks, message texts) instead of naming where it lives.
 Opened from: <menu path / window + event, from docs/navigation.md>. Mode: <modal / non-modal / child / internal window>.
 Size/resizing: <width × height, minimum size, resizable, anchors; saved position vs opening position — which wins>. Default button (Enter): <…>. Cancel button (Esc): <…>. Focus on open: <control, per mode>.
 
@@ -17,8 +17,13 @@ What the window needs and leaves behind, including what WINDEV passes implicitly
 
 From the inspector `layout` (pixels, absolute in the window) and the dossier (anchoring, images, skin). Fonts and colors come from the skin template: name it, and read them from the dossier image.
 
-| Legacy name | x | y | width | height | Anchoring | Image / skin |
+| Legacy name | x | y | width | height | Anchoring (how it moves or grows on resize) | Image / skin |
 |---|---|---|---|---|---|---|
+
+Style values: base font and size, colors (names resolved to RGB), and every icon or button visible in the dossier image — each named here or listed as a `U-` item.
+
+| Element | Font / size | Color (RGB) | Source (dossier field / image) |
+|---|---|---|---|
 
 ## Controls (in tab order)
 
@@ -39,8 +44,11 @@ From the inspector `layout` (pixels, absolute in the window) and the dossier (an
 |---|---|---|---|
 | On open | | | |
 | After a search or filter change | | | |
-| After add / modify / delete | | | |
+| After add / modify / delete (and a record that no longer matches the filter) | | | |
 | Empty result | | | |
+| Keyboard row moves | | | |
+| Data changed by another window or user | | | |
+| A second instance opened | | | |
 
 ## Built-in control features
 

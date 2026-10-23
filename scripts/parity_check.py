@@ -88,11 +88,25 @@ def check(matrix, seed=None, require_complete=False, element=None, check_files=F
     return errors, summary
 
 
+VAGUE = re.compile(r'not extracted|not proven|unknown|read from the image|untested|\bprobably\b|\bcheck\b', re.I)
+
+
+def lint_note(path):
+    """Open points written as prose instead of U- items: each such line must carry a U-<UNIT>-nn id."""
+    problems = []
+    for number, line in enumerate(Path(path).read_text(encoding='utf-8').splitlines(), start=1):
+        if VAGUE.search(line) and not re.search(r'\bU-(?:[A-Z0-9]+-)?\d+', line):
+            problems.append(f'{Path(path).name}:{number}: open point without a U- id: {line.strip()[:100]}')
+    return problems
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('matrix', type=Path, help='docs/parity/parity.csv')
     parser.add_argument('--seed', type=Path, help='parity-seed.csv produced by inspect_windev.py')
     parser.add_argument('--element', help='Only require the seed rows of this legacy element (per-unit files)')
+    parser.add_argument('--note', type=Path, action='append', default=[],
+                        help='Mapping note or spec to lint for open points without a U- id (repeatable)')
     parser.add_argument('--check-files', action='store_true',
                         help='Fail when a cited evidence file does not exist (paths relative to the current folder)')
     parser.add_argument('--require-complete', action='store_true',
@@ -102,6 +116,8 @@ def main():
         errors, summary = check(args.matrix, args.seed, args.require_complete, args.element, args.check_files)
     except OSError as error:
         parser.exit(1, f'Parity check failed: {error}\n')
+    for note in args.note:
+        errors.extend(lint_note(note))
     print(json.dumps(summary, indent=2))
     for error in errors:
         print(f'ERROR {error}')
