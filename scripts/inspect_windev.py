@@ -169,7 +169,10 @@ def encoded_slots(text, blocks):
         block = coded.get((tuple(context['names']), siblings['type']))
         if block:
             block['encoded_properties'] = True
-        slots.append({'names': context['names'], 'event': siblings['type'], 'line': i + 1, 'has_code': bool(block)})
+        # Equal encoded values mean the same action: an opaque ID groups them (nothing is decoded).
+        action = 'A-' + hashlib.sha1((entry[2] or '').encode('utf-8')).hexdigest()[:6]
+        slots.append({'names': context['names'], 'event': siblings['type'], 'line': i + 1, 'has_code': bool(block),
+                      'action': action})
     return slots
 
 
@@ -432,7 +435,7 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
                         if not slot['has_code']:
                             names = '/'.join(slot['names'])
                             seeds.append(seed_row(seed_id(relative, names, slot['event'], 'encoded'), 'encoded-action',
-                                                  name, f"{relative}:{slot['line']}", names + ' [encoded action]',
+                                                  name, f"{relative}:{slot['line']}", f"{names} [encoded action {slot['action']}]",
                                                   slot['event']))
                     hints.extend(secret_hints(relative, blocks))
             inventory.append(entry)

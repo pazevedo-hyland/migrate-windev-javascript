@@ -217,7 +217,27 @@ def runtime_questions(inspect_dir, dossier_dir, language='pt-PT'):
     return questions
 
 
-def markdown(rows, gaps, used, questions):
+def encoded_actions(inspect_dir, dossier_dir, language='pt-PT'):
+    """Code-less event slots grouped by action ID (equal encoded values = same predefined action), largest first.
+    Answering one group (WINDEV: the control's Actions tab, or clicking it in the app) settles all its slots."""
+    windows, reports, _, _ = dossier_items(dossier_dir)
+    groups = collections.defaultdict(list)
+    for name, data in sorted(elements_from_inspector(inspect_dir).items()):
+        described = (windows.get(name) or reports.get(name) or {}).get('controls', {})
+        for slot in data.get('encoded_slots', []):
+            if slot['has_code']:
+                continue
+            control = slot['names'][-1]
+            details = described.get(control) or next((c for n, c in described.items() if n.split('.')[-1] == control), {})
+            caption = details.get('caption')
+            caption = text_in(caption, language) if isinstance(caption, dict) else caption
+            groups[slot.get('action', '?')].append({'element': name, 'control': control, 'event': slot['event'],
+                                                    'caption': caption, 'button_type': details.get('button_type'),
+                                                    'evidence': f"{data['path']}:{slot['line']}"})
+    return [{'action': action, 'slots': slots} for action, slots in sorted(groups.items(), key=lambda kv: -len(kv[1]))]
+
+
+def markdown(rows, gaps, used, questions, actions=()):
     lines = ['# Evidence report', '', '## 1. Coverage', '',
              '| Element | Kind | Code blocks | Encoded actions | Controls | Dossier | Described | Captions | Image | Dialogs | SQL | Items |',
              '|---|---|---|---|---|---|---|---|---|---|---|---|']
@@ -240,6 +260,21 @@ def markdown(rows, gaps, used, questions):
     lines += [f'## 3. Runtime questions ({len(questions)})', '',
               'Only someone using the running application can answer these. Record answers as evidence.', '']
     lines += [f'- [ ] {q}' for q in questions]
+    total = sum(len(a['slots']) for a in actions)
+    lines += ['', f'## 4. Encoded actions ({len(actions)} distinct, {total} slots)', '',
+              'Event slots with no code whose predefined action WINDEV keeps encoded. Slots with the same action ID hold the '
+              'same encoded value, hence the same action: one answer per group (from the control\'s Actions tab in WINDEV, '
+              'or by using it in the app) settles every slot in it. Largest groups first.', '']
+    for group in actions:
+        names = sorted({s['control'] for s in group['slots']})
+        captions = sorted({s['caption'] for s in group['slots'] if s['caption']})
+        types = sorted({s['button_type'] for s in group['slots'] if s['button_type']})
+        example = group['slots'][0]
+        lines.append(f"- [ ] `{group['action']}` × {len(group['slots'])} (event {example['event']}): "
+                     f"{', '.join(names[:6])}{'…' if len(names) > 6 else ''}"
+                     + (f"; captions {', '.join(repr(c) for c in captions[:4])}" if captions else '')
+                     + (f"; button type {', '.join(types)}" if types else '')
+                     + f" — e.g. {example['element']}.{example['control']} ({example['evidence']}). What does it do?")
     return '\n'.join(lines) + '\n'
 
 
@@ -266,12 +301,15 @@ def main():
         if row['kind'] in ('window', 'report') and not caller_index.get(row['element']) and row['element'] != first:
             gaps.append(f"{row['element']}: no caller found in code (a predefined button action — see encoded actions —, "
                         "dynamic, unreachable, or the project's first window)")
-    args.out.write_text(markdown(rows, gaps, used, questions), encoding='utf-8')
+    actions = encoded_actions(args.inspect_dir, args.dossier, args.language)
+    args.out.write_text(markdown(rows, gaps, used, questions, actions), encoding='utf-8')
     args.out.with_suffix('.json').write_text(json.dumps(
         {'files': len(inventory['files']), 'coverage': rows, 'gaps': gaps, 'questions': questions, 'callers': caller_index,
+         'encoded_actions': actions,
          'usage': {f: [list(s) for s in sites] for f, sites in used.items()}}, indent=1, ensure_ascii=False),
         encoding='utf-8')
-    print(f'{len(rows)} elements, {len(gaps)} gaps, {len(used)} platform functions used, {len(questions)} runtime questions')
+    print(f'{len(rows)} elements, {len(gaps)} gaps, {len(used)} platform functions used, {len(questions)} runtime questions, '
+          f'{len(actions)} distinct encoded actions on {sum(len(a["slots"]) for a in actions)} slots')
 
 
 if __name__ == '__main__':

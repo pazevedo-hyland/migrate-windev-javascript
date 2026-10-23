@@ -29,6 +29,19 @@ class EvidenceReportTests(unittest.TestCase):
         self.assertEqual(index.get('WIN_sistema'), ['WIN_MENU.wdw:10 (Open in WIN_MENU)', 'WIN_WIN_A.wdw:5 (Open in WIN_A)'])
         self.assertEqual(index.get('rpt_x'), ['WIN_WIN_A.wdw:7 (iPrintReport in WIN_A)'])
 
+    def test_encoded_actions_grouped_by_action_id(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'code').mkdir()
+            for name, action in (('WIN_A', 'A-1'), ('WIN_B', 'A-1'), ('WIN_C', 'A-2')):
+                (root / f'code/{name}.wdw.json').write_text(json.dumps({
+                    'path': f'{name}.wdw', 'name': name, 'blocks': [], 'encoded_slots': [
+                        {'names': [name, 'BTN_Fechar'], 'event': '18', 'line': 9, 'has_code': False, 'action': action},
+                        {'names': [name, 'BTN_Ok'], 'event': '18', 'line': 20, 'has_code': True, 'action': 'A-3'}]}))
+            groups = module.encoded_actions(root, None)
+        self.assertEqual([(g['action'], len(g['slots'])) for g in groups], [('A-1', 2), ('A-2', 1)])
+        self.assertEqual(groups[0]['slots'][0]['evidence'], 'WIN_A.wdw:9')
+
     def test_coverage_usage_and_grouped_questions(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
