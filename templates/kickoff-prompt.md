@@ -39,8 +39,7 @@ continue with the first slice not Done. Otherwise start at step 1.
 
 Rules: legacy/ is read-only. Never push unless told to; commit in small steps. Never delete folders recursively.
 On Windows run Python as `py` where the playbook writes `python3`.
-
-Keep docs/runbooks/trial-report.md up to date as you go: what is done, check results, parity rows by status,
-visual scores, import reconciliation, every place you would have asked a human, and every playbook instruction,
-skill, template or script that was wrong, unclear, missing or failed (file, what happened, suggested fix).
+Progress lives where the playbook keeps it: ROADMAP.md, docs/parity/parity.csv, the handoff and the progress
+page. Add a "Playbook issues" section to the handoff for any playbook instruction, skill, template or script that
+was wrong, unclear or failed (file, what happened, suggested fix).
 ```
