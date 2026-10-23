@@ -16,8 +16,16 @@ Fill `legacy/` with the fixed layout of [00 §E](00-prerequisites.md#e-collect-t
 
 ## 4. Inspect
 
+One command runs the whole evidence pipeline in order — inspector, dossier extraction, event legend, evidence report and navigation map, schema draft, layout drawings — into fresh dated folders, and records their paths in `analysis-local/latest.json`:
+
 ```sh
-python3 scripts/inspect_windev.py legacy/code --out analysis-local/inspect-$(date +%Y%m%d)
+python3 scripts/prepare_evidence.py
+```
+
+It finds `legacy/docs/*Documentation*.pdf` and `legacy/code/<project>.cpl` itself (`--dossier-pdf`, `--compile-dir` to override) and says what is missing. Re-run it whenever `legacy/` changes: seed IDs do not change, so mapping rows stay attached. The steps below explain each part and its options; run one alone only to debug it.
+
+```sh
+python3 scripts/inspect_windev.py legacy --out analysis-local/inspect-$(date +%Y%m%d)
 ```
 
 Add `--fallback-encoding cp1252` for older non-Unicode sources, `--extra-ext .wwh` (repeatable) for element types not in the default list (compare with the project's element list in WINDEV), and `--block-key <key>` if `literal_keys` in the inventory shows other embedded sources worth extracting. Review `inventory.json` for binary files, nested projects and missing global procedures; request the missing exports from WINDEV. Review `secret-hints.json`: credentials found are **to be revoked**, not reused. **Spot-check 3–5 `code/*.json` files** against the sources: if `context.names` does not show the right window/control, fix the inspector for your project's format before mapping on top of it.
@@ -35,7 +43,7 @@ Per-element JSON (window title and type; each control's caption, tab order, inpu
 ## 4b. Check that the evidence is complete
 
 ```sh
-python3 scripts/evidence_report.py analysis-local/inspect-1 --dossier analysis-local/dossier --out docs/evidence-report.md
+python3 scripts/evidence_report.py analysis-local/inspect-<stamp> --dossier analysis-local/dossier-<stamp> --out docs/evidence-report.md
 ```
 
 Coverage per element with the list of gaps, the platform functions the code depends on (printing, INI files, external programs, command-line modes), the few runtime questions for someone with the running app, and the **encoded actions**: event slots without code whose predefined action (close, print, open…) WINDEV keeps encoded, grouped by action ID — slots with the same ID hold the same value, so one answer settles the whole group (on the real project: 225 code-less slots, 14 distinct actions). Someone with WINDEV (the control's Actions tab) or the running app answers each group in `docs/evidence/encoded-actions.md` (`A-2b6ca2: closes the window — checked in WINDEV by <name>, <date>`); parity rows then cite `runtime: A-2b6ca2`. Fix or record every gap before mapping.

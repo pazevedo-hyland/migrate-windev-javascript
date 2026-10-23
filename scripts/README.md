@@ -44,6 +44,14 @@ python3 scripts/parity_check.py docs/parity/parity.csv [--seed analysis-local/in
 
 Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). With `--seed`, every seed row must still exist. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
 
+## `prepare_evidence.py` — the whole evidence pipeline in one command
+
+```sh
+python3 scripts/prepare_evidence.py            # defaults: legacy/, analysis-local/, docs/
+```
+
+Runs the inspector, dossier extraction, event legend, evidence report and navigation map, schema draft and layout drawings in order, into fresh dated folders, and writes their paths to `analysis-local/latest.json`. Finds the dossier PDF in `legacy/docs/` and the compile folder in `legacy/code/` itself and says when one is missing. About 15 seconds on the real project (2,303-page dossier, `--no-images`).
+
 ## `dossier_extract.py` — WINDEV's project documentation as data
 
 ```sh

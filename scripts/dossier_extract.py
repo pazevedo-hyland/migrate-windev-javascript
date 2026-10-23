@@ -436,7 +436,7 @@ def extract(pdf, out, images=True):
             (folder / f'{stem}.json').write_text(json.dumps(item, indent=1, ensure_ascii=False), encoding='utf-8')
     summary = {kind: len(items) for kind, items in elements.items()}
     coverage = parsed_coverage(elements)
-    (out / 'index.json').write_text(json.dumps({'pages': len(texts), 'elements': summary, 'coverage': coverage},
+    (out / 'index.json').write_text(json.dumps({'pages': len(texts), 'images': images, 'elements': summary, 'coverage': coverage},
                                                indent=2), encoding='utf-8')
     for warning in coverage['warnings']:
         print(f'warning: {warning}', file=sys.stderr)

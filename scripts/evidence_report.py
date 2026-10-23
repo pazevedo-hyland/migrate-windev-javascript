@@ -75,6 +75,8 @@ def dossier_items(dossier_dir):
 def coverage(inspect_dir, dossier_dir, schema_tables):
     inspected = elements_from_inspector(inspect_dir)
     windows, reports, queries, tables = dossier_items(dossier_dir)
+    index = Path(dossier_dir or '.', 'index.json')
+    images = load_json(index).get('images', True) if dossier_dir and index.exists() else True
     rows, gaps = [], []
     for name, data in sorted(inspected.items(), key=lambda item: item[0].lower()):
         kind = Path(data['path']).suffix.lower()
@@ -94,7 +96,7 @@ def coverage(inspect_dir, dossier_dir, schema_tables):
             gaps.append(f'{name}: no dossier entry (captions, tab order, masks unknown)')
         elif missing:
             gaps.append(f'{name}: {len(missing)} controls without dossier description: {", ".join(missing[:8])}')
-        if dossier and not row['image']:
+        if dossier and not row['image'] and images:  # an extract run with --no-images has none at all
             gaps.append(f'{name}: no image in the dossier')
         if (dossier or {}).get('data_source') == 'Embedded query':
             gaps.append(f'{name}: embedded query — its SQL is not in the dossier (export it from the report editor, '
