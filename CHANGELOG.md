@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-23 — screens that look like the legacy ones
+
+### Added
+- `scripts/screen_layout.py` (layout JSON per window from the evidence), `scripts/skin_assets.py` (skin images per state, magenta transparent), `scripts/visual_compare.py` (pixel similarity, edge overlap, side-by-side image, recorded per screen). The progress page shows "looks like the original" per screen. CI installs Pillow for their tests.
+- Pilot: the client list rebuilt this way — edges 50 % → 75 %, pixels 89 % → 97 % vs the dossier image; behavior tests unchanged.
+
 ## 2026-10-23 — decisions for non-technical owners, progress page
 
 ### Added

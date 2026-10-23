@@ -68,6 +68,17 @@ python3 scripts/progress_dashboard.py --title "My App"     # writes docs/progres
 
 One self-contained HTML page from what the process already maintains — parity matrix and seed, mapping notes and specs, answer sheet, ADRs, Git history: the share of legacy behaviors verified in the new app, screens and reports done / being built / mapped / not started, questions waiting for the WINDEV expert, decisions waiting for the owner, progress over time (from the history of `docs/parity/`) and recent commits. Each stage regenerates and commits it; open it in a browser, no server needed.
 
+## `screen_layout.py`, `skin_assets.py`, `visual_compare.py` — a screen that looks like the legacy one
+
+```sh
+python3 scripts/screen_layout.py WIN_Table_Clientes --out src/ui/legacy/WIN_Table_Clientes.layout.json
+python3 scripts/skin_assets.py src/ui/legacy/*.layout.json --project <WINDEV project folder> --out public/skin
+python3 scripts/visual_compare.py docs/evidence/images/WIN_Table_Clientes.jpg ui-report/WIN_Table_Clientes.png \
+  --out docs/evidence/visual/WIN_Table_Clientes.compare.png --record docs/evidence/visual/WIN_Table_Clientes.json
+```
+
+Layout JSON from the evidence (positions, captions, icons and states, backgrounds, caption widths, columns); skin images as one PNG per state with magenta made transparent; a visual score (pixel similarity, edge overlap) plus a side-by-side image for the human. The last two need Pillow.
+
 ## `dossier_extract.py` — WINDEV's project documentation as data
 
 ```sh

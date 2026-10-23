@@ -27,7 +27,7 @@ At the end: commit explicit files with a clear message, push, update docs/parity
 
 ## Reusable instructions (pick according to accepted choices)
 
-- **WINDEV-like UI replica**: "Reproduce `docs/screens/<WINDOW>.md` and the screenshot: same fields, order, labels, tab order, masks, shortcuts and default button. Use the legacy control name as `data-testid`. Do not redesign; propose improvements separately."
+- **WINDEV-like UI replica**: "Reproduce `docs/screens/<WINDOW>.md` and the dossier image: same fields, order, labels, tab order, masks, shortcuts and default button. Generate the layout with scripts/screen_layout.py <WINDOW> and read captions and positions from it; export the skin with scripts/skin_assets.py. Use the legacy control name as `data-testid`. Score it with scripts/visual_compare.py --record and attach the side-by-side image to the handoff. Do not redesign; propose improvements separately."
 - **Modal flows**: "Legacy `Open()`/`YesNo()`/`Info()` block until closed. Implement as awaited promises and keep the code after them in the same order."
 - **Atomic business save**: "The UI builds one command DTO; one Rust command validates, re-checks invariants (stock, uniqueness, version) and writes in one transaction; return the committed state."
 - **Golden scenario**: "Replay `docs/golden/<GS-id>.md` through the application use cases and compare with `scripts/compare_exports.py`."
