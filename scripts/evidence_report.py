@@ -38,6 +38,15 @@ LITERALS = {'CommandLine': 0, 'INIRead': 3, 'INIWrite': 3, 'ExeRun': 0, 'iPrintR
             'OpenChild': 0, 'OpenSister': 0, 'ExecuteProcess': 0, 'fOpen': 0}
 
 
+# Buttons of WINDEV's skin templates, named alike in every project that uses one.
+TEMPLATE_BUTTONS = [(r'SYST_?(FERMER|CLOSE)', 'Close the window'), (r'SYST_?MINI', 'Minimize the window'),
+                    (r'SYST_?MAXI', 'Maximize or restore the window'),
+                    (r'^BTN_UMC$', "Open WINDEV's user macro-code editor (U.M.C., a WINDEV developer feature): "
+                                   'propose to exclude')]
+RETURNS = re.compile(r'\.\.ReturnedValue\s*=', re.I)
+CLOSES = re.compile(r'\bClose\s*\(', re.I)
+
+
 class CaseInsensitive(dict):
     """WINDEV names are case-insensitive: the dossier and the sources may spell them differently."""
 
@@ -163,6 +172,12 @@ def text_in(labels, language=None):
     return (labels.get(language) if language else None) or next(iter(labels.values()), '?')
 
 
+def control_code(data, control):
+    """The code of one control's events (WLanguage names are case-insensitive)."""
+    return '\n'.join(b['code'] for b in data['blocks']
+                     if (b.get('context', {}).get('names') or [''])[-1].lower() == control.lower())
+
+
 def callers(used):
     """{element: ['<source path>:<line> (<function> in <caller>)']}: who opens each window and prints each report.
 
@@ -225,45 +240,70 @@ def first_window(dossier_dir):
     return None
 
 
-def runtime_questions(inspect_dir, dossier_dir, language=None):
-    """What the code and the dossier cannot settle. Identical dialogs are asked once."""
+def runtime_questions(inspect_dir, dossier_dir, language=None, actions=(), skinned=()):
+    """What the code and the dossier cannot settle, each with the answer the evidence or WINDEV's convention proposes:
+    [(question, {'answer', 'basis'})]. The work goes on with the proposal; a person confirms or corrects it later.
+    Identical dialogs are asked once."""
     questions = []
     windows, _, _, _ = dossier_items(dossier_dir)
+    elements = elements_from_inspector(inspect_dir)
     dialogs = collections.defaultdict(list)
-    for name, data in sorted(elements_from_inspector(inspect_dir).items()):
+    for name, data in sorted(elements.items()):
         for dialog in data.get('dialogs', []):
             key = (text_in(dialog['label'], language),
                    tuple(text_in(b['label'], language) for b in dialog['buttons']), dialog['cancel_button'])
             dialogs[key].append(name)
     for (message, labels, cancel), used_in in sorted(dialogs.items(), key=lambda item: -len(item[1])):
-        questions.append(f'Dialog "{message}" ({" / ".join(labels)}), in {len(used_in)} window(s): '
-                         f'{", ".join(used_in[:6])}{"…" if len(used_in) > 6 else ""} — which button do Esc and the '
-                         f'close box trigger? (cancel_button = {cancel}; position or value is not documented)')
+        questions.append((f'Dialog "{message}" ({" / ".join(labels)}), in {len(used_in)} window(s): '
+                          f'{", ".join(used_in[:6])}{"…" if len(used_in) > 6 else ""} — which button do Esc and the '
+                          f'close box trigger? (cancel_button = {cancel}; position or value is not documented)',
+                          {'answer': f'"{labels[-1]}"', 'basis': 'convention: the last button is the cancel choice, '
+                                                                 'and the one that changes nothing'}))
+    closing = {(s['element'].lower(), s['control'].lower()): a for a in actions for s in a['slots']
+               if 'Close the window' in (a.get('proposal') or {}).get('answer', '')}
     validates = collections.defaultdict(list)
-    for name, data in sorted(elements_from_inspector(inspect_dir).items()):
-        code = '\n'.join(b['code'] for b in data['blocks'])
+    for name, data in sorted(elements.items()):
         for control, details in windows.get(name, {}).get('controls', {}).items():
             raw = ' '.join(details.get('raw', [])) + ' ' + details.get('row', '')
-            if details.get('kind') == 'Button' and re.search(r'\bValidate\b', raw) and 'Close(' not in code:
-                caption = details.get('caption')
-                caption = next(iter(caption.values())) if isinstance(caption, dict) else caption or control
-                validates[caption].append(f'{name}.{control}')
-    # Windows built from the same template behave alike: one question per caption.
-    for caption, used_in in sorted(validates.items(), key=lambda item: -len(item[1])):
-        questions.append(f'Validate button "{caption}" with no Close() in code, in {len(used_in)} window(s): '
-                         f'{", ".join(used_in[:5])}{"…" if len(used_in) > 5 else ""} — after its code succeeds, '
-                         'does the window close?')
+            if details.get('kind') != 'Button' or not re.search(r'\bValidate\b', raw):
+                continue
+            short = control.split('.')[-1]
+            code = control_code(data, short)
+            if CLOSES.search(code):
+                continue
+            action = closing.get((name.lower(), short.lower()))
+            if action:
+                proposal = ('closes after its code', f"its predefined action {action['action']} closes the window")
+            elif RETURNS.search(code):
+                proposal = ('closes after its code', 'the code sets ..ReturnedValue, which reaches the caller only '
+                                                     'when the window closes')
+            else:
+                proposal = ('stays open', 'WINDEV closes a window only by Close() or a predefined action; '
+                                          'neither is there')
+            caption = details.get('caption')
+            caption = next(iter(caption.values())) if isinstance(caption, dict) else caption or short
+            validates[(caption, proposal)].append(f'{name}.{short}')
+    # Windows built from the same template behave alike: one question per caption and proposal.
+    for (caption, (answer, basis)), used_in in sorted(validates.items(), key=lambda item: -len(item[1])):
+        questions.append((f'Validate button "{caption}" with no Close() in its code, in {len(used_in)} window(s): '
+                          f'{", ".join(used_in[:5])}{"…" if len(used_in) > 5 else ""} — after its code succeeds, '
+                          'does the window close?', {'answer': answer, 'basis': basis}))
     # Message boxes are drawn by WINDEV itself: title, icon and button labels are in no source. One screenshot of
     # each kind settles every box of the application.
     kinds = collections.Counter()
-    for data in elements_from_inspector(inspect_dir).values():
+    for data in elements.values():
         for block in data['blocks']:
             kinds.update(m.group(1) for m in re.finditer(r'\b(Info|Error|Warning|YesNo|OKCancel|Confirm)\s*\(',
                                                          block['code']))
     if kinds:
         used = ', '.join(f'{k} ×{v}' for k, v in kinds.most_common())
-        questions.append(f'Message boxes ({used}): a screenshot of one of each kind — what are the title, icon and '
-                         'button labels, and which button is the default?')
+        look = ("drawn with the project's skin template (the compile folder holds " + ', '.join(skinned) + ')'
+                if skinned else "Windows' standard message box")
+        questions.append((f'Message boxes ({used}): a screenshot of one of each kind — what are the title, icon and '
+                          'button labels, and which button is the default?',
+                          {'answer': f'{look}; title: the application\'s title; standard Info/Error/Question icons; '
+                                     'OK, or Yes/No for YesNo; the first button is the default',
+                           'basis': 'WINDEV default message boxes' + (' customized by the skin template' if skinned else '')}))
     return questions
 
 
@@ -287,19 +327,64 @@ def encoded_actions(inspect_dir, dossier_dir, language=None):
     return [{'action': action, 'slots': slots} for action, slots in sorted(groups.items(), key=lambda kv: -len(kv[1]))]
 
 
+def propose_actions(actions, inspect_dir, uncalled, preview):
+    """The answer the evidence proposes for each action group, strongest rule first, or a labelled default.
+    uncalled: {window: [reports no code calls but its compiled code names]}, case-insensitive."""
+    elements = CaseInsensitive(elements_from_inspector(inspect_dir))
+    left = collections.defaultdict(list)  # window -> code-less groups no rule explains, all in that window
+    for group in actions:
+        slots = group['slots']
+        named = {answer for s in slots for pattern, answer in TEMPLATE_BUTTONS if re.search(pattern, s['control'], re.I)}
+        coded = [control_code(elements.get(s['element'], {'blocks': []}), s['control']) for s in slots if s['has_code']]
+        proposal = None
+        if len(named) == 1:
+            # Equal encoded values are the same action: the skin template's own button names the whole group.
+            example = next(s['control'] for s in slots if any(re.search(p, s['control'], re.I) for p, _ in TEMPLATE_BUTTONS))
+            proposal = (next(iter(named)), f'same encoded action as the skin-template button {example}')
+        elif all(s['button_type'] == 'Abort' for s in slots):
+            proposal = ('Close the window without saving', 'every control in the group is an Abort button')
+        elif coded and len(coded) == len(slots):
+            proposal = (('Close the window after the code (it returns the value the code sets)',
+                         'the code sets ..ReturnedValue, which reaches the caller only when the window closes')
+                        if all(RETURNS.search(c) and not CLOSES.search(c) for c in coded)
+                        else ('Nothing beyond the code next to it', 'default: the code does the work'))
+        elif not coded and len({s['element'].lower() for s in slots}) == 1:
+            left[slots[0]['element'].lower()].append(group)
+        if proposal:
+            group['proposal'] = {'answer': proposal[0], 'basis': proposal[1]}
+    for window, groups in left.items():
+        reports = uncalled.get(window) or []
+        if len(groups) == 1 and len(reports) == 1:  # the one unexplained control and the one report nothing calls
+            groups[0]['proposal'] = {
+                'answer': f'Print {reports[0]}' + (" (preview first, as the app's own print calls do)" if preview else ''),
+                'basis': f"the compiled code of {groups[0]['slots'][0]['element']} names {reports[0]}, which no code calls, "
+                         'and no other rule explains this control'}
+    for group in actions:
+        group.setdefault('proposal', {'answer': 'Nothing (the control does nothing)',
+                                      'basis': 'default: no evidence of what it does'})
+    return actions
+
+
 def answer_sheet(actions, questions):
-    """A fill-in sheet for someone with WINDEV or the running app: one line per action group and question."""
+    """A fill-in sheet for someone with WINDEV or the running app: one line per action group and question, with the
+    proposal the migration uses until an answer is written."""
+    proposed = lambda p: f"{p['answer']} — {p['basis']}".replace('|', '/') if p else ''
     lines = ['# Answers from WINDEV or the running app', '',
-             'Fill `Answer`, `How checked` (WINDEV Actions tab / used in the app / other) and `By, date`. Mapping rows cite '
-             'an answered group as `runtime: A-xxxxxx`. New groups appear in docs/evidence-report.md §4 when the evidence is '
-             'regenerated: add them here by hand; this file is never overwritten.', '',
-             '## Encoded actions', '', '| Action | Slots | Example | Answer | How checked | By, date |', '|---|---|---|---|---|---|']
+             'The migration does not wait for these: it builds with `Proposed` and cites `proposed: A-xxxxxx` (or `Q-nn`). '
+             'Confirm or correct it: fill `Answer`, `How checked` (WINDEV Actions tab / used in the app / other) and '
+             '`By, date`; rows then cite `runtime: A-xxxxxx`, and a different answer reopens the rows that cited the '
+             'proposal. New groups appear in docs/evidence-report.md §4 when the evidence is regenerated: add them here '
+             'by hand; this file is never overwritten.', '',
+             '## Encoded actions', '', '| Action | Slots | Example | Proposed | Answer | How checked | By, date |',
+             '|---|---|---|---|---|---|---|']
     for group in actions:
         example = group['slots'][0]
         names = ', '.join(sorted({s['control'] for s in group['slots']}))
-        lines.append(f"| {group['action']} | {len(group['slots'])} ({names}) | {example['element']}.{example['control']} | | | |")
-    lines += ['', '## Runtime questions', '', '| # | Question | Answer | How checked | By, date |', '|---|---|---|---|---|']
-    lines += [f'| Q-{n:02d} | {q.replace("|", "/")} | | | |' for n, q in enumerate(questions, 1)]
+        lines.append(f"| {group['action']} | {len(group['slots'])} ({names}) | {example['element']}.{example['control']} | "
+                     f"{proposed(group.get('proposal'))} | | | |")
+    lines += ['', '## Runtime questions', '', '| # | Question | Proposed | Answer | How checked | By, date |',
+              '|---|---|---|---|---|---|']
+    lines += [f'| Q-{n:02d} | {q.replace("|", "/")} | {proposed(p)} | | | |' for n, (q, p) in enumerate(questions, 1)]
     return '\n'.join(lines) + '\n'
 
 
@@ -324,8 +409,8 @@ def markdown(rows, gaps, used, questions, actions=()):
                 lines.append(f'  - `{function}` arguments: ' + ', '.join(f'`{l}`' for l in literals[:15]))
         lines.append('')
     lines += [f'## 3. Runtime questions ({len(questions)})', '',
-              'Only someone using the running application can answer these. Record answers as evidence.', '']
-    lines += [f'- [ ] {q}' for q in questions]
+              'Only someone using the running application can confirm these; until then the work uses the proposal.', '']
+    lines += [f'- [ ] Q-{n:02d} {q}\n  - proposed: {p["answer"]} ({p["basis"]})' for n, (q, p) in enumerate(questions, 1)]
     total = sum(len(a['slots']) for a in actions)
     lines += ['', f'## 4. Encoded actions ({len(actions)} distinct, {total} slots)', '',
               'Event slots whose predefined action WINDEV keeps encoded, with no code or next to code (the action may run '
@@ -343,7 +428,8 @@ def markdown(rows, gaps, used, questions, actions=()):
                      f"{', '.join(names[:6])}{'…' if len(names) > 6 else ''}"
                      + (f"; captions {', '.join(repr(c) for c in captions[:4])}" if captions else '')
                      + (f"; button type {', '.join(types)}" if types else '')
-                     + f" — e.g. {example['element']}.{example['control']} ({example['evidence']}). What does it do?")
+                     + f" — e.g. {example['element']}.{example['control']} ({example['evidence']}). What does it do?"
+                     + (f"\n  - proposed: {group['proposal']['answer']} ({group['proposal']['basis']})" if group.get('proposal') else ''))
     return '\n'.join(lines) + '\n'
 
 
@@ -362,19 +448,22 @@ def main():
         tables |= {t['attributes'].get('Nom') or t['attributes'].get('Name', '') for t in load_json(path)['tables']}
     rows, gaps = coverage(args.inspect_dir, args.dossier, tables)
     used = calls(args.inspect_dir)
-    questions = runtime_questions(args.inspect_dir, args.dossier, args.language)
     caller_index = callers(used)
     # Key the JSON by each element's real name, not by the spelling of its first call site.
     known = {row['element'].lower(): row['element'] for row in rows}
     caller_index = CaseInsensitive({known.get(name.lower(), name): sites for name, sites in caller_index.items()})
     first = first_window(args.dossier)
-    compiled = load_json(args.compiled).get('compiled_references', {}) if args.compiled else {}
+    legend = load_json(args.compiled) if args.compiled else {}
+    compiled = legend.get('compiled_references', {})
+    uncalled = collections.defaultdict(list)
     for row in rows:
         if row['kind'] in ('window', 'report') and not caller_index.get(row['element']) and row['element'] != first:
             # The compiled code of another element naming it: a predefined action (e.g. a Print button) or a
             # dynamic call. Evidence of who reaches it, not of how.
             named_by = sorted(k for k, refs in compiled.items() if row['element'] in refs)
             if named_by:
+                for window in named_by:
+                    uncalled[window].append(row['element'])
                 caller_index[row['element']] = [f'{k} (named in its compiled code: predefined action or dynamic call)'
                                                 for k in named_by]
                 gaps.append(f"{row['element']}: no call in code; named in the compiled code of {', '.join(named_by)} "
@@ -382,7 +471,22 @@ def main():
             else:
                 gaps.append(f"{row['element']}: no caller found in code (a predefined button action — see encoded "
                             "actions —, dynamic, unreachable, or the project's first window)")
-    actions = encoded_actions(args.inspect_dir, args.dossier, args.language)
+    # An embedded report query reached only from one window that browses one file: propose what that table shows.
+    windows, _, _, _ = dossier_items(args.dossier)
+    for window, reports in uncalled.items():
+        tables = [c for c in (windows.get(window) or {}).get('controls', {}).values()
+                  if c.get('kind') == 'Table' and c.get('browsed_file')]
+        for index, gap in enumerate(gaps):
+            report = gap.split(':', 1)[0]
+            if report in reports and 'embedded query' in gap and len(tables) == 1:
+                file, item = tables[0]['browsed_file'], tables[0].get('browsed_item')
+                order = f', by {item}' if item else ''
+                gaps[index] = (f'{gap} — proposed: every record of {file}, no condition, in the order of the table '
+                               f'that prints it ({window}{order}); confirm on a legacy printout')
+    actions = propose_actions(encoded_actions(args.inspect_dir, args.dossier, args.language), args.inspect_dir,
+                              CaseInsensitive(uncalled), bool(used.get('iPreview')))
+    questions = runtime_questions(args.inspect_dir, args.dossier, args.language, actions,
+                                  legend.get('skinned_dialogs', ()))
     args.out.with_name('navigation.md').write_text(navigation(caller_index, rows, first), encoding='utf-8')
     sheet = args.out.parent / 'evidence' / 'encoded-actions.md'
     if not sheet.exists():  # written once: it holds the human's answers afterwards, never regenerated over them
@@ -390,7 +494,9 @@ def main():
         sheet.write_text(answer_sheet(actions, questions), encoding='utf-8')
     args.out.write_text(markdown(rows, gaps, used, questions, actions), encoding='utf-8')
     args.out.with_suffix('.json').write_text(json.dumps(
-        {'files': len(inventory['files']), 'coverage': rows, 'gaps': gaps, 'questions': questions, 'callers': caller_index,
+        {'files': len(inventory['files']), 'coverage': rows, 'gaps': gaps,
+         'questions': [{'id': f'Q-{n:02d}', 'question': q, 'proposal': p} for n, (q, p) in enumerate(questions, 1)],
+         'callers': caller_index,
          'encoded_actions': actions,
          'usage': {f: [list(s) for s in sites] for f, sites in used.items()}}, indent=1, ensure_ascii=False),
         encoding='utf-8')

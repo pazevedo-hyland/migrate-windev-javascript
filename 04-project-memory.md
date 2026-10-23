@@ -15,7 +15,7 @@ The principle: **separate** the central memory, detailed documentation, decision
 │   ├── evidence-report.md     ← generated: coverage, gaps, platform calls, runtime questions, encoded actions
 │   ├── navigation.md          ← generated: who opens or prints what, from code
 │   ├── evidence/
-│   │   ├── encoded-actions.md ← answer sheet filled by someone with WINDEV or the running app (never regenerated)
+│   │   ├── encoded-actions.md ← proposed answers, confirmed by someone with WINDEV or the running app (never regenerated)
 │   │   └── images/            ← generated: dossier image and layout drawing per window/report (committed)
 │   ├── schema/schema-draft.*  ← generated: draft SQLite schema + decisions for the database ADR
 │   ├── mapping/               ← one note per legacy unit; event-codes.md (generated) + event-codes-inferred.md

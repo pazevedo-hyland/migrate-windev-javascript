@@ -42,13 +42,14 @@ def pack(unit, latest):
                'procedures': b['procedures'], 'encoded_properties': b.get('encoded_properties', False)}
               for b in source['blocks']]
     groups = {g['action']: g['slots'] for g in report.get('encoded_actions', [])}
+    proposals = {g['action']: g.get('proposal') for g in report.get('encoded_actions', [])}
     actions = []
     for slot in source.get('encoded_slots', []):
         others = [s for s in groups.get(slot['action'], [])
                   if not (s['element'].lower() == unit.lower() and s['control'] == slot['names'][-1])]
         actions.append({'control': '/'.join(slot['names']), 'event': slot['event'], 'meaning': meaning(slot['event']),
                         'line': slot['line'], 'has_code': slot['has_code'], 'action': slot['action'],
-                        'same_action_elsewhere': others})
+                        'proposed': proposals.get(slot['action']), 'same_action_elsewhere': others})
     element = {}
     for kind in ('windev-window', 'report'):
         path = Path(dossier or '.', kind, f'{unit}.json')
@@ -62,7 +63,8 @@ def pack(unit, latest):
             'calls': {f: [{'line': s[1], 'argument': s[2]} for s in sites] for f, sites in calls.items() if sites},
             'embedded_query_items': next((v for k, v in compiled.get('report_queries', {}).items()
                                           if k.lower() == unit.lower()), None),
-            'gaps': mentions(report.get('gaps', [])), 'runtime_questions': mentions(report.get('questions', []))}
+            'gaps': mentions(report.get('gaps', [])), 'runtime_questions': [q for q in report.get('questions', [])
+                                                                           if unit.lower() in q['question'].lower()]}
 
 
 def main():

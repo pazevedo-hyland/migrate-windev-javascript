@@ -47,7 +47,7 @@ class ProgressDashboardTests(unittest.TestCase):
         stages = {u['name']: u['stage'] for u in units}
         self.assertEqual(stages, {'WIN_A': 'done', 'WIN_B': 'building', 'RPT_C': 'mapped', 'Clientes': 'not started'})
         self.assertIn('40.0%', page)  # 2 of 5 behaviors done
-        self.assertIn('<div class="big">2</div><div>questions waiting for the WINDEV expert</div>', page)
+        self.assertIn('<div class="big">2</div><div>assumptions to confirm with the WINDEV expert (work does not wait)</div>', page)
         self.assertIn('<polyline', page)  # two commits touched the parity files
         self.assertIn('stage 1', page)
 

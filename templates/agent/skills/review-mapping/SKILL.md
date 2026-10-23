@@ -18,7 +18,7 @@ Input: one unit name. Read its mapping note, its screen or report spec and its p
 
 ## Labels
 
-- `verified`: read directly in code, schema, dossier field or an answered runtime question.
+- `verified`: read directly in code, schema, dossier field or an answered runtime question. A row resting on a `proposed:` answer says "assumed" and is checked against the answer sheet when that line is answered.
 - `inferred`: reasoned from evidence; the reasoning is written.
 - `unresolved`: no evidence settles it; a `U-<UNIT>-nn` item names what would.
 

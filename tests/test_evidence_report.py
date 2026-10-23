@@ -81,9 +81,39 @@ class EvidenceReportTests(unittest.TestCase):
         self.assertIn('QRY_A: query without SQL in the dossier', gaps)
         self.assertIn('Clientes: table without typed items in the dossier analysis', gaps)
         self.assertEqual({s[2] for s in used['ExeRun']}, {'"tool.exe"'})
-        self.assertEqual(len([q for q in questions if q.startswith('Dialog "Apagar?"')]), 1)  # merged, pt-PT
-        self.assertIn('Message boxes (Info ×2)', ' '.join(questions))  # one question for every box
-        self.assertTrue(any('Validate button "Validar"' in q for q in questions))
+        asked = dict(questions)
+        dialog = [q for q in asked if q.startswith('Dialog "Apagar?"')]
+        self.assertEqual(len(dialog), 1)  # merged, pt-PT
+        self.assertEqual(asked[dialog[0]]['answer'], '"Não"')  # every question carries a proposal
+        self.assertIn('Message boxes (Info ×2)', ' '.join(asked))  # one question for every box
+        validate = next(q for q in asked if 'Validate button "Validar"' in q)
+        self.assertEqual(asked[validate]['answer'], 'stays open')
+
+    def test_proposals_from_names_code_and_compiled_references(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'code').mkdir()
+            (root / 'code/WIN_T.wdw.json').write_text(json.dumps({'path': 'WIN_T.wdw', 'name': 'WIN_T', 'blocks': [
+                block(['WIN_T', 'BTN_Pick'], 'MyWindow..ReturnedValue = 1'),
+                block(['WIN_T', 'BTN_Done'], 'close(WIN_T)')], 'encoded_slots': [
+                {'names': ['WIN_T', 'SC', 'BTN_SYST_FERMER'], 'event': '18', 'line': 1, 'has_code': False, 'action': 'A-1'},
+                {'names': ['WIN_T', 'BTN_Sair'], 'event': '18', 'line': 2, 'has_code': False, 'action': 'A-1'},
+                {'names': ['WIN_T', 'BTN_Pick'], 'event': '18', 'line': 3, 'has_code': True, 'action': 'A-2'},
+                {'names': ['WIN_T', 'BTN_Print'], 'event': '18', 'line': 4, 'has_code': False, 'action': 'A-3'},
+                {'names': ['WIN_T', 'BTN_Other'], 'event': '18', 'line': 5, 'has_code': False, 'action': 'A-4'}]}))
+            actions = module.propose_actions(module.encoded_actions(root, None), root, module.CaseInsensitive({'WIN_T': ['RPT_T']}), True)
+            proposed = {a['action']: a['proposal']['answer'] for a in actions}
+            data = json.loads((root / 'code/WIN_T.wdw.json').read_text())
+            data['encoded_slots'].pop()
+            (root / 'code/WIN_T.wdw.json').write_text(json.dumps(data))
+            alone = module.propose_actions(module.encoded_actions(root, None), root, module.CaseInsensitive({'WIN_T': ['RPT_T']}), True)
+        self.assertTrue(next(a for a in alone if a['action'] == 'A-3')['proposal']['answer'].startswith('Print RPT_T'))
+        self.assertEqual(proposed['A-1'], 'Close the window')  # BTN_Sair shares the template close button's action
+        self.assertTrue(proposed['A-2'].startswith('Close the window after the code'))
+        # Two unexplained controls and one uncalled report: which one prints it is not known.
+        self.assertTrue(proposed['A-3'].startswith('Nothing') and proposed['A-4'].startswith('Nothing'))
+        self.assertEqual(module.control_code({'blocks': [block(['WIN_T', 'btn_done'], 'close(WIN_T)')]}, 'BTN_Done'),
+                         'close(WIN_T)')
 
 
 if __name__ == '__main__':

@@ -92,10 +92,14 @@ def open_questions(docs):
     sheet = docs / 'evidence' / 'encoded-actions.md'
     unanswered = answered = 0
     if sheet.exists():
+        column = None
         for line in sheet.read_text(encoding='utf-8').splitlines():
             cells = [c.strip() for c in line.strip().strip('|').split('|')]
-            if line.startswith('| A-') or line.startswith('| Q-'):
-                answer = cells[3] if line.startswith('| A-') else cells[2]
+            if 'Answer' in cells:
+                column = cells.index('Answer')  # the sheet's header row: older sheets have no Proposed column
+            elif line.startswith('| A-') or line.startswith('| Q-'):
+                at = column if column is not None else 3 if line.startswith('| A-') else 2
+                answer = cells[at] if at < len(cells) else ''
                 answered += bool(answer)
                 unanswered += not answer
     items = set()
@@ -218,7 +222,7 @@ ul{{padding-left:18px}}li{{margin:3px 0}}
 <div><div>of the old app's behaviors are rebuilt <b>and proven</b> in the new app</div>
 <div class="muted">{done} of {rows} behaviors · updated {generated}</div></div></div>
 <div class="tiles">{tile("screen", "screens")}{tile("report", "reports")}
-<div class="tile"><div class="big">{questions["answer_sheet_open"]}</div><div>questions waiting for the WINDEV expert</div>
+<div class="tile"><div class="big">{questions["answer_sheet_open"]}</div><div>assumptions to confirm with the WINDEV expert (work does not wait)</div>
 <div class="muted">{questions["answer_sheet_done"]} answered · {questions["unresolved_items"]} open points in the analysis</div></div>
 <div class="tile"><div class="big">{len(pending)}</div><div>decisions waiting for you</div>
 <div class="muted">{escape(", ".join(pending[:4])) or "none"}</div></div></div>

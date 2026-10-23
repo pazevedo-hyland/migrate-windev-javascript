@@ -66,7 +66,7 @@ Seed rows, code blocks with event meanings, encoded actions with every other slo
 python3 scripts/progress_dashboard.py --title "My App"     # writes docs/progress/index.html (+ .json)
 ```
 
-One self-contained HTML page from what the process already maintains — parity matrix and seed, mapping notes and specs, answer sheet, ADRs, Git history: the share of legacy behaviors verified in the new app, screens and reports done / being built / mapped / not started, questions waiting for the WINDEV expert, decisions waiting for the owner, progress over time (from the history of `docs/parity/`) and recent commits. Each stage regenerates and commits it; open it in a browser, no server needed.
+One self-contained HTML page from what the process already maintains — parity matrix and seed, mapping notes and specs, answer sheet, ADRs, Git history: the share of legacy behaviors verified in the new app, screens and reports done / being built / mapped / not started, assumptions to confirm with the WINDEV expert, decisions waiting for the owner, progress over time (from the history of `docs/parity/`) and recent commits. Each stage regenerates and commits it; open it in a browser, no server needed.
 
 ## `screen_layout.py`, `skin_assets.py`, `visual_compare.py` — a screen that looks like the legacy one
 
@@ -110,7 +110,7 @@ Merges the inspector output and the dossier extract into one report before mappi
 1. **Coverage** per window, report, query and table: code blocks, controls, dossier description, captions, image, dialogs, SQL, typed items — and a list of **gaps** (missing dossier entries, undescribed controls, queries without SQL, untyped tables). Names are matched case-insensitively and by each element's internal name.
 2. **Platform usage**: every WLanguage function the code calls, grouped by what the new app must provide (data access, navigation, dialogs, tables, printing, files/INI/registry, external programs, devices), with literal arguments — INI files, external programs, command-line options, printed reports.
 3. **Callers** (in the JSON): for every window and report, the code lines that open or print it — mapping agents read call sites from here instead of searching; elements with no caller are listed as gaps.
-4. **Runtime questions**: what only the running app can answer, one per pattern (a dialog's Esc button, whether a Validate button closes its window), grouped across windows.
+4. **Runtime questions**: what only the running app can confirm, one per pattern (a dialog's Esc button, whether a Validate button closes its window), grouped across windows. Each question and each encoded-action group carries a proposed answer with its basis (template button names, button types, the button's own code, compiled references, WINDEV conventions, or a labelled default), so work never waits for the answer sheet.
 
 On the real WINDEV 28 project: 108 elements, 4 gaps, 50 platform functions (revealing `servidor.ini`, the `WDModFic.EXE` schema update run at startup and the `"artigos"`/`"modulo"` command-line modes), 11 runtime questions.
 

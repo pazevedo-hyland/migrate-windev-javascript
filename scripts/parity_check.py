@@ -13,7 +13,7 @@ CONFIDENCE = {'verified', 'inferred', 'unresolved'}
 DONE = {'verified', 'excluded'}
 # One evidence item: a source location, a dossier or analysis reference, or a file (screenshot, export, golden).
 # A JSON file may name the field: "dossier/windev-window/WIN_X.json (controls.BTN_Ok.flags)".
-EVIDENCE = re.compile(r'\S+:\d+(?:-\d+)?|(?:dossier|analysis|export|golden|runtime): ?\S.*|[^\s;]+\.[A-Za-z0-9]{2,5}(?: \(.+\))?')
+EVIDENCE = re.compile(r'\S+:\d+(?:-\d+)?|(?:dossier|analysis|export|golden|runtime|proposed): ?\S.*|[^\s;]+\.[A-Za-z0-9]{2,5}(?: \(.+\))?')
 
 
 def read_csv(path):
@@ -44,7 +44,7 @@ def check(matrix, seed=None, require_complete=False, element=None, check_files=F
         if not value['evidence']:
             errors.append(f'{where}: evidence is required (path:line, export or screenshot)')
         for item in filter(None, (i.strip() for i in value['evidence'].split(';'))):
-            if check_files and EVIDENCE.fullmatch(item) and not re.match(r'(?:dossier|analysis|export|golden|runtime):', item):
+            if check_files and EVIDENCE.fullmatch(item) and not re.match(r'(?:dossier|analysis|export|golden|runtime|proposed):', item):
                 path = re.split(r':\d|\s\(', item)[0]
                 if not Path(path).exists():
                     errors.append(f'{where}: evidence file not found: {path}')
@@ -54,7 +54,7 @@ def check(matrix, seed=None, require_complete=False, element=None, check_files=F
                 continue
             if not EVIDENCE.fullmatch(item):
                 errors.append(f'{where}: evidence "{item}" is not path:line, dossier: <unit>/<control>, '
-                              'analysis: <file>.<item>, export:/golden:/runtime: <ref> or a file')
+                              'analysis: <file>.<item>, export:/golden:/runtime:/proposed: <ref> or a file')
         legacy = (row.get('legacy_behavior') or '').strip()
         if value['status'] == 'unmapped' and legacy and not re.search(r'\bU-(?:[A-Z0-9]+-)?\d+', legacy):
             errors.append(f'{where}: an unmapped row with described behavior must cite the unresolved item (U-nn) blocking it')

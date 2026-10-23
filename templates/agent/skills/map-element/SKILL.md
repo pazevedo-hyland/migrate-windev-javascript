@@ -19,7 +19,7 @@ Dossier fields: a field missing from the extract is "not extracted", never false
 
 - **Rows**: seed rows whose `element` is the unit. Keep every `SRC-*` ID.
 - **Block**: a non-empty code block, one seed row.
-- **Encoded action** (seed `kind` `encoded-action`): an event slot with no code whose predefined action (close, validate, print, open) WINDEV keeps encoded. It is behavior: describe what the evidence proves (caption, button type, the same action ID next to code elsewhere) and leave the action `unmapped` with a `U-` item naming its ID — unless the answer sheet answers that ID: then cite `runtime: A-xxxxxx`. Blocks with `encoded_properties: true` may run an action besides their code. Template system buttons on every window may share one rule row.
+- **Encoded action** (seed `kind` `encoded-action`): an event slot with no code whose predefined action (close, validate, print, open) WINDEV keeps encoded. It is behavior: describe what the evidence proves (caption, button type, the same action ID next to code elsewhere) and map it to the answer sheet's `Answer` for that ID (cite `runtime: A-xxxxxx`) or, while unanswered, to its `Proposed` answer (cite `proposed: A-xxxxxx`, and say "assumed" in `legacy_behavior`). Runtime questions work the same way (`proposed: Q-nn`). A proposal is never a reason to stop; a `U-` item is only for what has neither answer nor proposal. Blocks with `encoded_properties: true` may run an action besides their code. Template system buttons on every window may share one rule row.
 - **Cross-window behavior** is where the risky rules are: shared file buffers and filters, globals, parameters, returned values. A window without an independent HFSQL context (`Indep. HFSQL ctx.` false) shares file positions and filters with the windows it opens and is opened from.
 
 ## Write `docs/mapping/<unit>.md`
@@ -44,7 +44,7 @@ Controls go only in the screen spec.
 
 Columns of `templates/parity.template.csv`.
 
-- `evidence`: `;`-separated, each `legacy/<path>:<line>` (seed evidence is relative to `legacy/`: prefix it), `dossier: <unit>/<field>` (e.g. `dossier: WIN_X/controls.BTN_Ok.flags`), `runtime: A-xxxxxx`, or a committed file. Never a path inside `analysis-local/`.
+- `evidence`: `;`-separated, each `legacy/<path>:<line>` (seed evidence is relative to `legacy/`: prefix it), `dossier: <unit>/<field>` (e.g. `dossier: WIN_X/controls.BTN_Ok.flags`), `runtime: A-xxxxxx` (answered), `proposed: A-xxxxxx` or `proposed: Q-nn` (assumed until answered), or a committed file. Never a path inside `analysis-local/`.
 - `confidence`: `verified` (read in code, schema, dossier or an answer), `inferred` (reasoning written in `legacy_behavior`), `unresolved`. A row mixing both is split.
 - `status`: `specified` with `target_behavior` = `Preserve legacy behavior` when understood; `unmapped` when a `U-` item blocks it, citing the item in `legacy_behavior`. A clear block with an unresolved outcome stays `specified`, the outcome in its own `RULE-*` row, `unmapped`.
 - New rows: `RULE-<ABBR>-NNN`. New event-code meanings: `docs/mapping/event-codes-inferred.md`, with evidence.

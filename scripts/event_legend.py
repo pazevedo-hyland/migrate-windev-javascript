@@ -141,7 +141,9 @@ def legend(source_dir, compile_dir):
         (best, count), total = counter.most_common(1)[0], sum(counter.values())
         result[code] = {'event': best, 'evidence': count, 'conflicts': {k: v for k, v in counter.items() if k != best}}
     return {'windows': windows, 'codes': result, 'report_queries': report_queries(compile_dir),
-            'compiled_references': {k: sorted(v) for k, v in sorted(references.items()) if v}}
+            'compiled_references': {k: sorted(v) for k, v in sorted(references.items()) if v},
+            # The project customizes WINDEV's message and dialog boxes: they follow the skin template.
+            'skinned_dialogs': sorted({f.name.split('.')[0] for f in Path(compile_dir).rglob('WINDEV*BOX.*.wdw.*')})}
 
 
 def markdown(data):

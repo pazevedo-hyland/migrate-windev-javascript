@@ -49,7 +49,7 @@ B. Ask the business owner (at most these; each with your recommendation and what
 6. Who provides a copy of real (anonymised) data, and who checks the new app's results against the old one?
 7. Go-live: can work stop for a few hours to switch over? Should both apps run side by side for a while?
 
-C. Ask the WINDEV person: the answer sheet docs/evidence/encoded-actions.md (encoded button actions, runtime questions), the embedded report query conditions, the data export. No programming knowledge needed beyond opening the project in WINDEV and the running app.
+C. Ask the WINDEV person, without waiting for the answers: the answer sheet docs/evidence/encoded-actions.md (encoded button actions, runtime questions — each already has a `Proposed` answer from the evidence or WINDEV's conventions, which the work uses until it is confirmed or corrected), the embedded report query conditions (proposed in docs/evidence-report.md), the data export. No programming knowledge needed beyond opening the project in WINDEV and the running app.
 
 Continue analysis and stage 0 work while answers are pending; never block on a question whose recommended default is safe and reversible.
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-23 — nothing waits for the human
+
+### Added
+- Every encoded-action group, runtime question and embedded report query gets a proposed answer with its basis: skin-template button names shared by the group, button types, the button's own code (`..ReturnedValue` set ⇒ the window closes), the one report a window's compiled code names that no code calls, the browsing table of the window that prints a list report, WINDEV conventions, or a labelled default. On the real project all 17 groups and 12 questions are proposed (2 by default).
+- Answer sheet `Proposed` column; mapping cites `proposed: A-xxxxxx` / `proposed: Q-nn` and says "assumed"; an answer that differs reopens those rows.
+- The event legend records whether the project skins WINDEV's message and dialog boxes (`WINDEVMESSAGEBOX`/`WINDEVDIALOGBOX` in the compile folder).
+
+### Fixed
+- "Validate button with no Close()" looked at the whole window's code, case-sensitively: a lowercase `close(` was missed and any `Close(` elsewhere hid the question. It now reads the button's own code.
+
 ## 2026-10-23 — lessons from building one slice in the legacy skin
 
 ### Added
