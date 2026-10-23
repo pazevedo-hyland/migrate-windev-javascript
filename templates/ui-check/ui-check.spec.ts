@@ -58,7 +58,8 @@ function visualScore(window: string, screenshot: string): [Score | null, Score |
   if (!legacy) return [null, null];
   const record = resolve(root, config.visualDir!, `${window}.json`);
   const previous: Score | null = existsSync(record) ? JSON.parse(readFileSync(record, "utf-8")) : null;
-  const run = spawnSync("python3", ["scripts/visual_compare.py", legacy, screenshot,
+  // scripts/py.mjs finds python3 (macOS, Linux) or py (Windows).
+  const run = spawnSync("node", ["scripts/py.mjs", "scripts/visual_compare.py", legacy, screenshot,
     "--out", resolve(root, config.report, `${window}.compare.png`), "--record", record], { cwd: root, encoding: "utf-8" });
   if (run.status !== 0) throw new Error(`visual_compare.py failed for ${window}: ${run.stderr}`);
   return [JSON.parse(run.stdout), previous];

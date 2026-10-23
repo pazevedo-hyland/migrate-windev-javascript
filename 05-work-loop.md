@@ -80,7 +80,7 @@ Example: a repair-order save is complete when validation, material/time recordin
 - **UI control coverage:** `npm run ui:check` ([templates/ui-check](templates/ui-check/), chapter 10 §3) in every UI slice.
 - **UI inspection by the agent:** in dev mode outside Tauri, the app installs the test fake backend (`mockIPC` with the golden data) behind a visible "browser preview" banner. The agent opens the Vite dev server in a browser preview, clicks through the slice's workflows and checks layout, focus and exact messages before the human run. It proves UI behavior only, never the Rust commands. Wait for the screen to settle before trusting a screenshot.
 
-Use the smallest meaningful set for the change; expand when failures or new risks justify it. These commands are conventions of the application, not executable commands of this playbook.
+Use the smallest meaningful set for the change; expand when failures or new risks justify it. The npm scripts are defined by the foundation slice ([06 §7](06-start-a-migration.md#7-foundations)).
 
 ## Running agents for long stretches
 

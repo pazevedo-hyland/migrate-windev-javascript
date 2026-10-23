@@ -1,6 +1,6 @@
 # Scripts
 
-Python 3.10+, standard library only — except `dossier_extract.py`, which needs `python3 -m pip install pypdf`. No WINDEV runtime, network or AI credentials required. Run the tests with `python3 -m unittest discover -s tests -v`.
+Python 3.10+, standard library plus `pypdf` (dossier) and `pillow` (skin images, visual scores): `python3 -m pip install pypdf pillow`. No WINDEV runtime, network or AI credentials required. Run the tests with `python3 -m unittest discover -s tests -v`.
 
 ## `inspect_windev.py` — inventory, context and parity seed
 
@@ -91,7 +91,7 @@ Layout JSON from the evidence (positions, captions, icons and states, background
 
 ```sh
 pip install pypdf
-python3 scripts/dossier_extract.py legacy/docs/<project>_Documentation.pdf --out <dossier dir> [--no-images]
+python3 scripts/dossier_extract.py legacy/<path to>/<project>_Documentation.pdf --out <dossier dir> [--no-images]
 ```
 
 WINDEV's project technical documentation states what the text sources encrypt. The extractor writes one JSON per element (`windev-window/`, `report/`, `query/`, `analysis/`, `project/`) with the raw section text plus parsed fields — window `title` and `window_type`; per control `caption`, `tab_order`, `input_mask`, `input_size`, `image`, `background_image`, `anchoring`; per query `sql`, `parameters`, `conditions`; per analysis file its description and items with `caption`, `type` as WINDEV names it ("8-byte real", "Decimal", "Automatic identifier (8 bytes)"), `size` and `default` — and each element's image under `images/`. **Checkbox properties** are read from the check marks the dossier draws (they are not text): window-level `flags` such as `Indep. HFSQL ctx.`, `Resizable`, `Title bar`, and per control `flags` from the control tables (`Visible`, `Password`, `Required input`, `Multiline`, `Blank if zero`, `NULL if empty`…), and per analysis item `keys` (`Unique Key`, `Key with Duplicates`). Tables continuing on the next page without a header and long control names cut at 31 characters are handled.
@@ -125,7 +125,7 @@ On the real WINDEV 28 project: 108 elements, 4 gaps, 50 platform functions (reve
 ## `event_legend.py` — event codes verified from the compile folder
 
 ```sh
-python3 scripts/event_legend.py legacy/code --compile-dir legacy/code/<project>.cpl --out docs/mapping/event-codes.md
+python3 scripts/event_legend.py legacy/<project folder> --compile-dir legacy/<project folder>/<project>.cpl --out docs/mapping/event-codes.md
 ```
 
 The text sources store events as raw codes (18, 17, 34…). The compiled per-window files in the project's `.cpl` folder contain WINDEV's own label for each coded event ("Click BTN_Save", "Exit from EDT_Name"). Pairing them where unambiguous gives a legend backed by the compiler, with evidence counts and conflicts. On a real WINDEV 28 project: 18 Click (293 matches, no conflict), 17 Whenever modifying, 16 Exit, 15 Entry, 21 Display a row, 33 Select a row, 34 End of initialization, no code = Global declarations. The inspector itself skips `.cpl` folders (they are build output, not sources).

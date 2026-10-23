@@ -102,7 +102,7 @@ Pair the guard with the agent's own sandbox and approval settings (workspace-onl
 The rules live in `AGENTS.md`, skills are Markdown files, guardrails run in Git and CI — so the method works with any coding agent. Install once per application repository:
 
 ```sh
-cp -R templates/agent/skills skills
+mkdir -p skills && cp -R templates/agent/skills/. skills/   # skip if 06 §2 already did it
 # Optional guard (recommended for unattended runs)
 cp templates/agent/guard.py scripts/guard.py
 mkdir -p .githooks && cp templates/agent/pre-commit .githooks/ && chmod +x .githooks/pre-commit
@@ -112,6 +112,7 @@ cp templates/CLAUDE.template.md CLAUDE.md && mkdir -p .claude
 cp templates/claude/settings.json .claude/ && cp -R skills .claude/skills
 ```
 
+- **Windows (PowerShell):** `Copy-Item -Recurse templates\agent\skills\* skills\`, `New-Item -ItemType Directory .githooks`, `Copy-Item templates\agent\pre-commit .githooks\` (no `chmod` needed), `git config core.hooksPath .githooks`.
 - **Codex** reads `AGENTS.md` (and nested ones) natively. If your version supports skills or hooks, point them at `skills/` and `scripts/guard.py --command/--write`; otherwise the commit guard, its sandbox/approval modes and CI cover it.
 - **No sub-agents?** Run the mapping units as parallel sessions or one after another.
 - **Two agents** work well together: one implements, the other reviews with `skills/review/SKILL.md` — a different model catches different misses.

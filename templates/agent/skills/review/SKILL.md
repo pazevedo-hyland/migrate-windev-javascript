@@ -5,7 +5,7 @@ description: Review a migration stage (code, SQL, tests, docs) against legacy ev
 
 # Stage review
 
-Run in a fresh context (a new session or sub-agent — Claude, Codex or another), never the one that wrote the code. Read the diff and the changed files in full, the stage prompt, the accepted ADRs, `docs/porting.md` and the legacy evidence cited by the parity rows the stage moved — not the implementer's handoff or reasoning, which argue for the code. Assume the code is wrong and find how. Report **only** real findings:
+Run in a fresh context (a new session or sub-agent — Claude, Codex or another), never the one that wrote the code (if you cannot start one, clear your context and read only what follows; say so in the handoff). Read the diff and the changed files in full, the stage prompt, the accepted ADRs, `docs/porting.md` and the legacy evidence cited by the parity rows the stage moved — not the implementer's handoff or reasoning, which argue for the code. Assume the code is wrong and find how. Report **only** real findings:
 
 1. **Blocking** — build/test failure, data loss, wrong totals or rounding, broken transaction, violated permission, missing acceptance criterion, hard rule from `AGENTS.md` violated.
 2. **Parity gap** — a legacy behavior missing or changed without an ADR; a row marked `verified` without an executed test; an `inferred` rule implemented as fact; a WLanguage trap mistranslated (`docs/wlanguage-traps.md`).

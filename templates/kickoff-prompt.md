@@ -16,8 +16,8 @@ continue with the first slice not Done. Otherwise start at step 1.
 
 1. Read the playbook's README, chapters 06, 05 and 10, and templates/PromptInit.md (method and decision rules).
 2. Set up this folder as the application repository as chapter 06 §2 says (templates/, scripts/, skills/,
-   AGENTS.md from the template, chapter 09 as docs/wlanguage-traps.md, anchored .gitignore). The guard is optional:
-   skip it unless the playbook's agent adapter for you is ready to install.
+   AGENTS.md from the template, chapter 09 as docs/wlanguage-traps.md, anchored .gitignore). Do not install the guard
+   (humans own it); if scripts/guard.py is installed, run it with --staged before each commit.
 3. Data copy: if legacy/data/ holds no data.sqlite but legacy/ holds HFSQL files (.fic/.ndx/.mmo), make one on
    Windows: copy those files to a scratch folder outside legacy/, create an ODBC data source on the copy with the
    HFSQL driver (PowerShell Add-OdbcDsn, or the ODBC administrator; 32- or 64-bit as scripts/windows/README.md

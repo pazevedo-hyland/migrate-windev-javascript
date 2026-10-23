@@ -9,7 +9,7 @@ Input: one unit name. Paths below are defaults; a stage prompt may give others. 
 
 ## Read
 
-1. The unit's evidence pack: `python3 scripts/unit_evidence.py <unit> --out analysis-local/units/<unit>.json` (keep it: the reviewer diffs it later). It holds the seed rows, code blocks with event meanings, encoded actions with every other slot sharing the same action ID, the parsed dossier fields, callers, calls out, gaps and runtime questions.
+1. The unit's evidence pack — windows, reports and the project (`.wdp`): `python3 scripts/unit_evidence.py <unit> --out analysis-local/units/<unit>.json` (keep it: the reviewer diffs it later). For a **table group**: the tables' seed rows (`element` = each table), `docs/schema/schema-draft.md` and `docs/data/profile.md`, and validate with `--element <Table1>,<Table2>`. For a **query**: its SQL in the dossier extract (`query/<QRY>.json` in the `dossier` folder of `analysis-local/latest.json`) and its callers (`grep -rn <QRY> legacy/`). The window or report pack It holds the seed rows, code blocks with event meanings, encoded actions with every other slot sharing the same action ID, the parsed dossier fields, callers, calls out, gaps and runtime questions.
 2. The unit's source in `legacy/` in full, and the callers' and callees' code one level out (call sites are in the pack).
 3. `docs/wlanguage-traps.md`, `docs/mapping/event-codes.md` (generated, verified), `docs/evidence/encoded-actions.md` (answers, or proposals until answered), the images `docs/evidence/images/<unit>.*`.
 
@@ -38,7 +38,7 @@ Controls go only in the screen spec.
 ## Write the spec
 
 - **Window** → `docs/screens/<unit>.md` from `templates/window-spec.md`. Captions, masks, tab order, flags and button types come from the dossier; without one, write `unresolved (encoded)` per column instead of guessing.
-- **Report** → `docs/reports/<unit>.md` from `templates/report-spec.md`: bands and geometry (inspector `layout`, millimetres), bound items, calculations, presets, page fit. Captions are often only in the image: say so. No caller in the pack is a finding: confirm with `grep -rnil "<unit>" legacy/code` (a hit outside the report and the `.wdp` project file is a missed caller; a hit in a compiled file of `<project>.cpl` names the window whose predefined action likely prints it — the evidence report already lists those).
+- **Report** → `docs/reports/<unit>.md` from `templates/report-spec.md`: bands and geometry (inspector `layout`, millimetres), bound items, calculations, presets, page fit. Captions are often only in the image: say so. No caller in the pack is a finding: confirm with `grep -rnil "<unit>" legacy/` (a hit outside the report and the `.wdp` project file is a missed caller; a hit in a compiled file of the `<project>.cpl` folder names the window whose predefined action likely prints it — the evidence report already lists those).
 
 ## Write the parity rows
 
@@ -52,8 +52,10 @@ Columns of `templates/parity.template.csv`. During stage 0 (parallel mapping) in
 Validate:
 
 ```sh
-python3 scripts/parity_check.py docs/parity/<unit>.csv --seed docs/parity/parity-seed.csv --element <unit> \   # or parity.csv
-  --check-files --note docs/mapping/<unit>.md --note docs/screens/<unit>.md   # or docs/reports/<unit>.md
+python3 scripts/parity_check.py docs/parity/<unit>.csv --seed docs/parity/parity-seed.csv --element <unit> \
+  --check-files --note docs/mapping/<unit>.md --note docs/screens/<unit>.md
 ```
+
+Once the rows are in `docs/parity/parity.csv`, check that file; for a report, `--note docs/reports/<unit>.md`.
 
 Finish with: blocks and encoded actions covered / total, rows written, the riskiest rules, the unresolved list (blocking ones first), questions for the human.

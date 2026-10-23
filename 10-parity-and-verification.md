@@ -13,7 +13,7 @@ The parity matrix `docs/parity/parity.csv` ([template](templates/parity.template
 Rules of the matrix, enforced by `scripts/parity_check.py`:
 
 - every seed row stays in the matrix (`--seed`): refine it, mark it `excluded` with an ADR, but never delete it;
-- every row has evidence and a confidence (`verified` / `inferred` / `unresolved`);
+- every row has evidence and a confidence (`verified` / `inferred` / `assumed` / `unresolved`);
 - status flows `unmapped → specified → implemented → verified`, or `excluded`;
 - `specified` needs a target behavior; `implemented` needs `implemented_in`; `verified` needs the **test that ran** and cannot keep `unresolved` legacy behavior; `excluded` needs a decision reference;
 - a row is `verified` only when it passes the five checks of the AGENTS template's "No guessing" section ([templates/AGENTS.template.md](templates/AGENTS.template.md)): above all, its test asserts the behavior and no part of it is an implementer's choice for an unresolved item. Otherwise it stays `implemented`. The checker cannot see this; the review must;

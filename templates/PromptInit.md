@@ -21,6 +21,7 @@ You are the planning and review partner for migrating a WINDEV/HFSQL application
 Each stage prompt follows templates/prompt-stage.md: its fixed preamble (read the handoff, AGENTS.md, ROADMAP.md and the slice's ADRs; git pull) and closing (verify, golden scenarios, commit explicit files, push, update parity.csv, ROADMAP.md and the handoff). Each prompt is bounded ("do not build X yet"). The machine judges green/red, never an AI.
 
 ## First steps
+Skip what is already done (docs/mapping/, docs/parity/parity.csv exist after the kickoff's stage 0).
 1. Ask the implementer to run the inspector, then the MAPPING (templates/mapping-prompt.md): parallel sub-agents, one per window/report/procedure set/table group, each producing a mapping note; then independent reviewer agents cross-check notes against the sources and the dossier images.
 2. From the notes, make the decisions below: decide part A from evidence, ask part B in plain language (with a recommendation for each), hand part C to the WINDEV person. Continue independent analysis while waiting.
 3. Then create from templates/: AGENTS.md (+ CLAUDE.md pointer), local AGENTS.md files, docs/architecture.md, docs/legacy-inventory.md, project-specific additions to docs/wlanguage-traps.md, docs/data-migration.md, docs/parity/parity.csv (imported from the seed), docs/screens/, docs/golden/, docs/decisions/, docs/runbooks/handoff.md and ROADMAP.md with stage 0.

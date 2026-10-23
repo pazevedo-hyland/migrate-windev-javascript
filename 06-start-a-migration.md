@@ -8,7 +8,7 @@ Accounts, tools, legacy Windows environment, isolated agent machine, test machin
 
 ## 2. Create the project repository
 
-Create a private repository for the application. Copy `templates/` and `scripts/` from this playbook, `templates/agent/skills/` to `skills/`, `templates/AGENTS.template.md` to `AGENTS.md` (framing fills in its project parts later) and chapter 09 to `docs/wlanguage-traps.md` (the mapping reads it); add the `.gitignore` entries `/legacy/` and `/analysis-local/` (anchored with a leading `/`: an unanchored `legacy/` also hides application folders such as `src/ui/legacy/`), HFSQL data files and `.env`; `python3 -m pip install pypdf` for the dossier. Optionally install the shared guard with its pre-commit hook and your agent's adapter ([04](04-project-memory.md#claude-code-codex-and-other-agents)): recommended when agents run unattended for long stretches.
+Create a private repository for the application. Copy `templates/` and `scripts/` from this playbook, `templates/agent/skills/` to `skills/`, `templates/AGENTS.template.md` to `AGENTS.md` (framing fills in its project parts later) and chapter 09 to `docs/wlanguage-traps.md` (the mapping reads it); add the `.gitignore` entries `/legacy/` and `/analysis-local/` (anchored with a leading `/`: an unanchored `legacy/` also hides application folders such as `src/ui/legacy/`), HFSQL data files and `.env`; `python3 -m pip install pypdf pillow` (dossier, skin images, visual scores; `py -m pip …` on Windows). Optionally install the shared guard with its pre-commit hook and your agent's adapter ([04](04-project-memory.md#claude-code-codex-and-other-agents)): recommended when agents run unattended for long stretches.
 
 ## 3. Collect the sources
 
@@ -22,7 +22,7 @@ One command runs the whole evidence pipeline in order — inspector, dossier ext
 python3 scripts/prepare_evidence.py
 ```
 
-It finds `legacy/docs/*Documentation*.pdf` and `legacy/code/<project>.cpl` itself (`--dossier-pdf`, `--compile-dir` to override) and says what is missing. Pass `--language <code>` (WINDEV's language code of the app's texts, e.g. `pt-PT`, `fr-FR`) when the app is multilingual; otherwise each text's first language is used. Re-run it whenever `legacy/` changes: seed IDs do not change, so mapping rows stay attached. **Updating the tools** from a newer playbook (copy `scripts/`, `skills/`, `templates/ui-kit/`): re-run `prepare_evidence.py`, then `npm run verify` and `parity_check.py --seed docs/parity/parity-seed.csv --check-files` before committing; fix what they report (renamed seed rows, stricter evidence forms — the playbook's CHANGELOG lists format changes) in the same commit. The steps below explain each part and its options; run one alone only to debug it.
+It finds the `*Documentation*.pdf` and the `<project>.cpl` folder anywhere under `legacy/` itself (`--dossier-pdf`, `--compile-dir` to override) and says what is missing. Pass `--language <code>` (WINDEV's language code of the app's texts, e.g. `pt-PT`, `fr-FR`) when the app is multilingual; otherwise each text's first language is used. Re-run it whenever `legacy/` changes: seed IDs do not change, so mapping rows stay attached. **Updating the tools** from a newer playbook (copy `scripts/`, `skills/`, `templates/ui-kit/`): re-run `prepare_evidence.py`, then `npm run verify` and `parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv --check-files` before committing; fix what they report (renamed seed rows, stricter evidence forms — the playbook's CHANGELOG lists format changes) in the same commit. The steps below explain each part and its options; run one alone only to debug it.
 
 ```sh
 python3 scripts/inspect_windev.py legacy --out analysis-local/inspect-$(date +%Y%m%d)
@@ -35,7 +35,7 @@ The inspector is deliberately shallow: it extracts code blocks with their window
 ## 4a. Extract the dossier (if one exists)
 
 ```sh
-python3 scripts/dossier_extract.py legacy/docs/<project>_Documentation.pdf --out analysis-local/dossier-<stamp>
+python3 scripts/dossier_extract.py legacy/<path to>/<project>_Documentation.pdf --out analysis-local/dossier-<stamp>
 ```
 
 Per-element JSON (window title and type; each control's caption, tab order, input mask and size, button type, images; each query's SQL, parameters and conditions) plus each window's image as WINDEV draws it. Mapping notes and screen specs cite it as evidence (`dossier: WIN_X/BTN_Y`). It does not show runtime behavior (what Esc does on a dialog, dynamic states): that comes from the code, and when the code cannot settle it, from someone observing the running app — record it as `unresolved` until then.
@@ -70,7 +70,29 @@ UI style is one of these choices: a **WINDEV-like replica** (same layout, fields
 
 ## 7. Foundations
 
-Scaffold the Tauri app in the accepted structure, `npm run verify` in CI on every target OS, bindings generation, schema v1 migrations, an opt-in dev seed (a Cargo feature such as `dev-seed` that loads the synthetic data into an empty database, so humans can try every slice), a browser-preview mode with the fake backend for agent UI inspection ([05](05-work-loop.md#checks-to-use)), and an import **dry run** on the data copy with a reconciliation report ([08](08-data-migration.md)). Record golden scenarios for the first workflows in the legacy app ([10](10-parity-and-verification.md)).
+**Wiring every later step relies on** (the pilot's, to copy):
+
+- Scaffold with `npm create tauri-app@latest` (React + TypeScript), then `npm i -D @playwright/test vitest eslint` and `npm i @tauri-apps/api`. Playwright drives the installed Chrome (`channel: "chrome"`): no browser download.
+- `package.json` scripts — Python through `node scripts/py.mjs` so they run on Windows too:
+  ```json
+  "dev": "vite",
+  "typecheck": "tsc --noEmit",
+  "lint": "eslint .",
+  "test": "vitest run",
+  "rust:fmt": "cargo fmt --manifest-path src-tauri/Cargo.toml --check",
+  "rust:clippy": "cargo clippy --locked --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
+  "rust:test": "cargo test --locked --manifest-path src-tauri/Cargo.toml",
+  "parity": "node scripts/py.mjs scripts/parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv",
+  "verify": "npm run typecheck && npm run lint && npm test && npm run rust:fmt && npm run rust:clippy && npm run rust:test && npm run parity",
+  "ui:check": "playwright test -c ui-check/playwright.config.ts"
+  ```
+  Add a bindings check to `verify` once ts-rs bindings are generated.
+- UI check: `templates/ui-check/ui-check.spec.ts` and `playwright.config.ts` → `ui-check/`; `ui-check.config.json` → the repository root (the spec reads it from there); each slice adds `ui-check/<slice>.flows.spec.ts`.
+- Skin kit: `templates/ui-kit/` → `src/ui/legacy/`; layouts with `scripts/screen_layout.py <WINDOW> --out src/ui/legacy/<WINDOW>.layout.json`; images with `scripts/skin_assets.py --out public/skin src/ui/legacy/*.layout.json`.
+- Browser preview: in `src/main.tsx`, when `import.meta.env.DEV` and not inside Tauri (`!("__TAURI_INTERNALS__" in window)`), install `mockIPC` from `@tauri-apps/api/mocks` with a fake backend over the golden data, behind a visible banner. `npm run dev` then serves the UI to the browser checks.
+- CI: run `npm run verify` on the target OSes once the repository has a remote.
+
+Then: the Tauri app in the accepted structure, bindings generation, schema v1 migrations, an opt-in dev seed (a Cargo feature such as `dev-seed` that loads the synthetic data into an empty database, so humans can try every slice), a browser-preview mode with the fake backend for agent UI inspection ([05](05-work-loop.md#checks-to-use)), and an import **dry run** on the data copy with a reconciliation report ([08](08-data-migration.md)). Record golden scenarios for the first workflows in the legacy app ([10](10-parity-and-verification.md)).
 
 ## 8. First vertical slice
 
@@ -82,7 +104,7 @@ Each stage ([05](05-work-loop.md)): planner writes the prompt → you paste it i
 
 ## 10. Parity and rollout
 
-Expand slice by slice until `parity_check.py --require-complete --seed docs/parity/parity-seed.csv` passes. Then: replay all golden scenarios, reconcile a full import, test concurrent edits if applicable, check native integrations on the real target OSes, rehearse backup/restore and cutover ([08](08-data-migration.md#cutover)). Agree which intentional improvements replace legacy behavior before expanding scope.
+Expand slice by slice until `parity_check.py docs/parity/parity.csv --require-complete --seed docs/parity/parity-seed.csv` passes. Then: replay all golden scenarios, reconcile a full import, test concurrent edits if applicable, check native integrations on the real target OSes, rehearse backup/restore and cutover ([08](08-data-migration.md#cutover)). Agree which intentional improvements replace legacy behavior before expanding scope.
 
 ---
 

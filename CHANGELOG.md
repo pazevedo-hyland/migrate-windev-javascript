@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-23 — a cold start that follows only the guide
+
+A fresh agent given only the kickoff prompt and the guide, on a folder with the project dropped in as is, found 21 problems the earlier runs' detailed briefs had hidden. Fixed:
+
+### Added
+- 06 §7 "wiring every later step relies on": scaffold, the `package.json` scripts (`verify`, `ui:check`, `parity`…), where the UI check, its config and the skin kit go, the browser-preview fake backend, CI once a remote exists.
+- `scripts/py.mjs`: runs Python as `python3` or `py` so npm scripts, the UI check and the commit hook work on Windows.
+
+### Fixed
+- Commands that failed as written: map-element's validate block, two `parity_check.py` calls without the matrix, the skin-asset command in the roadmap.
+- map-element covers table groups and queries (no evidence pack for them); specs go to `docs/screens/` or `docs/reports/`.
+- Paths assumed `legacy/code/` and `legacy/docs/`; the project folder can sit anywhere under `legacy/`.
+- Gaps are recorded in `docs/legacy-inventory.md` (the evidence report is regenerated).
+- Pillow added to the setup; skills install without nesting; PowerShell install lines; portable pack diff and compiled-file search.
+- Pull and push only when a remote exists and the project allows it; closing order: update, regenerate, then commit.
+- A review fallback for agents that cannot start a separate session; the guard is the human's to install.
+- The UI check's example config no longer hides controls; the parity template's rule row uses the unit as `element`; `assumed` listed with the confidences; ROADMAP rows 0–1 Done when created after stage 0; PromptInit skips steps the kickoff already did.
+
 ## 2026-10-23 — drop the project folder in as is
 
 ### Changed

@@ -26,7 +26,7 @@ Need more: `python3 scripts/prepare_evidence.py` regenerates `analysis-local/` f
 ## Non-negotiable rules
 
 1. Verify before coding: read the real legacy source, schema, exports and library APIs. Never invent a column, table, control, rule or API member.
-2. Every business rule cites evidence (`path:line`, export, screenshot) and a confidence: verified, inferred or unresolved.
+2. Every business rule cites evidence (`path:line`, export, screenshot) and a confidence: verified, inferred, assumed or unresolved.
 3. Preserve legacy behavior unless an accepted ADR records the change. A screen that renders is not parity.
 4. Data-structure changes are proposed to the human first. No silent destructive "fixes"; no editing committed migrations.
 5. One user save = one command = one transaction. Validate input at the native/server boundary; parameterize all SQL.

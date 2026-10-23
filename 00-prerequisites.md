@@ -10,7 +10,7 @@ Do this once; every migration project reuses it.
 ## B. Tools on the development machine
 
 - Git, a supported Node.js LTS with npm, the Rust toolchain (`rustup`), and the [Tauri 2 platform prerequisites](https://v2.tauri.app/start/prerequisites/) (Windows: Microsoft C++ Build Tools and WebView2; macOS: Xcode command-line tools; Linux: webkit2gtk and build libraries).
-- Python 3.10+ for this playbook's scripts (standard library only, except the dossier extractor: `python3 -m pip install pypdf`).
+- Python 3.10+ for this playbook's scripts (standard library plus `python3 -m pip install pypdf pillow`; `pyodbc` too on the Windows PC that exports the data).
 - An editor (VS Code or similar). Pin the real Node/Rust/dependency versions in the application repository and commit `package-lock.json` and `Cargo.lock`.
 
 ## C. The legacy Windows environment
@@ -20,7 +20,7 @@ Keep a Windows machine or VM with the **original WINDEV version** and an HFSQL e
 - run the old application to record [golden scenarios](10-parity-and-verification.md) and screenshots;
 - switch the project to the **text backup format** (required for Git, and for the inspector) — see PC SOFT's guide on [sharing projects via Git](https://doc.pcsoft.fr/fr-FR/?9500230&name=partagez_vos_projets_via_git);
 - [generate the SQL script from the analysis](https://doc.pcsoft.fr/fr-FR/?2011027), export binary queries as SQL with their parameters, and export HFSQL data to CSV through supported tooling (WINDEV, HFSQL Control Center, or ODBC/OLE DB drivers);
-- optionally run the WINDEV 2026 AI Companion `/init_projet` command, which writes a project-context file: put it in `legacy/docs/`.
+- optionally run the WINDEV 2026 AI Companion `/init_projet` command, which writes a project-context file: put it anywhere under `legacy/`.
 
 Reading a text-format window file does not require WINDEV; reproducing runtime behavior does.
 

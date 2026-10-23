@@ -3,8 +3,8 @@
 
   inspect_windev.py   legacy/              -> analysis-local/inspect-<stamp>/   (code, layout, encoded slots, XDD, seed)
                                            -> docs/parity/parity-seed.csv      (committed copy, for the parity gate)
-  dossier_extract.py  legacy/docs/*.pdf    -> analysis-local/dossier-<stamp>/   (when a dossier exists)
-  event_legend.py     legacy/code + .cpl   -> docs/mapping/event-codes.md       (when the compile folder exists)
+  dossier_extract.py  legacy/**/*Documentation*.pdf -> analysis-local/dossier-<stamp>/ (when a dossier exists)
+  event_legend.py     legacy/**/<project>.cpl        -> docs/mapping/event-codes.md     (when the compile folder exists)
   evidence_report.py                       -> docs/evidence-report.md, docs/navigation.md
   schema_draft.py                          -> docs/schema/schema-draft.md, .sql
   render_layouts.py                        -> analysis-local/layouts-<stamp>/
@@ -75,12 +75,12 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
         run('dossier_extract.py', dossier_pdf, '--out', dossier, *([] if images else ['--no-images']))
         paths['coverage'] = json.loads(Path(dossier, 'index.json').read_text(encoding='utf-8'))['coverage']
     else:
-        print('no dossier PDF in legacy/docs: captions, tab order, masks and checkbox properties stay unknown')
+        print('no *Documentation*.pdf under legacy/: captions, tab order, masks and checkbox properties stay unknown')
     if compile_dir:
         run('event_legend.py', Path(compile_dir).parent, '--compile-dir', compile_dir, '--out', docs / 'mapping/event-codes.md')
         paths['event_legend'] = str(docs / 'mapping/event-codes.md')
     else:
-        print('no <project>.cpl compile folder in legacy/code: event codes stay inferred')
+        print('no <project>.cpl compile folder under legacy/: event codes stay inferred')
     report = run('evidence_report.py', paths['inspect'], *(['--dossier', dossier] if dossier else []),
                  *(['--compiled', docs / 'mapping/event-codes.json'] if compile_dir else []),
                  '--out', docs / 'evidence-report.md', *(['--language', language] if language else []))
@@ -105,8 +105,8 @@ def main():
     parser.add_argument('--legacy', default='legacy', help='the legacy folder (code/, schema/, docs/…)')
     parser.add_argument('--analysis', default='analysis-local', help='where dated tool outputs go (not committed)')
     parser.add_argument('--docs', default='docs', help='where generated documents go')
-    parser.add_argument('--dossier-pdf', type=Path, help='default: legacy/docs/*Documentation*.pdf')
-    parser.add_argument('--compile-dir', type=Path, help='default: legacy/code/*.cpl')
+    parser.add_argument('--dossier-pdf', type=Path, help='default: the first *Documentation*.pdf under legacy/')
+    parser.add_argument('--compile-dir', type=Path, help='default: the first *.cpl folder under legacy/')
     parser.add_argument('--language', help="the application's language for dialog texts, as WINDEV names it (pt-PT, "
                                            "fr-FR…); default: the first language of each text")
     parser.add_argument('--no-images', action='store_true', help='skip dossier images (faster)')
