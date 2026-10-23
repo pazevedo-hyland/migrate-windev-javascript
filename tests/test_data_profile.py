@@ -29,6 +29,7 @@ SCHEMA = [
 class DataProfileTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)  # registered first, so it runs after the connections close
         self.db = Path(self.directory.name) / 'copy.sqlite'
         con = sqlite3.connect(self.db)
         con.execute('CREATE TABLE Clientes (Codigo TEXT, Nome TEXT, Obs TEXT)')
@@ -44,9 +45,6 @@ class DataProfileTests(unittest.TestCase):
         con.execute("INSERT INTO Estado VALUES ('1')")
         con.commit()
         con.close()
-
-    def tearDown(self):
-        self.directory.cleanup()
 
     def test_findings_keys_and_links(self):
         connection = module.load(self.db)
