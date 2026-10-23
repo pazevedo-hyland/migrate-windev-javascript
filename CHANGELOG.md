@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-23 — lessons from a large agent-driven port (Bun, Zig → Rust) and a mapping review
+
+### Added
+- `docs/porting.md` in stage 0 (mapping prompt step 1b): one target pattern per WLanguage construct the app uses, reviewed before any unit is mapped; slices follow it (AGENTS rule 12, stage prompt, review skill). It keeps 20–30 slices consistent.
+- Two independent adversarial reviews and one fixer, for each unit's mapping and each slice.
+- AGENTS rule 11: several agents in one checkout never stash, reset, clean or rebase, commit only their own files, run slow commands one at a time.
+- Review skill rejects stubs or mocks behind `verified` rows, skipped/deleted/weakened tests, and workarounds that need a paragraph to justify.
+- Roadmap: a cleanup slice after the first 2–3 slices and then every few (port faithfully first, make idiomatic after).
+
+### Changed
+- `parity_check.py --element`: the summary covers only those units.
+- The answer sheet's `Proposed` cell is refreshed on unanswered lines when the evidence is regenerated; answers are never touched.
+- Review-mapping: checks on `parity.csv` with `--note`, a sorted JSON diff of packs, strings in compiled files, and finding units by name (a window's file name can differ: `WIN_WIN_Teclado.wdw` holds `WIN_Teclado_Alfa`); `assumed` label.
+
 ## 2026-10-23 — one prompt to start
 
 ### Added

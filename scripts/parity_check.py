@@ -113,6 +113,8 @@ def check(matrix, seed=None, require_complete=False, element=None, check_files=F
         # Seed rows may be refined or excluded, never silently dropped.
         errors.extend(f'seed row missing from matrix: {r["id"]}' for r in scoped
                       if r['id'] not in ids and r['id'] not in renamed)
+    if wanted:  # the summary describes the units asked for, not the whole matrix
+        rows = [r for r in rows if unit_of(r, units).lower() in wanted]
     counts = {s: sum(1 for r in rows if (r.get('status') or '').strip() == s) for s in STATUSES}
     total = len(rows)
     done = counts['verified'] + counts['excluded']

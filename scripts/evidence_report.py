@@ -377,7 +377,7 @@ def answer_sheet(actions, questions):
              'Confirm or correct it: fill `Answer`, `How checked` (WINDEV Actions tab / used in the app / other) and '
              '`By, date`; rows then cite `runtime: A-xxxxxx`, and a different answer reopens the rows that cited the '
              'proposal. New groups appear in docs/evidence-report.md §4 when the evidence is regenerated: add them here '
-             'by hand; this file is never overwritten.', '',
+             'by hand; this file is never overwritten (only the Proposed cell of an unanswered line is refreshed).', '',
              '## Encoded actions', '', '| Action | Slots | Example | Proposed | Answer | How checked | By, date |',
              '|---|---|---|---|---|---|---|']
     for group in actions:
@@ -389,6 +389,28 @@ def answer_sheet(actions, questions):
               '|---|---|---|---|---|---|']
     lines += [f'| Q-{n:02d} | {q.replace("|", "/")} | {proposed(p)} | | | |' for n, (q, p) in enumerate(questions, 1)]
     return '\n'.join(lines) + '\n'
+
+
+def refresh_proposals(kept, fresh):
+    """Update the Proposed cell of unanswered lines from a fresh sheet; answers and everything else stay as written."""
+    cells = lambda line: [c.strip() for c in line.strip().strip('|').split('|')]
+    proposals = {}
+    for line in fresh.splitlines():
+        if line.startswith(('| A-', '| Q-')):
+            row = cells(line)
+            proposals[row[0]] = row[3] if line.startswith('| A-') else row[2]
+    out, column, changed = [], None, False
+    for line in kept.splitlines():
+        row = cells(line)
+        if 'Proposed' in row and 'Answer' in row:
+            column = (row.index('Proposed'), row.index('Answer'))
+        elif column and line.startswith(('| A-', '| Q-')) and len(row) > column[1] and not row[column[1]] \
+                and row[0] in proposals:
+            if row[column[0]] != proposals[row[0]]:
+                row[column[0]] = proposals[row[0]]
+                line, changed = '| ' + ' | '.join(row) + ' |', True
+        out.append(line)
+    return '\n'.join(out) + '\n' if changed else kept  # unchanged: byte for byte
 
 
 def markdown(rows, gaps, used, questions, actions=()):
@@ -495,6 +517,9 @@ def main():
     if not sheet.exists():  # written once: it holds the human's answers afterwards, never regenerated over them
         sheet.parent.mkdir(parents=True, exist_ok=True)
         sheet.write_text(answer_sheet(actions, questions), encoding='utf-8')
+    else:
+        sheet.write_text(refresh_proposals(sheet.read_text(encoding='utf-8'), answer_sheet(actions, questions)),
+                         encoding='utf-8')
     args.out.write_text(markdown(rows, gaps, used, questions, actions), encoding='utf-8')
     args.out.with_suffix('.json').write_text(json.dumps(
         {'files': len(inventory['files']), 'coverage': rows, 'gaps': gaps,

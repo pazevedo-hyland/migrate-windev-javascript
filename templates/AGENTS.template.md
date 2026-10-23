@@ -14,6 +14,7 @@ Keep this file short (about 100 lines). Details live in `docs/`; local rules liv
 - `src-tauri/src/commands/` — one Rust command per business operation, one transaction each.
 - `src-tauri/migrations/` — ordered SQL migrations; committed ones are immutable. See local `AGENTS.md`.
 - `docs/parity/parity.csv` — behavior parity matrix: the definition of done.
+- `docs/porting.md` — one target pattern per WLanguage construct the app uses; every slice follows it.
 - `legacy/`, `analysis-local/` — private, ignored, read-only evidence. Never execute legacy code.
 - `skills/` — playbooks to follow; `scripts/` — evidence pipeline, parity gate, comparator, guard. Humans own `scripts/guard.py`, `.githooks/` and agent configuration: do not modify them.
 
@@ -34,7 +35,9 @@ Need more: `python3 scripts/prepare_evidence.py` regenerates `analysis-local/` f
 8. Generated files (bindings, scaffolds) are regenerated, not edited.
 9. Never claim a check passed unless you ran it. Record checks you could not run.
 10. Do not re-open accepted decisions without new evidence. Read whole files before concluding.
-11. If a guard is installed (`scripts/guard.py`, pre-commit), a block is deliberate: report it in the handoff; never bypass it (`--no-verify`, renames, other paths).
+11. Several agents in one checkout: never `git stash`, `git reset`, `git checkout -- .`, `git clean` or a rebase; stage and commit only the files you changed, by name; one writer per file; slow commands (full build, full test suite) run by one agent at a time. Separate sessions writing code get separate worktrees.
+12. Port every WLanguage construct with its pattern in `docs/porting.md`; add a missing pattern there first.
+13. If a guard is installed (`scripts/guard.py`, pre-commit), a block is deliberate: report it in the handoff; never bypass it (`--no-verify`, renames, other paths).
 
 ## Work autonomously; ask the human only for these
 

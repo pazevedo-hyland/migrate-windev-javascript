@@ -89,6 +89,14 @@ class EvidenceReportTests(unittest.TestCase):
         validate = next(q for q in asked if 'Validate button "Validar"' in q)
         self.assertEqual(asked[validate]['answer'], 'stays open')
 
+    def test_refresh_keeps_answers_and_updates_open_proposals(self):
+        header = '| Action | Slots | Example | Proposed | Answer | How checked | By, date |\n|---|---|---|---|---|---|---|\n'
+        kept = header + '| A-1 | 2 (B) | W.B | old | | | |\n| A-2 | 1 (C) | W.C | old | closes | app | Ana |\n'
+        fresh = header + '| A-1 | 2 (B) | W.B | new | | | |\n| A-2 | 1 (C) | W.C | new | | | |\n'
+        result = module.refresh_proposals(kept, fresh)
+        self.assertIn('| A-1 | 2 (B) | W.B | new |', result)
+        self.assertIn('| A-2 | 1 (C) | W.C | old | closes | app | Ana |', result)  # answered: untouched
+
     def test_proposals_from_names_code_and_compiled_references(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

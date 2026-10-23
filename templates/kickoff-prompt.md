@@ -20,7 +20,8 @@ continue with the first slice not Done. Otherwise start at step 1.
    skip it unless the playbook's agent adapter for you is ready to install.
 3. Evidence (06 §4): scripts/prepare_evidence.py, then scripts/data_profile.py on the data copy. Read
    docs/evidence-report.md, docs/evidence/encoded-actions.md (Proposed answers), docs/navigation.md,
-   docs/schema/schema-draft.md and docs/data/profile.md.
+   docs/schema/schema-draft.md and docs/data/profile.md. Port faithfully first; make it idiomatic in the
+   roadmap's cleanup slices.
 4. Stage 0, mapping of the whole application: templates/mapping-prompt.md (every window, report, query set and
    table group; sub-agents in parallel if you have them, else sequentially; a cross-review by a separate agent or
    session, else a second pass of your own, said so in the handoff).
@@ -32,8 +33,8 @@ continue with the first slice not Done. Otherwise start at step 1.
 6. Slices, in ROADMAP order, one at a time, each as templates/prompt-stage.md says: write the stage brief into
    docs/runbooks/stage-<n>.md, build, verify (npm run verify, UI check and click-through flows, parity check), update
    docs/parity/parity.csv, ROADMAP.md and the handoff, regenerate the progress page
-   (scripts/progress_dashboard.py), commit. Then the next slice. After every few slices, review your own last
-   slices with skills/review (a fresh session if you can).
+   (scripts/progress_dashboard.py), commit. Each slice gets two independent reviews and one fixer, as the stage
+   prompt says. Then the next slice.
 7. Stop only when every parity row is verified or excluded, or when every remaining slice waits on a decision
    no default covers; the handoff then lists exactly what is needed from whom.
 

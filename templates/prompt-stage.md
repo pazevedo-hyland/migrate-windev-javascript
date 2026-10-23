@@ -10,10 +10,12 @@ Stage "<name>" (roadmap #<n>):
 - Expected behavior: <normal case, boundary case, failure case with exact legacy message>.
 - Intentional changes: <none, or ADR references>.
 - Deliverables: <domain rules + tests named with parity IDs, Rust command + transaction, UI, golden scenario, migration if any>.
-- Constraints: inspect the real schema and library APIs before coding; check docs/wlanguage-traps.md for every construct you translate; <architecture constraints from ADRs>.
+- Constraints: inspect the real schema and library APIs before coding; port every construct with its pattern in docs/porting.md (and its trap in docs/wlanguage-traps.md); <architecture constraints from ADRs>.
 - Out of scope: <explicit limits — "do not build X yet">.
 
 Done means: npm run verify passes, the golden scenarios for these rows pass — also clicked through the UI in ui-check/<slice>.flows.spec.ts (templates/ui-check/flows.example.spec.ts) —, each row you mark verified names the test that proves it, and every window and message box the slice opens is built from its generated layout with the skin kit, configured in ui-check.config.json and passes npm run ui:check (controls, captions, visual score recorded and not lower than before) — attach the side-by-side images to the handoff. Unknown legacy behavior follows AGENTS.md "No guessing": a proposal makes the row `assumed` (it may be verified); a choice of your own with no proposal keeps it implemented, listed under "Decisions needed". List checks you could not run (e.g. native printing on Windows).
+
+Before closing: two independent reviews of the slice with skills/review (separate sub-agents or sessions; one on behavior against the legacy evidence, one on conventions and docs/porting.md); one fixer applies their findings.
 
 At the end: commit explicit files with a clear message, push, update docs/parity/parity.csv, ROADMAP.md and docs/runbooks/handoff.md, regenerate the progress page (python3 scripts/progress_dashboard.py --title "<App>") and commit it with them (Delivered / Assumptions and differences / Checks actually executed / Remaining work / Decisions needed).
 ```

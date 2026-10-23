@@ -10,6 +10,7 @@ Order follows dependencies: never start a slice whose dependencies are not `Done
 | 3 | Foundation | Schema v1 (every table with all its columns, from the schema draft) + golden data covering them + import dry run on sanitized data | MIG-4 | `table` rows | implementer | prompt-stage | migrations, reconciliation report | 2 | To do |
 | 3b | Foundation | Skin kit: the legacy look as UI primitives (window frame and title bar, buttons, edits, memo, table, message boxes) from `templates/ui-kit/` and the project's skin images (`scripts/skin_assets.py --project legacy/images`, no asset missing for any window); layouts generated for every window; a temporary menu that opens each built window until the legacy menu's slice | MIG-… | — | implementer | prompt-stage | `src/ui/legacy/`, `public/skin/`, ui-check scoring every window | 2 | To do |
 | 4 | Slice | <first complete workflow, e.g. customer → order → saved order> | MIG-… | RULE-…, SRC-… | implementer | prompt-stage | domain + command + UI (every window and dialog it opens, scored) + golden scenario | 3, 3b | To do |
+| 5 | Cleanup | After the first 2–3 slices, then every few: extract what slices repeated (list/form, search, dialogs) into shared components, update docs/porting.md; behavior and parity unchanged | MIG-… | — | implementer | prompt-stage | shared components, slices using them, verify green | 4 | To do |
 | … | | | | | | | | | |
 | n | Cutover | Rehearsal, final import, acceptance | MIG-… | all | human | `08-data-migration.md` | signed acceptance | all | To do |
 

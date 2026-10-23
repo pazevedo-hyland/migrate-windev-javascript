@@ -25,6 +25,8 @@ No unrequested rewrites. Propose; the human decides. Do not reopen accepted deci
 - Every row moved to `verified` passes the five checks in `AGENTS.md` ("No guessing"); otherwise it must be `implemented` with the choice in the handoff.
 - Checks in the handoff were actually executed (commands and output); unavailable native checks are listed. Browser mocks are not proof of packaged native behavior.
 - `parity.csv`, `ROADMAP.md` and the handoff reflect what was really delivered.
+- Every WLanguage construct is ported with its pattern in `docs/porting.md`; a new pattern was added there, not invented in place.
+- **Reject**: stubs, placeholders, `todo!()`/`unimplemented!()` or a mock standing in for behavior a `verified` row claims; tests skipped, deleted or weakened to pass; a workaround that needs a paragraph-long comment to justify it — the code is wrong, fix the code.
 
 ## Output
 
