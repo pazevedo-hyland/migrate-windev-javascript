@@ -41,6 +41,14 @@ class DocumentationTests(unittest.TestCase):
         self.assertEqual(header.split(','), load('scripts/inspect_windev.py').SEED_COLUMNS)
 
 
+class MergeMarkerTests(unittest.TestCase):
+    def test_no_unresolved_merge_conflicts(self):
+        marker = re.compile(r'^(<<<<<<< |>>>>>>> )', re.M)
+        found = [str(p.relative_to(ROOT)) for p in ROOT.rglob('*') if p.suffix in ('.md', '.py', '.ts', '.tsx', '.json', '.csv')
+                 and '.git' not in p.parts and marker.search(p.read_text(encoding='utf-8', errors='replace'))]
+        self.assertEqual(found, [])
+
+
 class GitignoreTests(unittest.TestCase):
     def test_evidence_ignores_are_anchored_to_the_root(self):
         # An unanchored "legacy/" also ignores application folders such as src/ui/legacy/ (pilot incident).

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-23 — profile the real data
+
+### Added
+- `scripts/data_profile.py`: profiles a copy of the legacy data (SQLite staging file or the ODBC exporter's CSV folder) against the schema draft — per column nulls, empty strings, shapes, lengths, values not parsing as the WINDEV type, zeros, constant columns, spaces, line breaks, binary composite keys; duplicates per unique key; orphans per link. Counts only, no records. 4 s on the real project's 180,000 rows.
+- 08 "Profile the data before deciding the schema", with what the real data showed (composite keys exported as binary, unused generated link columns, stored totals always 0, 0 meaning empty, empty dates, orphans and duplicate identifiers, outliers, negative stock).
+- Windows export: matching Python and HFSQL ODBC architectures (32/64-bit), with the observed 32-bit workaround (PR #2).
+
 ## 2026-10-23 — fixes from a fresh agent building a slice alone
 
 A fresh agent with no human mapped, built and scored the vehicle list and form on the pilot (verify green, pixels 97.8 %, layout 76 % / 89 %) and reported 20 frictions. Fixed here:
