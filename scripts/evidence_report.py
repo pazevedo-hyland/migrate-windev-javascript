@@ -139,7 +139,7 @@ def arguments(code, start):
 
 
 def calls(inspect_dir):
-    """{function: [(element, line, first literal argument, source path)]} across all code blocks."""
+    """{function: [(element, line, the naming argument, source path)]} across all code blocks."""
     names = {n.lower(): n for group in CATEGORIES.values() for n in group}
     pattern = re.compile(r'\b(' + '|'.join(sorted(names, key=len, reverse=True)) + r')\s*\(', re.I)
     found = collections.defaultdict(list)
@@ -151,7 +151,9 @@ def calls(inspect_dir):
                     function = names[match[1].lower()]
                     found_args = arguments(code, match.end())
                     index = LITERALS.get(function)
-                    literal = found_args[index] if index is not None and index < len(found_args) else ''
+                    # The argument that names what is called (LITERALS); otherwise the first one (the file, control…).
+                    position = index if index is not None else 0
+                    literal = found_args[position] if position < len(found_args) else ''
                     found[function].append((name, block['start_line'] + offset, literal, data.get('path', name)))
     return found
 
@@ -279,7 +281,7 @@ def answer_sheet(actions, questions):
              '## Encoded actions', '', '| Action | Slots | Example | Answer | How checked | By, date |', '|---|---|---|---|---|---|']
     for group in actions:
         example = group['slots'][0]
-        names = ', '.join(sorted({s['control'] for s in group['slots']})[:4])
+        names = ', '.join(sorted({s['control'] for s in group['slots']}))
         lines.append(f"| {group['action']} | {len(group['slots'])} ({names}) | {example['element']}.{example['control']} | | | |")
     lines += ['', '## Runtime questions', '', '| # | Question | Answer | How checked | By, date |', '|---|---|---|---|---|']
     lines += [f'| Q-{n:02d} | {q.replace("|", "/")} | | | |' for n, q in enumerate(questions, 1)]

@@ -5,7 +5,7 @@ description: Map one legacy WINDEV element (window, report, query, procedure set
 
 # Map one legacy element
 
-Input: one unit name. Paths are relative to the repository root; the locations named here are the defaults — when your stage prompt gives other paths, use those. Read in full: the unit's dossier extract if present (`<dossier dir>/<kind>/<unit>.json`: captions, tab order, masks, query SQL — cite it as `dossier: <unit>/<control>`), the unit's source in `legacy/`, its extracted blocks in the inspector output (`<inspect dir>/code/…/<file>.json`), `docs/wlanguage-traps.md`, `docs/mapping/event-codes.md` and `docs/mapping/event-codes-inferred.md`. Never modify legacy files, never run anything from them, never copy credential values (locations only). Do not write application code.
+Input: one unit name. Paths are relative to the repository root; the locations named here are the defaults — when your stage prompt gives other paths, use those. Read in full: the unit's dossier extract if present (`<dossier dir>/<kind>/<unit>.json`: captions, tab order, masks, query SQL — cite it as `dossier: <unit>/<control>`), the unit's source in `legacy/`, its extracted blocks in the inspector output (`<inspect dir>/code/<path under legacy/>.json`, e.g. `code/code/WIN_X.wdw.json`), `docs/wlanguage-traps.md`, `docs/mapping/event-codes.md` and `docs/mapping/event-codes-inferred.md`. Never modify legacy files, never run anything from them, never copy credential values (locations only). Do not write application code.
 
 Start from the unit's evidence pack: `python3 scripts/unit_evidence.py <unit> --out analysis-local/units/<unit>.json` — its seed rows, blocks with event meanings, encoded actions with every other slot holding the same action ID (often what settles one), parsed dossier fields, callers, calls out, gaps and runtime questions. Keep the pack: the reviewer diffs it against a newer one.
 
@@ -53,7 +53,7 @@ Exact columns of `templates/parity.template.csv`.
 Validate before finishing:
 
 ```sh
-python3 scripts/parity_check.py docs/parity/<unit>.csv --seed <inspect dir>/parity-seed.csv --element <unit>
+python3 scripts/parity_check.py docs/parity/<unit>.csv --seed <inspect dir>/parity-seed.csv --element <unit> --check-files
 ```
 
 Finish with: blocks covered / total, rows written, the top risky rules, the unresolved list, and questions for the human.

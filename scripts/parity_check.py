@@ -13,7 +13,7 @@ CONFIDENCE = {'verified', 'inferred', 'unresolved'}
 DONE = {'verified', 'excluded'}
 # One evidence item: a source location, a dossier or analysis reference, or a file (screenshot, export, golden).
 # A JSON file may name the field: "dossier/windev-window/WIN_X.json (controls.BTN_Ok.flags)".
-EVIDENCE = re.compile(r'\S+:\d+(?:-\d+)?|(?:dossier|analysis|export|golden|runtime): ?\S.*|.*\S\.[A-Za-z0-9]{2,5}(?: \(.+\))?')
+EVIDENCE = re.compile(r'\S+:\d+(?:-\d+)?|(?:dossier|analysis|export|golden|runtime): ?\S.*|[^\s;]+\.[A-Za-z0-9]{2,5}(?: \(.+\))?')
 
 
 def read_csv(path):
@@ -22,7 +22,7 @@ def read_csv(path):
         return reader.fieldnames or [], list(reader)
 
 
-def check(matrix, seed=None, require_complete=False, element=None):
+def check(matrix, seed=None, require_complete=False, element=None, check_files=False):
     """Return (errors, summary). Errors make the gate fail."""
     header, rows = read_csv(matrix)
     errors = [f'missing column: {c}' for c in REQUIRED if c not in header]
@@ -44,6 +44,10 @@ def check(matrix, seed=None, require_complete=False, element=None):
         if not value['evidence']:
             errors.append(f'{where}: evidence is required (path:line, export or screenshot)')
         for item in filter(None, (i.strip() for i in value['evidence'].split(';'))):
+            if check_files and EVIDENCE.fullmatch(item) and not re.match(r'(?:dossier|analysis|export|golden|runtime):', item):
+                path = re.split(r':\d|\s\(', item)[0]
+                if not Path(path).exists():
+                    errors.append(f'{where}: evidence file not found: {path}')
             if not EVIDENCE.fullmatch(item):
                 errors.append(f'{where}: evidence "{item}" is not path:line, dossier: <unit>/<control>, '
                               'analysis: <file>.<item>, export:/golden:/runtime: <ref> or a file')
@@ -89,11 +93,13 @@ def main():
     parser.add_argument('matrix', type=Path, help='docs/parity/parity.csv')
     parser.add_argument('--seed', type=Path, help='parity-seed.csv produced by inspect_windev.py')
     parser.add_argument('--element', help='Only require the seed rows of this legacy element (per-unit files)')
+    parser.add_argument('--check-files', action='store_true',
+                        help='Fail when a cited evidence file does not exist (paths relative to the current folder)')
     parser.add_argument('--require-complete', action='store_true',
                         help='Fail unless every row is verified or excluded')
     args = parser.parse_args()
     try:
-        errors, summary = check(args.matrix, args.seed, args.require_complete, args.element)
+        errors, summary = check(args.matrix, args.seed, args.require_complete, args.element, args.check_files)
     except OSError as error:
         parser.exit(1, f'Parity check failed: {error}\n')
     print(json.dumps(summary, indent=2))

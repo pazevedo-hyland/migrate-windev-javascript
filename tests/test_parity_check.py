@@ -55,11 +55,17 @@ class ParityCheckTests(unittest.TestCase):
                 evidence='code/WIN_A.wdw:3; dossier: WIN_A/BTN_Ok; dossier/windev-window/WIN_A.json (flags.Resizable)'),
             row('R2', 'unmapped', confidence='unresolved', legacy_behavior='Closes? See U-02'),
             row('R3', 'unmapped', confidence='inferred', legacy_behavior='Probably closes the window'),
-            row('R4', 'specified', target_behavior='same', evidence='the dossier folder')])
+            row('R4', 'specified', target_behavior='same', evidence='see docs/notes.md')])
         self.assertEqual(len(errors), 2)
         self.assertIn('R3', errors[0])
         self.assertIn('U-nn', errors[0])
-        self.assertIn('the dossier folder', errors[1])
+        self.assertIn('see docs/notes.md', errors[1])  # prose ending in a file name is not a reference
+
+    def test_check_files(self):
+        (self.root / 'a.wdw').write_text('x', encoding='utf-8')
+        write(self.root / 'parity.csv', [row('R1', 'specified', target_behavior='same', evidence=f'{self.root}/a.wdw:3; {self.root}/gone.wdw:1')])
+        errors, _ = module.check(self.root / 'parity.csv', check_files=True)
+        self.assertEqual(errors, [f'line 2 (R1): evidence file not found: {self.root}/gone.wdw'])
 
     def test_stale_seed_rows_are_reported(self):
         errors, _ = self.run_check([row('SRC-old', 'specified', target_behavior='same'),
