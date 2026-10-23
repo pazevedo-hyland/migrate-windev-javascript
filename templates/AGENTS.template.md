@@ -14,7 +14,7 @@ Keep this file short (about 100 lines). Details live in `docs/`; local rules liv
 - `src-tauri/src/commands/` — one Rust command per business operation, one transaction each.
 - `src-tauri/migrations/` — ordered SQL migrations; committed ones are immutable. See local `AGENTS.md`.
 - `docs/parity/parity.csv` — behavior parity matrix: the definition of done.
-- `docs/porting.md` — one target pattern per WLanguage construct the app uses; every slice follows it.
+- `docs/porting.md` — this project's concrete pattern (file, function, component) for each WLanguage construct it uses, over `docs/wlanguage-traps.md`; every slice follows it.
 - `legacy/`, `analysis-local/` — private, ignored, read-only evidence. Never execute legacy code.
 - `skills/` — playbooks to follow; `scripts/` — evidence pipeline, parity gate, comparator, guard. Humans own `scripts/guard.py`, `.githooks/` and agent configuration: do not modify them.
 
