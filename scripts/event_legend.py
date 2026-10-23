@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Derive WINDEV event-code meanings from the project's own compile folder (evidence, not guesses).
+"""Derive WINDEV event-code meanings (and embedded report query items) from the project's compile folder.
 
 The compiled per-window files (`<project>.cpl/**/<WINDOW>.<hash>.wdw.wcw`) contain the event label
 of every coded event ("Click BTN_Save", "Exit from EDT_Name", "End of initialization of WIN_X").
@@ -35,6 +35,30 @@ def compiled_labels(data):
         if match and re.match(r'^[A-Z][a-z]', match[1]) and len(match[1]) < 45:
             labels[match[2]].add(match[1])
     return labels
+
+
+QUERY_STRING = re.compile(rb'(?:[\x20-\x7e]|[\xc2-\xf4][\x80-\xbf]+){3,}')
+
+
+def report_queries(compile_dir):
+    """{report: [{'item', 'caption'}]}: the items an embedded report query selects, from the compiled report
+    (`.wbe`). The dossier does not print embedded queries; their compiled form keeps item names and captions
+    as plain strings after `<REPORT>$Query`. Selection conditions and sort are not there."""
+    queries = {}
+    for path in sorted(Path(compile_dir).rglob('*.wbe')):
+        data = path.read_bytes()
+        start = data.find(b'$Query')
+        if start < 0:
+            continue
+        strings = [s.decode('utf-8', 'replace') for s in QUERY_STRING.findall(data[start + 6:start + 6000])]
+        strings = [s for s in strings if re.match(r'[^\W\d]', s)]  # drop binary noise such as "}|D"
+        items = []
+        while len(strings) >= 2 and re.fullmatch(r'[A-Za-z_]\w*', strings[0]):
+            items.append({'item': strings[0], 'caption': strings[1]})
+            strings = strings[2:]
+        if items:
+            queries[path.name.split('.')[0]] = items
+    return queries
 
 
 def legend(source_dir, compile_dir):
@@ -103,7 +127,7 @@ def legend(source_dir, compile_dir):
     for code, counter in sorted(votes.items(), key=lambda item: -sum(item[1].values())):
         (best, count), total = counter.most_common(1)[0], sum(counter.values())
         result[code] = {'event': best, 'evidence': count, 'conflicts': {k: v for k, v in counter.items() if k != best}}
-    return {'windows': windows, 'codes': result}
+    return {'windows': windows, 'codes': result, 'report_queries': report_queries(compile_dir)}
 
 
 def markdown(data):
@@ -114,6 +138,11 @@ def markdown(data):
     for code, item in data['codes'].items():
         conflicts = ', '.join(f'{k} ({v})' for k, v in item['conflicts'].items()) or '—'
         lines.append(f"| {code} | {item['event']} | {item['evidence']} | {conflicts} |")
+    if data.get('report_queries'):
+        lines += ['', '## Embedded report queries (items selected, from the compiled reports)', '',
+                  'Item names and captions only: selection conditions and sort are not in the compiled file.', '']
+        lines += [f"- **{report}**: " + ', '.join(f"`{i['item']}` ({i['caption']})" for i in items)
+                  for report, items in data['report_queries'].items()]
     return '\n'.join(lines) + '\n'
 
 

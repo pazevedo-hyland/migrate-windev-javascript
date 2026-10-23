@@ -99,8 +99,9 @@ def coverage(inspect_dir, dossier_dir, schema_tables):
         if dossier and not row['image'] and images:  # an extract run with --no-images has none at all
             gaps.append(f'{name}: no image in the dossier')
         if (dossier or {}).get('data_source') == 'Embedded query':
-            gaps.append(f'{name}: embedded query — its SQL is not in the dossier (export it from the report editor, '
-                        'or derive it from a legacy printout on known data)')
+            gaps.append(f'{name}: embedded query — its SQL is not in the dossier (the items it selects are in '
+                        'docs/mapping/event-codes.md from the compile folder; export the conditions and sort from the '
+                        'report editor, or derive them from a legacy printout on known data)')
         encoded = [s for s in data.get('encoded_slots', []) if not s['has_code']]
         row['encoded_actions'] = len(encoded)
     for name, query in sorted(queries.items()):

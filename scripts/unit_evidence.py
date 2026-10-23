@@ -27,7 +27,8 @@ def strip(value):
 def pack(unit, latest):
     inspect, dossier = Path(latest['inspect']), latest.get('dossier')
     report = load(Path(latest['evidence_report']).with_suffix('.json'))
-    legend = load(Path(latest['event_legend']).with_suffix('.json')).get('codes', {}) if latest.get('event_legend') else {}
+    compiled = load(Path(latest['event_legend']).with_suffix('.json')) if latest.get('event_legend') else {}
+    legend = compiled.get('codes', {})
     meaning = lambda code: legend.get(code or 'none', {}).get('event', 'unknown')
     sources = (load(p) for p in (inspect / 'code').rglob('*.json'))
     source = next((s for s in sources if s.get('name', '').lower() == unit.lower()), None)
@@ -59,6 +60,8 @@ def pack(unit, latest):
     return {'unit': unit, 'source': source['path'], 'seed_rows': seed, 'blocks': blocks, 'encoded_actions': actions,
             'dossier': element, 'opened_or_printed_by': callers,
             'calls': {f: [{'line': s[1], 'argument': s[2]} for s in sites] for f, sites in calls.items() if sites},
+            'embedded_query_items': next((v for k, v in compiled.get('report_queries', {}).items()
+                                          if k.lower() == unit.lower()), None),
             'gaps': mentions(report.get('gaps', [])), 'runtime_questions': mentions(report.get('questions', []))}
 
 

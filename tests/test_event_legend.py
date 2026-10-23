@@ -95,6 +95,16 @@ class EventLegendTests(unittest.TestCase):
         self.assertEqual(data['codes']['2']['event'], 'Close')
         self.assertEqual(data['codes']['18']['conflicts'], {})
 
+    def test_embedded_report_query_items(self):
+        sep = b'\xff\xff\xff\xff\x00\x01'
+        data = (b'\x00\x02RPT_List$Query' + sep + b'}|D' + sep + b'Codigo' + sep + 'Código'.encode('utf-8') + sep
+                + b'Morada1' + sep + b'Morada 1' + sep + b'\x01\x02')
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / 'RPT_List.1234.wde.wbe').write_bytes(data)
+            queries = module.report_queries(directory)
+        self.assertEqual(queries, {'RPT_List': [{'item': 'Codigo', 'caption': 'Código'},
+                                                {'item': 'Morada1', 'caption': 'Morada 1'}]})
+
 
 if __name__ == '__main__':
     unittest.main()
