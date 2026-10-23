@@ -5,7 +5,7 @@ description: Cross-review one unit's mapping (note, screen or report spec, parit
 
 # Review one unit's mapping
 
-Input: one unit name. Read its mapping note, its screen or report spec and its parity CSV, then the evidence they cite. Read-only: report findings, do not edit. Paths are the defaults of `map-element`; a stage prompt may give others.
+Input: one unit name. Run in a fresh context, never the mapper's; assume the mapping is wrong and find how. Read its mapping note, its screen or report spec and its parity CSV, then the evidence they cite. Read-only: report findings, do not edit. Paths are the defaults of `map-element`; a stage prompt may give others.
 
 ## Checks, in this order
 

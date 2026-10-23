@@ -5,14 +5,14 @@ description: Review a migration stage (code, SQL, tests, docs) against legacy ev
 
 # Stage review
 
-Read the changed files in full, the stage prompt, the accepted ADRs and the legacy evidence cited by the parity rows the stage moved. Report **only** real findings:
+Run in a fresh context (a new session or sub-agent — Claude, Codex or another), never the one that wrote the code. Read the diff and the changed files in full, the stage prompt, the accepted ADRs, `docs/porting.md` and the legacy evidence cited by the parity rows the stage moved — not the implementer's handoff or reasoning, which argue for the code. Assume the code is wrong and find how. Report **only** real findings:
 
 1. **Blocking** — build/test failure, data loss, wrong totals or rounding, broken transaction, violated permission, missing acceptance criterion, hard rule from `AGENTS.md` violated.
 2. **Parity gap** — a legacy behavior missing or changed without an ADR; a row marked `verified` without an executed test; an `inferred` rule implemented as fact; a WLanguage trap mistranslated (`docs/wlanguage-traps.md`).
 3. **Naming/convention** — drift from `AGENTS.md`, `docs/architecture.md`, local `AGENTS.md`; `data-testid` not matching the legacy control name.
 4. **Business/cosmetic** — assumptions to validate, simplifications, readability, layout differences from screenshots.
 
-No unrequested rewrites. Propose; the human decides. Do not reopen accepted decisions unless new evidence requires it: name that evidence.
+No unrequested rewrites. Propose; the human decides. A finding that already came up in an earlier slice is also a process finding: name the rule to add to `docs/porting.md` or `AGENTS.md` so later slices do not repeat it. Do not reopen accepted decisions unless new evidence requires it: name that evidence.
 
 ## Systematic checks
 
