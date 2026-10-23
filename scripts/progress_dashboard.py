@@ -192,12 +192,12 @@ h2{{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut
 .tile{{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}}
 .big{{font-size:34px;font-weight:700}}.big small{{font-size:18px;color:var(--muted)}}
 .muted{{color:var(--muted);font-size:13px}}
-.bar{{display:flex;height:12px;border-radius:6px;overflow:hidden;background:{COLORS["unmapped"]};min-width:120px}}
+.bar{{display:flex;height:12px;border-radius:6px;overflow:hidden;background:{COLORS["unmapped"]};min-width:40px}}
 .bar span{{display:block;height:100%}}
 .legend{{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);margin:10px 0}}
 .legend i{{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}}
-table{{width:100%;border-collapse:collapse}}td{{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}}
-td:nth-child(4){{width:40%}}.num{{text-align:right;white-space:nowrap}}
+table{{width:100%;border-collapse:collapse;table-layout:fixed}}td{{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle;overflow-wrap:anywhere}}
+td:nth-child(1){{width:34%}}td:nth-child(2){{width:11%}}td:nth-child(3){{width:15%}}td:nth-child(5){{width:10%}}.num{{text-align:right;white-space:nowrap}}
 .stage{{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--line);white-space:nowrap}}
 .stage.done{{background:#1f4d33;color:#9ff0c0}}.stage.building{{background:#4d3f17;color:#ffe08a}}
 .stage.mapped{{background:#2d2752;color:#cfc6ff}}
@@ -206,7 +206,7 @@ td:nth-child(4){{width:40%}}.num{{text-align:right;white-space:nowrap}}
 .chart{{width:100%;max-width:640px;background:var(--panel);border:1px solid var(--line);border-radius:10px}}
 .chart text{{fill:var(--muted);font-size:11px}}
 ul{{padding-left:18px}}li{{margin:3px 0}}
-@media (max-width:640px){{td:nth-child(2){{display:none}}.hero .pct{{font-size:56px}}}}
+@media (max-width:760px){{td:nth-child(2){{display:none}}td:nth-child(1){{width:40%}}td:nth-child(3){{width:22%}}td:nth-child(5){{width:16%}}.hero .pct{{font-size:56px}}}}
 </style></head><body><main>
 <h1>{escape(title)} · WINDEV → new app · migration progress</h1>
 <div class="hero"><div class="pct">{percent}%</div>
