@@ -4,7 +4,7 @@
 
 ### Added
 - `docs/porting.md` in stage 0 (mapping prompt step 1b): the project's concrete layer over chapters 09 and 07 — for each construct the app uses, a link to its trap and where and how this code base ports it (command, component, example file); no repeated explanations. Slices follow it (AGENTS rule 12, stage prompt, review skill), which keeps 20–30 slices consistent.
-- Two independent adversarial reviews and one fixer, for each unit's mapping and each slice.
+- An independent adversarial review and one fixer for each unit's mapping and each slice; a second reviewer only where a mistake is costly and tests catch it poorly (money, stock or totals, the data import, deleting or overwriting data, or a multi-window workflow).
 - AGENTS rule 11: several agents in one checkout never stash, reset, clean or rebase, commit only their own files, run slow commands one at a time.
 - Review skill rejects stubs or mocks behind `verified` rows, skipped/deleted/weakened tests, and workarounds that need a paragraph to justify.
 - Roadmap: a cleanup slice after the first 2–3 slices and then every few (port faithfully first, make idiomatic after).
