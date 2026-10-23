@@ -3,7 +3,7 @@
 Proves parity rows: <IDs>. Recorded on: <date>, WINDEV app version <x>, by <who>.
 
 ## Starting state
-Recorded raw in `legacy/golden/GS-<nnn>/` (private). The **sanitized** copy every machine replays is committed in `docs/golden/GS-<nnn>/`: `before/` (CSV export of the tables listed below, with manifest: encoding, delimiter, decimal and date formats, row counts).
+Recorded raw in `legacy/golden/GS-<nnn>/` (private). The copy every machine replays (anonymised if the data is personal) is committed in `docs/golden/GS-<nnn>/`: `before/` (CSV export of the tables listed below, with manifest: encoding, delimiter, decimal and date formats, row counts).
 Tables: <ORDERS, ORDER_LINES, STOCK…>. Settings that matter: <date, user, rights, INI/registry values, printer>.
 
 ## Steps performed in the legacy application
@@ -12,7 +12,7 @@ Tables: <ORDERS, ORDER_LINES, STOCK…>. Settings that matter: <date, user, righ
 3. <Click BTN_Save; answer Yes to "Confirm the order?">
 
 ## Recorded results
-- Data after: `docs/golden/GS-<nnn>/after/` (same tables, same export settings, sanitized the same way).
+- Data after: `docs/golden/GS-<nnn>/after/` (same tables, same export settings).
 - Outputs: <report PDF `docs/golden/GS-<nnn>/order.pdf`, exported file, message texts shown>.
 
 ## Replay in the target

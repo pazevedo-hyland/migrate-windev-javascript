@@ -113,7 +113,7 @@ Rehearse on a copy. Schedule a write freeze, take a verified final backup/export
 1. **Inspect what the application really uses**: triggers (including `HDescribeTrigger`), stored procedures, encryption, journaling, replication, locks, full-text, key options. Many apps use only a fraction.
 2. Choose the family from the topology: one owner → SQLite; shared → PostgreSQL behind an API.
 3. For each feature **really used**, find its row above and decide (native / extension / build). **Record the database choice in an ADR.**
-4. Dry-run the import on a real sanitized subset and reconcile before writing business features on top.
+4. Dry-run the import on the real data copy and reconcile before writing business features on top.
 
 ## Glossary
 

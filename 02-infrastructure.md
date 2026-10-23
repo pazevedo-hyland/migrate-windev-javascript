@@ -40,7 +40,7 @@ Native builds run on each intended OS per [Tauri's GitHub pipeline guide](https:
 
 A **complete, isolated** environment (a self-hosted Windows runner works well), never production:
 
-- A **dedicated test database** rebuilt every night from migrations and the sanitized import, under a test-only name.
+- A **dedicated test database** rebuilt every night from migrations and the data import, under a test-only name.
 - If the app integrates a third-party system: its database restored from a backup kept on a share (**never versioned**), and the link re-established after each rebuild.
 - **Nightly job**: `git pull` → rebuild DB → full tests → golden scenarios → native smoke test → **timestamped report** pushed to a dedicated `reports` branch (never `main`, so it never conflicts).
 - **Guards, belt and braces**:

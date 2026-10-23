@@ -46,25 +46,26 @@ Install there a **complete, self-sufficient development environment**, without a
 - Node, Rust, Tauri prerequisites, Git;
 - the local database engines the target needs (SQLite is embedded; PostgreSQL if a server is planned);
 - if the agent must read legacy data directly: an HFSQL server or ODBC driver on a **copy** of the data;
-- a local, sanitized copy of the data — **never production**.
+- a local copy of the data — **never production**.
 
 Use a native Windows VM when you must test Windows-specific behavior (printing, COM/DLL, installers). A second **test machine** that replays everything nightly is recommended — see [02 — Infrastructure](02-infrastructure.md).
 
 ## E. Collect the legacy material
 
-Create `legacy/` (ignored by Git, but copied privately to every machine where agents work: parity evidence cites `legacy/<path>:<line>`). **Simplest: put the WINDEV project folder in it as is** (text-format sources with the `.cpl` compile folder, the analysis export, the dossier PDF and the images inside): the tools search `legacy/` for the sources, the `.xdd`, the `*Documentation*.pdf`, the `.cpl` folder and the images. Add what the project folder does not hold — `legacy/data/` above all. The layout below is where each kind of material goes when it comes from elsewhere; the quality of the analysis depends on having it.
+Create `legacy/` (ignored by Git, but copied privately to every machine where agents work: parity evidence cites `legacy/<path>:<line>`). **Put the WINDEV project folder in it as is**: the tools search `legacy/` for everything below.
 
-| Folder | Content | How to obtain |
+**Needed to start:**
+
+| What | Why | How to obtain |
 |---|---|---|
-| `legacy/code/` | Project in **text format** (`.wdp`, `.wdw`, `.wde`, `.wdr`, `.wdg`, `.wdc`, WebDev pages…), **including the `<project>.cpl/` compile folder** (it holds WINDEV's event labels, used to verify event codes) | Switch the project to text backup format, then copy |
-| `legacy/images/` | Every image file of the WINDEV project folder and its skin template folder (`*.gif`, `*.png`, `*.jpg`, `*.bmp`, `*.ico`): window backgrounds, button strips, icons | Copy from the project folder (images named in the dossier, e.g. `C:\My Projects\<project>\Btn_Cancel.gif`) |
-| `legacy/schema/` | Analysis export (XDD) and the **generated SQL script** | Generate from the analysis |
-| `legacy/queries/` | SQL and parameters of every query, especially binary ones | Export from the query editor |
-| `legacy/data/` | `data.sqlite` (lossless copy), a CSV per table and `manifest.json` (rows read and `COUNT(*)` per table, types, nulls, driver); sanitized copies for golden data | `scripts/windows/export_odbc.py` (HFSQL ODBC), then `scripts/data_profile.py` |
-| `legacy/screenshots/` | Every window and state, **named after the window**: `WIN_Order.png`, `WIN_Order--closed.png` | Screen captures |
-| `legacy/reports/` | A sample PDF of every report **with the input data used** | Print to PDF |
-| `legacy/golden/` | Recorded golden scenarios (before/after exports); their sanitized copies are committed in `docs/golden/` | [10 — Parity](10-parity-and-verification.md) |
-| `legacy/docs/` | **The WINDEV project technical documentation ("dossier") as PDF** — the best single source: window titles, every control's caption, tab order, input mask and size, button type and images, window images, every query's SQL and parameters, analysis item types — plus manuals, the `/init_projet` file, specs | WINDEV's project documentation print option, to PDF, with windows, reports, queries, code and analysis included. Check the project folder first: it is often already there (`<project>_Documentation.pdf`) |
+| The project in **text format** (`.wdp`, `.wdw`, `.wde`, `.wdr`, `.wdg`, `.wdc`…) **with its `<project>.cpl/` compile folder** and its images | the code, every control, WINDEV's event labels, the skin | Switch the project to text backup format; the project folder holds the rest |
+| **The dossier PDF** (WINDEV's project documentation) | captions, tab order, masks, button types, window images, every query's SQL, analysis item types — the best single source | Project documentation print option, to PDF, with windows, reports, queries, code and analysis. Often already in the project folder (`<project>_Documentation.pdf`) |
+| The analysis export (`.xdd`) | the schema: tables, keys, types, sizes | Export the analysis (often already in the project folder) |
+| The data: the HFSQL files (`.fic`, `.ndx`, `.mmo`), a backup of the HFSQL server, or a copy already exported | the data profile, the import, realistic tests | The agent exports it on Windows with `scripts/windows/export_odbc.py` into `legacy/data/data.sqlite` |
+
+Demo or test data is used as is. Only **personal data** (real customers) is anonymised before any of it is committed — golden data, fixtures — or shared; the kickoff prompt asks which one you have.
+
+**Later, when a slice needs it (optional):** sample PDFs of reports with their input data (report slices); golden scenarios recorded in the running app (before/after exports, [10](10-parity-and-verification.md)); screenshots of runtime states the dossier image cannot show (a filled table, an open dropdown), named after the window. Not needed: the generated SQL script (the schema draft replaces it) and query exports (the dossier has their SQL), unless the dossier is missing.
 
 Also record: WINDEV version, project language (WLanguage code may be written with **French or English keywords**), HFSQL mode (Classic or Client/Server), hardware (printers, scanners, label printers), INI/registry settings, scheduled tasks, and integrations.
 

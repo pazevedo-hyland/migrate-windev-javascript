@@ -32,7 +32,7 @@ These are the recommended defaults the planner brings to framing; every choice i
 Accounts, Git host (it replaces the WINDEV source manager), an isolated machine for the coding agent, a legacy Windows environment with WINDEV, and a nightly test machine if possible → [00](00-prerequisites.md), [02](02-infrastructure.md).
 
 ### Step 1 — Prepare the sources *(`legacy/`)*
-Switch the WINDEV project to **text format**, generate the **SQL script** from the analysis, export queries and sanitized **CSV** data, take **screenshots named after each window**, keep sample **report PDFs** with their inputs → [00 §E](00-prerequisites.md#e-collect-the-legacy-material). Tip: WINDEV 2026's AI Companion `/init_projet` writes a project-context file — add it to `legacy/docs/`.
+Switch the WINDEV project to **text format**, print its **project documentation to PDF** (the "dossier"), and put the project folder with its data files in `legacy/` as is → [00 §E](00-prerequisites.md#e-collect-the-legacy-material). Report samples and recorded scenarios come later, when a slice needs them. Tip: WINDEV 2026's AI Companion `/init_projet` writes a project-context file — add it to `legacy/docs/`.
 
 ### Step 2 — Inspect and map *(before any code)*
 Put WINDEV's documentation PDF (`<project>_Documentation.pdf`, the "dossier") in `legacy/docs/`, then run the whole evidence pipeline:

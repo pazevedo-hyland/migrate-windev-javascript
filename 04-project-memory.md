@@ -21,7 +21,7 @@ The principle: **separate** the central memory, detailed documentation, decision
 │   ├── mapping/               ← one note per legacy unit; event-codes.md (generated) + event-codes-inferred.md
 │   ├── screens/               ← one spec per window (templates/window-spec.md)
 │   ├── reports/               ← one spec per report (templates/report-spec.md)
-│   ├── golden/                ← golden scenarios: spec, sanitized before/after data, compare.json
+│   ├── golden/                ← golden scenarios: spec, before/after data (anonymised if personal), compare.json
 │   ├── parity/parity.csv      ← behavior parity matrix: the definition of done
 │   ├── decisions/             ← ADRs: one decision = one file
 │   └── runbooks/

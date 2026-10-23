@@ -27,7 +27,7 @@ Run it in `npm run verify` (without `--require-complete`) on every commit, and w
 
 The only robust proof that totals, rounding, statuses and reports match is to **record the legacy application and replay the target** on identical inputs ([template](templates/golden-scenario.md)):
 
-1. **Before**: export the relevant tables from a sanitized dataset (CSV + manifest).
+1. **Before**: export the relevant tables from the data copy (CSV + manifest; anonymised if the data is personal).
 2. **Act**: perform a scripted sequence in the legacy app (or with WINDEV's automated test scenarios, if the project has them).
 3. **After**: export the same tables; save output files (report PDF, exported files) and the exact messages shown.
 4. **Replay** in the target from the same "before" state, through the use cases (fast tests) and end to end (slower).

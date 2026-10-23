@@ -12,7 +12,7 @@ Create a private repository for the application. Copy `templates/` and `scripts/
 
 ## 3. Collect the sources
 
-Fill `legacy/` with the fixed layout of [00 §E](00-prerequisites.md#e-collect-the-legacy-material). **More material, better analysis.** Name screenshots after windows. Keep originals read-only.
+Put the WINDEV project folder (text format, with its `.cpl` folder and the dossier PDF) and its data in `legacy/`, as [00 §E](00-prerequisites.md#e-collect-the-legacy-material) lists. Keep originals read-only. Report samples and recorded scenarios come later, with the slices that need them.
 
 ## 4. Inspect
 
@@ -57,7 +57,7 @@ Export every table to CSV through the HFSQL ODBC driver ([data export](scripts/w
 The first prompt to the implementer is the **mapping** ([templates/mapping-prompt.md](templates/mapping-prompt.md)):
 
 - **sub-agents in parallel**, one per window/report/procedure set/table group, each using the [map-element skill](templates/agent/skills/map-element/SKILL.md), produce `docs/mapping/*.md` notes: entities, screens and navigation, events, business rules, naming conventions, traps, external dependencies, **hardcoded secrets to revoke**;
-- **other agents review** each note against the sources and screenshots;
+- **other agents review** each note against the sources and the dossier images;
 - consolidated outputs: `docs/legacy-inventory.md`, navigation map, `docs/screens/<WINDOW>.md`, and `docs/parity/parity.csv` imported from the seed plus manual rows (menus, shortcuts, rights, reports, jobs, integrations).
 
 Gate: `python3 scripts/parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv --check-files` passes. This is the analysis brief.
@@ -66,11 +66,11 @@ Gate: `python3 scripts/parity_check.py docs/parity/parity.csv --seed docs/parity
 
 Paste [templates/PromptInit.md](templates/PromptInit.md) into the planning session. From the mapping notes, it asks **the questions that change the plan**, with a recommendation each; **you decide together**: topology, persistence, OS targets, permissions, reports, UI fidelity, integrations, build order, exclusions. Then it creates `AGENTS.md`, the first ADRs, the local instruction files and `ROADMAP.md` in the order **you chose**.
 
-UI style is one of these choices: a **WINDEV-like replica** (same layout, fields, tab order and shortcuts from the screenshots — the safest for trained users and for parity) or a **modernized layout** (each difference is an accepted behavior change). For a replica, add the dedicated instruction from [templates/prompt-stage.md](templates/prompt-stage.md) to stage prompts.
+UI style is one of these choices: a **WINDEV-like replica** (same layout, fields, tab order and shortcuts from the dossier — the safest for trained users and for parity) or a **modernized layout** (each difference is an accepted behavior change). For a replica, add the dedicated instruction from [templates/prompt-stage.md](templates/prompt-stage.md) to stage prompts.
 
 ## 7. Foundations
 
-Scaffold the Tauri app in the accepted structure, `npm run verify` in CI on every target OS, bindings generation, schema v1 migrations, an opt-in dev seed (a Cargo feature such as `dev-seed` that loads the synthetic data into an empty database, so humans can try every slice), a browser-preview mode with the fake backend for agent UI inspection ([05](05-work-loop.md#checks-to-use)), and an import **dry run** on sanitized data with a reconciliation report ([08](08-data-migration.md)). Record golden scenarios for the first workflows in the legacy app ([10](10-parity-and-verification.md)).
+Scaffold the Tauri app in the accepted structure, `npm run verify` in CI on every target OS, bindings generation, schema v1 migrations, an opt-in dev seed (a Cargo feature such as `dev-seed` that loads the synthetic data into an empty database, so humans can try every slice), a browser-preview mode with the fake backend for agent UI inspection ([05](05-work-loop.md#checks-to-use)), and an import **dry run** on the data copy with a reconciliation report ([08](08-data-migration.md)). Record golden scenarios for the first workflows in the legacy app ([10](10-parity-and-verification.md)).
 
 ## 8. First vertical slice
 

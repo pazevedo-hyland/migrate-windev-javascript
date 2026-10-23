@@ -3,6 +3,8 @@
 ## 2026-10-23 — drop the project folder in as is
 
 ### Changed
+- Sanitising is no longer a general step: demo or test data is used as is; only personal data is anonymised before it is committed or shared.
+- 00 §E split into what is needed to start (project folder in text format with `.cpl`, dossier PDF, `.xdd`, the data files) and what comes later when a slice needs it (report samples, recorded scenarios, runtime screenshots); the SQL script and query exports are no longer asked for (schema draft, dossier).
 - Kickoff prompt: when `legacy/` holds HFSQL files and no data copy, the agent exports them itself on Windows (ODBC data source on a copy, `export_odbc.py`).
 - `prepare_evidence.py` finds the dossier PDF and the `.cpl` compile folder anywhere under `legacy/` (fixed layout first); `skin_assets.py` searches `legacy/` for images. The WINDEV project folder can be put in `legacy/` unchanged: on the real project, the same evidence as the structured layout (125 elements, 12 questions, 17 encoded actions).
 
