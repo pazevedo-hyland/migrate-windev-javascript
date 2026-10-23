@@ -64,8 +64,36 @@ class EventLegendTests(unittest.TestCase):
                 'Click BTN_Save', 'Initialization of EDT_Name', 'Exit from EDT_Name'))
             data = module.legend(root / 'src', root / 'cpl')
         events = {code: item['event'] for code, item in data['codes'].items()}
-        self.assertEqual(events, {'18': 'Click', '16': 'Exit', 'none': 'Global declarations', '34': 'End of initialization'})
+        self.assertEqual(events, {'18': 'Click', '16': 'Exit', 'none': 'Global declarations', '34': 'End of initialization',
+                                  '458752': 'Local procedure'})  # proven by the procedure's own PROCEDURE line
         self.assertIn('| 18 | Click | 1 | — |', module.markdown(data))
+
+    def test_elimination_pairs_what_is_left(self):
+        # WIN_B codes Click and Close on itself: ambiguous alone, settled once WIN_A proves 18 = Click.
+        window_b = '''window :
+ name : WIN_B
+ code_elements :
+  p_codes :
+   -
+     code : |1-
+      Ok()
+     type : 18
+   -
+     code : |1-
+      Bye()
+     type : 2
+'''
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'src').mkdir()
+            (root / 'src/WIN_A.wdw').write_text(WINDOW, encoding='utf-8')
+            (root / 'src/WIN_B.wdw').write_text(window_b, encoding='utf-8')
+            (root / 'cpl').mkdir()
+            (root / 'cpl/WIN_A.1.wdw.wcw').write_bytes(compiled('Click BTN_Save', 'Exit from EDT_Name'))
+            (root / 'cpl/WIN_B.1.wdw.wcw').write_bytes(compiled('Click WIN_B', 'Close WIN_B'))
+            data = module.legend(root / 'src', root / 'cpl')
+        self.assertEqual(data['codes']['2']['event'], 'Close')
+        self.assertEqual(data['codes']['18']['conflicts'], {})
 
 
 if __name__ == '__main__':

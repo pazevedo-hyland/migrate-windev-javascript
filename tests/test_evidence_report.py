@@ -50,8 +50,10 @@ class EvidenceReportTests(unittest.TestCase):
                         {'names': [name, 'BTN_Fechar'], 'event': '18', 'line': 9, 'has_code': False, 'action': action},
                         {'names': [name, 'BTN_Ok'], 'event': '18', 'line': 20, 'has_code': True, 'action': 'A-3'}]}))
             groups = module.encoded_actions(root, None)
-        self.assertEqual([(g['action'], len(g['slots'])) for g in groups], [('A-1', 2), ('A-2', 1)])
-        self.assertEqual(groups[0]['slots'][0]['evidence'], 'WIN_A.wdw:9')
+        # Largest first; slots next to code are grouped too, and marked.
+        self.assertEqual([(g['action'], len(g['slots'])) for g in groups], [('A-3', 3), ('A-1', 2), ('A-2', 1)])
+        self.assertTrue(all(s['has_code'] for s in groups[0]['slots']))
+        self.assertEqual(groups[1]['slots'][0]['evidence'], 'WIN_A.wdw:9')
 
     def test_coverage_usage_and_grouped_questions(self):
         with tempfile.TemporaryDirectory() as directory:

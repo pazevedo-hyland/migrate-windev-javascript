@@ -142,6 +142,14 @@ def markdown(data):
     for table in data['tables']:
         for key in table['keys']:
             lines.append(f"- {table['table']}.{key['name']}: {key['key']} on ({', '.join(key['columns'])})")
+    lines += ['', '## Tables', '']
+    for table in data['tables']:
+        lines += [f"### {table['table']}", '', '| Column | Caption | WINDEV type | Size | Key | Default | SQLite |',
+                  '|---|---|---|---|---|---|---|']
+        lines += [f"| {c['name']} | {c['caption'] or ''} | {c['type'] or 'code ' + str(c['code'])} | {c['size'] or ''} | "
+                  f"{c['key'] or ''} | {c['default'] if c['default'] not in (None, '') else ''} | {c['sqlite'] or 'unresolved'} |"
+                  for c in table['columns']]
+        lines.append('')
     nullable = sum(c['nullable'] for t in data['tables'] for c in t['columns'])
     total = sum(len(t['columns']) for t in data['tables'])
     lines += ['', '## Nulls', '', f'{nullable} of {total} items accept NULL in the analysis. HFSQL still writes the default '

@@ -20,7 +20,7 @@ HEADER = re.compile(r'^Part (\d+)\s+(.*)$')
 DETAIL = re.compile(r'^(Button|Edit control|Caption|Image|Supercontrol|Table|Column|Combo box|List box|Check box|'
                     r'Radio button|Tab|Static|Progress bar|Looper|Internal window|Layout|Spin|Slider|Scrollbar|'
                     r'Rating|Calendar|Chart|Toolbar|Menu option|Cell|Tree view|Rich text|HTML|Zone|Sidebar|'
-                    r'Organizer|Scheduler|Shape|Splitter|[A-Z][a-z]+(?: [A-Za-z]+)*) : ([A-Za-z_][\w$]*(?:\.[A-Za-z_][\w$]*)*)$')
+                    r'Organizer|Scheduler|Shape|Splitter|[A-Z][A-Za-z]+(?: [A-Za-z]+)*) : ([A-Za-z_][\w$]*(?:\.[A-Za-z_][\w$]*)*)$')
 # Control table rows: "EDT_Codigo 14 31 158 25 0 Active Numeric" (windows, pixels) or
 # "STC_Codigo Caption 0.00 0.00 6.09 14.66 0.10 Solid TBL-" (reports, millimetres).
 WINDOW_ROW = re.compile(r'^([A-Za-z_][\w$]*) (-?\d+) (-?\d+) (\d+) (\d+) (\d+)(?: (.*))?$')
@@ -84,9 +84,11 @@ def checkboxes(content, carry=None):
     numeric = lambda t: re.fullmatch(r'-?[\d.]+', t) is not None
     if not runs:
         return {}, {}
-    # Row labels start at the body margin: the most common x near the left edge (section titles sit a little left of it).
-    left = min(x for x, _, _ in runs)
-    margin = collections.Counter(x for x, _, _ in runs if x < left + 30).most_common(1)[0][0]
+    # Row labels start at the body margin, indented a little right of the breadcrumb and section titles: the
+    # rightmost text start within 10 points of the left edge (titles can outnumber rows on a page).
+    words = [x for x, _, t in runs if re.match(r'\w\w', t)]  # code is drawn token by token: skip " ", "(", "+"
+    left = min(words or [x for x, _, _ in runs])
+    margin = max(x for x in words or [left] if x < left + 10)
     grid = [margin + offset for offset in GRID_OFFSETS]
     anchors = sorted({(y, 'control' if t in CONTROL_TABLE else 'key') for x, y, t in runs
                       if t in CONTROL_TABLE | KEY_TABLE and not any(abs(ly - y) < 2 and numeric(lt) for lx, ly, lt in runs)},
@@ -403,7 +405,12 @@ def extract(pdf, out, images=True):
         folder = out / re.sub(r'\W+', '-', kind.lower()).strip('-')
         folder.mkdir(exist_ok=True)
         for element, item in items.items():
-            (folder / f'{element}.json').write_text(json.dumps(item, indent=1, ensure_ascii=False), encoding='utf-8')
+            # The analysis is named by its Windows path ("C:\\My Projects\\App.ana\\App.wda"): keep the file name.
+            stem = re.split(r'[\\/]', element)[-1] if element != '_general' else element
+            if stem != element:
+                item.setdefault('path', element)
+            stem = re.sub(r'[:*?"<>|]', '_', stem)
+            (folder / f'{stem}.json').write_text(json.dumps(item, indent=1, ensure_ascii=False), encoding='utf-8')
     summary = {kind: len(items) for kind, items in elements.items()}
     coverage = parsed_coverage(elements)
     (out / 'index.json').write_text(json.dumps({'pages': len(texts), 'elements': summary, 'coverage': coverage},

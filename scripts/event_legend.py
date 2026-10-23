@@ -45,6 +45,8 @@ def legend(source_dir, compile_dir):
         for path in Path(compile_dir).rglob(pattern):
             compiled.setdefault(path.name.split('.')[0].lower(), path)
     votes = collections.defaultdict(collections.Counter)
+    observations = []  # (raw codes, compiled labels) per control, for the elimination passes
+    procedures = collections.Counter()  # slot types of local procedures, proven by their PROCEDURE line
     windows = 0
     sources = sorted(Path(source_dir).glob('*.[wW][dD][wW]')) + sorted(Path(source_dir).glob('*.[wW][dD][eE]'))
     for source in sources:
@@ -55,26 +57,48 @@ def legend(source_dir, compile_dir):
         windows += 1
         labels = compiled_labels(wcw.read_bytes())
         events = collections.defaultdict(set)
+        own = {source.stem.lower(), inspector.element_name(text, source.stem).lower(), 'mywindow', 'mafenêtre',
+               'mafenetre', 'myreport', 'monetat'}
         for block in inspector.extract_blocks(text):
             declared = [p.lower() for p in block['procedures']]
-            if declared and declared[0] not in (source.stem.lower(), 'mywindow', 'mafenêtre', 'mafenetre'):
-                continue  # a local procedure, not an event
+            code = block['context']['siblings'].get('type') or 'none'
+            if declared and declared[0] not in own:
+                # A local procedure: its PROCEDURE line in the source proves what the slot type is.
+                if code != 'none':
+                    procedures[code] += 1
+                continue
             names = block['context']['names']
-            events[names[-1] if names else source.stem].add(block['context']['siblings'].get('type') or 'none')
+            events[names[-1] if names else source.stem].add(code)
         for control, codes in events.items():
             named = set(labels.get(control, set()))
             codes = set(codes)
             # The block without a raw code is the declarations block (it holds PROCEDURE <window>()).
             if 'none' in codes and 'Global declarations' in named:
                 votes['none']['Global declarations'] += 1
-                codes.discard('none')
+            codes.discard('none')
+            named.discard('Global declarations')
             # A control whose only coded event and only compiled label are its initialization names that code.
-            if named - {'Global declarations'} == {'Initialization'} and len(codes - {'none'}) == 1:
-                votes[next(iter(codes - {'none'}))]['Initialization'] += 1
-            named -= {'Initialization', 'Global declarations'}
-            coded = codes - {'14'} if len(codes) > 1 else codes
-            if len(coded) == 1 and len(named) == 1:
-                votes[next(iter(coded))][next(iter(named))] += 1
+            if named == {'Initialization'} and len(codes) == 1:
+                votes[next(iter(codes))]['Initialization'] += 1
+            observations.append((codes, named))
+    # Every control is labelled "Initialization" whether or not it has code, so that label pairs only as above.
+    # Then pair one-to-one, repeatedly removing the codes already named and their labels from each control:
+    # "Click" known for 18 leaves {2} and {Closing} on a window coded for both.
+    known = {}
+    while True:
+        known.update({code: counter.most_common(1)[0][0] for code, counter in votes.items()})
+        found = collections.defaultdict(collections.Counter)
+        for codes, named in observations:
+            left_codes = {c for c in codes if c not in known}
+            left_labels = named - set(known.values()) - {'Initialization'}
+            if len(left_codes) == 1 and len(left_labels) == 1:
+                found[next(iter(left_codes))][next(iter(left_labels))] += 1
+        if not found:
+            break
+        for code, counter in found.items():
+            votes[code].update(counter)
+    for code, count in procedures.items():
+        votes[code]['Local procedure'] += count  # after pairing, so a conflict shows instead of hiding a code
     result = {}
     for code, counter in sorted(votes.items(), key=lambda item: -sum(item[1].values())):
         (best, count), total = counter.most_common(1)[0], sum(counter.values())

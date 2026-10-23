@@ -163,6 +163,12 @@ def encoded_slots(text, blocks):
     for i, entry in enumerate(parsed):
         if not entry or entry[1] != 'internal_properties':
             continue
+        # Only items of an event list (`code_elements: p_codes:`) are event slots. A column's `content`,
+        # a date's `calendar` or a combo's dropdown also pair `type` with encoded properties: there `type`
+        # is the sub-object's type, not an event.
+        holder = next((parsed[j] for j in range(i - 1, -1, -1) if parsed[j] and parsed[j][0] < entry[0]), None)
+        if not holder or holder[1] != 'p_codes':
+            continue
         context = block_context(parsed, i, entry[0], entry[3])
         siblings = context['siblings']
         if 'type' not in siblings or 'name' in siblings:

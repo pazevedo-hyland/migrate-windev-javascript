@@ -15,6 +15,13 @@
 - Event legend: optional-event labels and Initialization (code 14).
 - Window flags no longer polluted by headings and dates; tables continued on a new section page.
 
+### Fixed (round 5, two harder windows)
+- Encoded slots only inside event lists: columns' content, calendars and drop-downs were counted as actions (402 → 225 code-less slots, 80 → 14 distinct actions). Groups now include slots next to code.
+- Event legend: elimination passes pair what is left once codes are known (Close, Resize, row and drop-down events), local procedures proven by their PROCEDURE line: 21 codes, no conflict.
+- Dossier: CamelCase control kinds (`RadioButton`) no longer merge into the previous control; page margin found on pages with more headings than rows (controls with flags 771 → 877 of 877, analysis items with keys 135 of 135); the analysis JSON is named after its file, not its Windows path.
+- Schema draft lists every column per table.
+- Skill: inferred event codes go to `event-codes-inferred.md`; shared HFSQL context rule for cross-window effects.
+
 ### Changed
 - `parity_check.py`: evidence must be `path:line`, a dossier/analysis/runtime reference or a file (JSON with its field); an `unmapped` row with described behavior must cite its `U-` item. Unresolved items are unit-scoped (`U-WFC-01`).
 

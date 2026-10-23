@@ -211,6 +211,12 @@ custom_note :
         internal_properties : BBBB
         type : 18
   -
+    name : EDT_Date
+    calendar :
+     internal_properties : EEEE
+     type : 47
+    type : 2
+  -
     name : BTN_Cancel
     internal_properties : CCCC
     type : 4
@@ -225,7 +231,7 @@ custom_note :
 '''
         blocks = module.extract_blocks(text)
         slots = module.encoded_slots(text, blocks)
-        # Control-level properties are not slots; the code-less Cancel click is an encoded action.
+        # Control-level and sub-object properties (a date's calendar) are not slots; the code-less Cancel click is.
         self.assertEqual([('/'.join(s['names']), s['event'], s['has_code']) for s in slots],
                          [('WIN_Form/BTN_Ok', '18', True), ('WIN_Form/BTN_Cancel', '18', False)])
         self.assertTrue(blocks[0]['encoded_properties'])
