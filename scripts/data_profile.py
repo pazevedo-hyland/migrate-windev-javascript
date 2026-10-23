@@ -12,6 +12,7 @@ The report holds counts, shapes, lengths and numeric or date extremes — no rec
 committing anyway (an extreme can be a real amount).
 """
 import argparse
+import base64
 import collections
 import csv
 from datetime import datetime
@@ -21,6 +22,15 @@ import re
 import sqlite3
 
 DATE_FORMATS = {'Date': ('%Y%m%d', 8), 'Date and Time': ('%Y%m%d%H%M%S', 14), 'Time': ('%H%M%S', 6)}
+
+
+def as_text(value):
+    """A stored value as text: bytes (a binary column of the ODBC export) become base64, as in its CSV files."""
+    if value is None:
+        return None
+    if isinstance(value, bytes):
+        return 'base64:' + base64.b64encode(value).decode('ascii')
+    return str(value)
 
 
 def shape(value):
@@ -71,6 +81,8 @@ def invalid(value, kind):
         fmt, digits = DATE_FORMATS[kind]
         if set(value) == {'0'}:
             return False  # WINDEV's empty date or time: counted apart
+        if re.fullmatch(r'\d{4}-\d\d-\d\d([T ]\d\d:\d\d(:\d\d(\.\d+)?)?)?|\d\d:\d\d(:\d\d(\.\d+)?)?', value):
+            value = re.sub(r'\D', '', value)  # the ODBC export writes dates in ISO 8601: compare as WINDEV digits
         try:
             datetime.strptime(value[:digits], fmt)
             return not value.isdigit()
@@ -101,7 +113,8 @@ def column_profile(values, spec):
     if kind == 'text':
         result.update(padded=sum(v != v.strip() for v in filled),
                       line_breaks=sum('\n' in v or '\r' in v for v in filled),
-                      control=sum(bool(re.search(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', v)) for v in filled))
+                      control=sum(v.startswith('base64:') or bool(re.search(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', v))
+                                  for v in filled))
     return result
 
 
@@ -165,7 +178,7 @@ def profile(connection, schema, refs=()):
         entry = {'rows': connection.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0], 'columns': {}}
         for column in columns:
             spec = specs.get((table.lower(), column.lower()), {})
-            values = [None if v is None else str(v) for (v,) in connection.execute(f'SELECT "{column}" FROM "{table}"')]
+            values = [as_text(v) for (v,) in connection.execute(f'SELECT "{column}" FROM "{table}"')]
             data = column_profile(values, spec)
             data["findings"] = findings(data, spec)
             entry['columns'][column] = data
@@ -184,11 +197,12 @@ def profile(connection, schema, refs=()):
             joined = " || char(31) || ".join(f'"{p}"' for p in parts)  # a composite key rebuilt from its parts
             duplicates = connection.execute(f'SELECT COUNT(*) - COUNT(DISTINCT {joined}) FROM "{table}"').fetchone()[0]
             report['keys'].append({'table': table, 'key': key['name'], 'columns': parts, 'duplicates': duplicates})
-    column_values = lambda table, column: [None if v is None else str(v)
-                                           for (v,) in connection.execute(f'SELECT "{column}" FROM "{table}"')]
+    column_values = lambda table, column: [as_text(v) for (v,) in connection.execute(f'SELECT "{column}" FROM "{table}"')]
     candidates = collections.defaultdict(list)
+    present = {(table.lower(), column.lower()) for table, columns in tables.items() for column in columns}
     for table, column, target, key in candidate_links(tables, schema):
-        candidates[(table, column)].append((target, key))
+        if (target.lower(), key.lower()) in present:  # the analysis may list tables the copy does not hold
+            candidates[(table, column)].append((target, key))
     for ref in refs:
         table, column, target, key = re.split(r'[.=]', ref)
         candidates[(table, column)] = [(target, key)]

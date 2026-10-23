@@ -60,7 +60,7 @@ Create `legacy/` (ignored by Git, but copied privately to every machine where ag
 | `legacy/images/` | Every image file of the WINDEV project folder and its skin template folder (`*.gif`, `*.png`, `*.jpg`, `*.bmp`, `*.ico`): window backgrounds, button strips, icons | Copy from the project folder (images named in the dossier, e.g. `C:\My Projects\<project>\Btn_Cancel.gif`) |
 | `legacy/schema/` | Analysis export (XDD) and the **generated SQL script** | Generate from the analysis |
 | `legacy/queries/` | SQL and parameters of every query, especially binary ones | Export from the query editor |
-| `legacy/data/` | CSV per table + manifest (encoding, delimiter, decimal and date format, row counts), or an SQLite staging copy keeping every value as text; sanitized copies for golden data | `scripts/windows/export_odbc.py` (HFSQL ODBC), then `scripts/data_profile.py` |
+| `legacy/data/` | `data.sqlite` (lossless copy), a CSV per table and `manifest.json` (rows read and `COUNT(*)` per table, types, nulls, driver); sanitized copies for golden data | `scripts/windows/export_odbc.py` (HFSQL ODBC), then `scripts/data_profile.py` |
 | `legacy/screenshots/` | Every window and state, **named after the window**: `WIN_Order.png`, `WIN_Order--closed.png` | Screen captures |
 | `legacy/reports/` | A sample PDF of every report **with the input data used** | Print to PDF |
 | `legacy/golden/` | Recorded golden scenarios (before/after exports); their sanitized copies are committed in `docs/golden/` | [10 — Parity](10-parity-and-verification.md) |

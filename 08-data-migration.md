@@ -65,10 +65,10 @@ Read `.fic`/`.ndx`/`.mmo` only through supported HFSQL/WINDEV export tooling. Ex
 
 ## Profile the data before deciding the schema
 
-The analysis says what the data should be; only the data says what it is. On a copy (the CSV folder of `scripts/windows/export_odbc.py`, or an SQLite staging file that keeps every value as the ODBC text and nulls apart):
+The analysis says what the data should be; only the data says what it is. On a copy — `data.sqlite` from `scripts/windows/export_odbc.py` (lossless: NULLs, bytes, counts checked), its CSV folder, or another SQLite staging file:
 
 ```sh
-python3 scripts/data_profile.py <copy.sqlite or export folder> --ref ordem.matricula=Viaturas.matricula   # → docs/data/profile.md
+python3 scripts/data_profile.py legacy/data/data.sqlite --ref ordem.matricula=Viaturas.matricula   # → docs/data/profile.md
 ```
 
 Per column: nulls, empty strings, distinct values, value shapes, lengths, values that do not parse as the WINDEV type, zeros, constant columns, stray spaces and line breaks; per unique key (composite ones rebuilt from their parts): duplicates; per link (columns named after a table or its identifier, plus `--ref`): orphans, with `0` counted as "no link". The report holds counts, shapes and extremes, not records: review and commit it; mapping rows and ADRs cite `export: docs/data/profile.md#<table>`. Run it again on every new export.

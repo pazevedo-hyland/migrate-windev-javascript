@@ -72,6 +72,22 @@ class DataProfileTests(unittest.TestCase):
         self.assertIn('0 in every row — the link is not used', page)
         self.assertNotIn('Ana', page)  # no record values in the report
 
+    def test_odbc_copy_with_bytes_and_iso_dates(self):
+        db = Path(self.directory.name) / 'data.sqlite'
+        con = sqlite3.connect(db)
+        con.execute('CREATE TABLE Viaturas (Matricula, Cliente, Ano, Entrada, EstadoID, Ativo, Chave)')
+        con.execute("INSERT INTO Viaturas VALUES ('AA', '1', '0', '2024-01-31', '0', '1', ?)", (b'CP\x00\x01',))
+        con.execute('CREATE TABLE __export (key, value)')
+        con.commit()
+        con.close()
+        connection = module.load(db)
+        self.addCleanup(connection.close)
+        report = module.profile(connection, SCHEMA)
+        columns = report['tables']['Viaturas']['columns']
+        self.assertEqual(columns['Entrada']['invalid'], 0)  # ISO 8601 from the exporter
+        self.assertIn('composite key exported as data', ' '.join(columns['Chave']['findings']))
+        self.assertNotIn('__export', report['tables'])
+
     def test_csv_folder_of_the_odbc_exporter(self):
         folder = Path(self.directory.name) / 'export'
         folder.mkdir()

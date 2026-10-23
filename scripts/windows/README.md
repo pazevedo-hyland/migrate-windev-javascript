@@ -1,6 +1,6 @@
 # Windows data export
 
-Exports every table of an HFSQL database to CSV with a manifest, through PC SOFT's HFSQL ODBC driver. Static UI evidence (captions, tab order, masks, window images, query SQL) comes from WINDEV's project documentation instead — see [dossier_extract.py](../README.md#dossier_extractpy--windevs-project-documentation-as-data).
+Exports every table of an HFSQL database through PC SOFT's HFSQL ODBC driver: a lossless SQLite copy, CSV files and a manifest. Static UI evidence (captions, tab order, masks, window images, query SQL) comes from WINDEV's project documentation instead — see [dossier_extract.py](../README.md#dossier_extractpy--windevs-project-documentation-as-data).
 
 ## Steps
 
@@ -13,7 +13,7 @@ Exports every table of an HFSQL database to CSV with a manifest, through PC SOFT
    py scripts\windows\export_odbc.py --dsn MigrationCopy --out C:\migration\data
    ```
 
-Every table becomes a UTF-8 CSV; `manifest.json` records row counts, column types and row hashes. Exporting the same tables before and after a scripted action in the legacy app gives a golden scenario's expected data ([compare_exports.py](../README.md#compare_exportspy--golden-master-and-reconciliation)).
+`data.sqlite` keeps every value as the driver returns it — text (dates ISO 8601, decimals exact), bytes as BLOB, NULL apart from the empty string — and is the copy to profile ([data_profile.py](../README.md#data_profilepy--what-the-legacy-data-really-is)) and import from. Every table is also a UTF-8 CSV, where NULL and an empty string look alike. `manifest.json` records, per table, the rows read **and the table's own `COUNT(*)`** — the export fails when they differ — plus column types, null and binary counts per column, a hash of the rows, the driver and the Python architecture. Exporting the same tables before and after a scripted action in the legacy app gives a golden scenario's expected data ([compare_exports.py](../README.md#compare_exportspy--golden-master-and-reconciliation)).
 
 ## ODBC architecture troubleshooting
 
@@ -36,4 +36,4 @@ Use a new output folder for each attempt: the exporter refuses to overwrite one.
 
 ## Status
 
-`export_odbc.py` is tested on GitHub's Windows runners against a real ODBC driver (SQL Server LocalDB: accents, decimals, dates, NULLs). On the real project, the HFSQL ODBC driver (32-bit, see above) read every table: 17 tables, about 180,000 rows, text in clean UTF-8 — with composite keys arriving as binary columns ([data_profile.py](../README.md#data_profilepy--what-the-legacy-data-really-is) flags them). Check each export's row counts per table against the application before relying on it.
+`export_odbc.py` is tested on GitHub's Windows runners against a real ODBC driver (SQL Server LocalDB: accents, decimals, dates, NULLs). On the real project, the HFSQL ODBC driver (32-bit, see above) read every table: 17 tables, about 180,000 rows, text in clean UTF-8 — with composite keys arriving as binary columns ([data_profile.py](../README.md#data_profilepy--what-the-legacy-data-really-is) flags them). That first export did not use this script: its composite keys were read as text (bytes damaged, rebuildable from their parts), a composite link column came out empty, and no source row counts were kept. This script reads bytes as bytes and checks every count; run it for the next export.

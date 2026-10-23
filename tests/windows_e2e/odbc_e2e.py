@@ -5,13 +5,14 @@ Uses the SQLite ODBC driver when installed, otherwise SQL Server LocalDB (presen
 import csv
 import json
 from pathlib import Path
+import sqlite3
 import subprocess
 import sys
 
 import pyodbc
 
 ROOT = Path(__file__).resolve().parents[2]
-ROWS = [(1, 'Oficina São João', '12.50', '2026-01-02'), (2, None, None, None)]
+ROWS = [(1, 'Oficina São João', '12.50', '2026-01-02'), (2, None, None, None), (3, '', '0.00', '2026-01-03')]
 
 
 def sqlserver_localdb():
@@ -43,8 +44,13 @@ def main():
     failures = [] if result.returncode == 0 else [f'exit {result.returncode}']
     if not failures:
         manifest = json.loads((out / 'manifest.json').read_text(encoding='utf-8'))
-        if {t: v['rows'] for t, v in manifest['tables'].items()} != {'Clientes': 2, 'unidades': 1}:
+        if {t: (v['rows'], v['count']) for t, v in manifest['tables'].items()} != {'Clientes': (3, 3), 'unidades': (1, 1)}:
             failures.append(f'row counts: {manifest}')
+        copy = sqlite3.connect(out / 'data.sqlite')
+        names = [r[0] for r in copy.execute('SELECT Descricao FROM Clientes ORDER BY ClientesID')]
+        copy.close()
+        if names != ['Oficina São João', None, '']:  # the SQLite copy keeps NULL and '' apart
+            failures.append(f'sqlite values: {names}')
         with (out / 'Clientes.csv').open(encoding='utf-8') as handle:
             rows = list(csv.reader(handle))
         if rows[1] != ['1', 'Oficina São João', '12.50', '2026-01-02'] or rows[2] != ['2', '', '', '']:

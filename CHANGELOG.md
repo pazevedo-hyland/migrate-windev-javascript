@@ -5,6 +5,7 @@
 ### Added
 - `scripts/data_profile.py`: profiles a copy of the legacy data (SQLite staging file or the ODBC exporter's CSV folder) against the schema draft — per column nulls, empty strings, shapes, lengths, values not parsing as the WINDEV type, zeros, constant columns, spaces, line breaks, binary composite keys; duplicates per unique key; orphans per link. Counts only, no records. 4 s on the real project's 180,000 rows.
 - 08 "Profile the data before deciding the schema", with what the real data showed (composite keys exported as binary, unused generated link columns, stored totals always 0, 0 meaning empty, empty dates, orphans and duplicate identifiers, outliers, negative stock).
+- `export_odbc.py` writes a lossless `data.sqlite` beside the CSV files (NULL apart from empty strings, bytes as BLOB) and checks rows read against each table's `COUNT(*)` (fails on a difference); the manifest adds null and binary counts per column, the driver and the Python architecture. The real project's first conversion damaged composite-key bytes, emptied a composite link column and kept no source counts; nothing irreplaceable was lost (all rebuildable from their parts).
 - Windows export: matching Python and HFSQL ODBC architectures (32/64-bit), with the observed 32-bit workaround (PR #2).
 
 ## 2026-10-23 — fixes from a fresh agent building a slice alone
