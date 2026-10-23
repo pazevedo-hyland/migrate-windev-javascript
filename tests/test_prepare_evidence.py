@@ -39,10 +39,22 @@ class PrepareEvidenceTests(unittest.TestCase):
             latest = json.loads((root / 'analysis-local/latest.json').read_text(encoding='utf-8'))
             report = (root / 'docs/evidence-report.md').read_text(encoding='utf-8')
             navigation = (root / 'docs/navigation.md').read_text(encoding='utf-8')
+            sheet = (root / 'docs/evidence/encoded-actions.md').read_text(encoding='utf-8')
         self.assertEqual(latest['inspect'], paths['inspect'])
         self.assertNotIn('dossier', latest)
         self.assertIn('Encoded actions (1 distinct, 1 slots)', report)
         self.assertIn('WIN_A[WIN_A] --> WIN_B[WIN_B]', navigation)
+        self.assertIn('| A-', sheet)
+
+    def test_answer_sheet_is_never_overwritten(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'legacy/code').mkdir(parents=True)
+            (root / 'legacy/code/WIN_A.wdw').write_text(WINDOW, encoding='utf-8')
+            (root / 'docs/evidence').mkdir(parents=True)
+            (root / 'docs/evidence/encoded-actions.md').write_text('my answers', encoding='utf-8')
+            module.prepare(root / 'legacy', root / 'analysis-local', root / 'docs')
+            self.assertEqual((root / 'docs/evidence/encoded-actions.md').read_text(encoding='utf-8'), 'my answers')
 
     def test_unit_evidence_pack(self):
         unit_evidence = load('scripts/unit_evidence.py')

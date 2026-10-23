@@ -270,6 +270,22 @@ def encoded_actions(inspect_dir, dossier_dir, language='pt-PT'):
     return [{'action': action, 'slots': slots} for action, slots in sorted(groups.items(), key=lambda kv: -len(kv[1]))]
 
 
+def answer_sheet(actions, questions):
+    """A fill-in sheet for someone with WINDEV or the running app: one line per action group and question."""
+    lines = ['# Answers from WINDEV or the running app', '',
+             'Fill `Answer`, `How checked` (WINDEV Actions tab / used in the app / other) and `By, date`. Mapping rows cite '
+             'an answered group as `runtime: A-xxxxxx`. New groups appear in docs/evidence-report.md §4 when the evidence is '
+             'regenerated: add them here by hand; this file is never overwritten.', '',
+             '## Encoded actions', '', '| Action | Slots | Example | Answer | How checked | By, date |', '|---|---|---|---|---|---|']
+    for group in actions:
+        example = group['slots'][0]
+        names = ', '.join(sorted({s['control'] for s in group['slots']})[:4])
+        lines.append(f"| {group['action']} | {len(group['slots'])} ({names}) | {example['element']}.{example['control']} | | | |")
+    lines += ['', '## Runtime questions', '', '| # | Question | Answer | How checked | By, date |', '|---|---|---|---|---|']
+    lines += [f'| Q-{n:02d} | {q.replace("|", "/")} | | | |' for n, q in enumerate(questions, 1)]
+    return '\n'.join(lines) + '\n'
+
+
 def markdown(rows, gaps, used, questions, actions=()):
     lines = ['# Evidence report', '', '## 1. Coverage', '',
              '| Element | Kind | Code blocks | Encoded actions | Controls | Dossier | Described | Captions | Image | Dialogs | SQL | Items |',
@@ -339,6 +355,10 @@ def main():
                         "dynamic, unreachable, or the project's first window)")
     actions = encoded_actions(args.inspect_dir, args.dossier, args.language)
     args.out.with_name('navigation.md').write_text(navigation(caller_index, rows, first), encoding='utf-8')
+    sheet = args.out.parent / 'evidence' / 'encoded-actions.md'
+    if not sheet.exists():  # written once: it holds the human's answers afterwards, never regenerated over them
+        sheet.parent.mkdir(parents=True, exist_ok=True)
+        sheet.write_text(answer_sheet(actions, questions), encoding='utf-8')
     args.out.write_text(markdown(rows, gaps, used, questions, actions), encoding='utf-8')
     args.out.with_suffix('.json').write_text(json.dumps(
         {'files': len(inventory['files']), 'coverage': rows, 'gaps': gaps, 'questions': questions, 'callers': caller_index,
