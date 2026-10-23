@@ -38,6 +38,9 @@ class EvidenceReportTests(unittest.TestCase):
         self.assertIn('START(( )) --> WIN_MENU', text)
         self.assertIn('WIN_List[WIN_List] -->|iPrintReport| RPT_List[/RPT_List/]', text)
         self.assertIn('- RPT_Orphan (report)', text)
+        compiled = module.navigation({'RPT_X': ['WIN_List (named in its compiled code: predefined action or dynamic call)']},
+                                     rows + [{'element': 'RPT_X', 'kind': 'report'}], 'WIN_MENU')
+        self.assertIn('WIN_List[WIN_List] -.->|compiled| RPT_X[/RPT_X/]', compiled)
         self.assertNotIn('- WIN_MENU', text)  # the first window is reached at startup
 
     def test_encoded_actions_grouped_by_action_id(self):

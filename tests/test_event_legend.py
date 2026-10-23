@@ -95,6 +95,12 @@ class EventLegendTests(unittest.TestCase):
         self.assertEqual(data['codes']['2']['event'], 'Close')
         self.assertEqual(data['codes']['18']['conflicts'], {})
 
+    def test_whole_names_only(self):
+        self.assertTrue(module.names_in(b'\x00RPT_List\x00', 'RPT_List'))
+        self.assertTrue(module.names_in('x RPT_List'.encode('utf-16-le'), 'RPT_List'))
+        self.assertFalse(module.names_in(b'\x00RPT_List_Clientes\x00', 'RPT_List'))
+        self.assertFalse(module.names_in('RPT_ListX'.encode('utf-16-le'), 'RPT_List'))
+
     def test_embedded_report_query_items(self):
         sep = b'\xff\xff\xff\xff\x00\x01'
         data = (b'\x00\x02RPT_List$Query' + sep + b'}|D' + sep + b'Codigo' + sep + 'Código'.encode('utf-8') + sep

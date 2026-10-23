@@ -31,14 +31,14 @@ Dossier fields: a field missing from the extract is "not extracted", never false
 5. **Data** — files read and written, keys, current-record use, queries and parameters.
 6. **Behavior checklist** — answer each, with evidence or a `U-` item: what is selected and shown on open, after a search or mode change, after add/modify/delete (also a record leaving the filter), on an empty result, on keyboard row moves; refresh when other windows or users change the data; two instances open; built-in control features (sort, per-column search, saved columns, Enter handling — dossier `flags`) and how they meet the code's filters; each dialog's title, default button, Esc result and labels per language; each write's failure path; numbers turned into text for SQL or display.
 7. **Proposed changes** — what the target might do differently (a bug fix, a parameterized query), for an ADR. Never written as `target_behavior`.
-8. **Unresolved** — `U-<UNIT>-nn` (same abbreviation as the rule rows, e.g. `U-WFC-01`). Every "not extracted", "unknown", "read from the image", "check" or "probably" in your documents is one. Each says what would resolve it, whether it blocks implementation, and the interim default: the most likely legacy behavior, or "none: must be answered".
+8. **Unresolved** — `U-<UNIT>-nn` (same abbreviation as the rule rows, e.g. `U-WFC-01`). Every "not extracted", "unknown", "read from the image", "to be checked" or "probably" in your documents is one. Each says what would resolve it, whether it blocks implementation, and the interim default: the most likely legacy behavior, or "none: must be answered".
 
 Controls go only in the screen spec.
 
 ## Write the spec
 
 - **Window** → `docs/screens/<unit>.md` from `templates/window-spec.md`. Captions, masks, tab order, flags and button types come from the dossier; without one, write `unresolved (encoded)` per column instead of guessing.
-- **Report** → `docs/reports/<unit>.md` from `templates/report-spec.md`: bands and geometry (inspector `layout`, millimetres), bound items, calculations, presets, page fit. Captions are often only in the image: say so. No caller in the pack is a finding: confirm with `grep -rni "<unit>" legacy/code` (a hit outside the report and the `.wdp` project file is a missed caller).
+- **Report** → `docs/reports/<unit>.md` from `templates/report-spec.md`: bands and geometry (inspector `layout`, millimetres), bound items, calculations, presets, page fit. Captions are often only in the image: say so. No caller in the pack is a finding: confirm with `grep -rnil "<unit>" legacy/code` (a hit outside the report and the `.wdp` project file is a missed caller; a hit in a compiled file of `<project>.cpl` names the window whose predefined action likely prints it — the evidence report already lists those).
 
 ## Write `docs/parity/<unit>.csv`
 

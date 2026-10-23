@@ -50,7 +50,7 @@ Validates columns, unique IDs, statuses and confidence values, and evidence rule
 python3 scripts/prepare_evidence.py            # defaults: legacy/, analysis-local/, docs/
 ```
 
-Runs the inspector, dossier extraction, event legend, evidence report and navigation map, schema draft and layout drawings in order, into fresh dated folders, and writes their paths to `analysis-local/latest.json`. Finds the dossier PDF in `legacy/docs/` and the compile folder in `legacy/code/` itself and says when one is missing. About 15 seconds on the real project (2,303-page dossier, `--no-images`).
+Runs the inspector, dossier extraction, event legend, evidence report and navigation map, schema draft and layout drawings in order, into fresh dated folders, and writes their paths to `analysis-local/latest.json`. Finds the dossier PDF in `legacy/docs/` and the compile folder in `legacy/code/` itself and says when one is missing. On the real project (2,303-page dossier): about 15 seconds with `--no-images`, about 70 with images.
 
 ## `unit_evidence.py` — one unit's evidence in one JSON
 

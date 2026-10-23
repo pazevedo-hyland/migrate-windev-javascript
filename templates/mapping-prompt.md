@@ -1,9 +1,9 @@
-# Mapping prompt (stage 0, for the implementer)
+# Mapping prompt (journey step 2 — inspect and map, before any code)
 
-Run once the legacy material is collected, and again for any source added later (step 0 regenerates the evidence; seed IDs stay stable). The goal is a complete, reviewed description of the legacy application **before** any code is written.
+Run once the legacy material is collected, and again for any source added later (its first step regenerates the evidence; seed IDs stay stable). The goal is a complete, reviewed description of the legacy application **before** any code is written.
 
 ```text
-Read AGENTS.md (or this prompt if it does not exist yet) and docs/wlanguage-traps.md.
+Read AGENTS.md and docs/wlanguage-traps.md (both installed at repository setup, chapter 06 §2).
 
 Goal: map the whole legacy application into docs/mapping/ and docs/parity/parity.csv. Do not write application code.
 
@@ -12,7 +12,7 @@ Goal: map the whole legacy application into docs/mapping/ and docs/parity/parity
 2. Plan the split: one unit per window, report, query, procedure set, class and table group (≈5–10 tables). List units in docs/mapping/README.md with their parity-seed row counts.
 3. Fan out: one unit per sub-agent in parallel (or per parallel session, or sequentially if your agent has no sub-agents). Each follows skills/map-element/SKILL.md and writes docs/mapping/<unit>.md, docs/screens/<unit>.md and docs/parity/<unit>.csv, validated with parity_check.py --element <unit>. Sub-agents only read legacy/ and analysis-local/.
 4. Cross-review: for each unit, a different sub-agent or session (ideally a different model) follows skills/review-mapping/SKILL.md and reports findings in its six categories. Apply the corrections, then re-run parity_check.py for the unit.
-5. Consolidate:
+5. Consolidate (for a subset of units, only what those units cover):
    - docs/legacy-inventory.md: sources, coverage, binary or missing exports to request (queries, encoded properties, reports), nested projects, external dependencies, hardcoded secrets to revoke (location only, never the value).
    - docs/mapping/entities.md, screens.md (navigation map: start from the generated docs/navigation.md — proven call sites — and add what it cannot see: encoded actions once answered, dynamic targets, modal or not, parameters, returned values), workflows.md, permissions.md, reports.md, jobs-and-integrations.md.
    - docs/parity/parity.csv: merge the per-unit CSVs, then import every remaining parity-seed.csv row unchanged (keep IDs), and add rows for menus, shortcuts, rights, reports, jobs and integrations not covered by code blocks.

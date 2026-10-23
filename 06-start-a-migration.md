@@ -8,7 +8,7 @@ Accounts, tools, legacy Windows environment, isolated agent machine, test machin
 
 ## 2. Create the project repository
 
-Create a private repository for the application. Copy `templates/` and `scripts/` from this playbook, `templates/agent/skills/` to `skills/`, and chapter 09 to `docs/wlanguage-traps.md` (the mapping reads it); add the `.gitignore` entries for `legacy/`, `analysis-local/`, HFSQL data files and `.env`; `python3 -m pip install pypdf` for the dossier. Optionally install the shared guard with its pre-commit hook and your agent's adapter ([04](04-project-memory.md#claude-code-codex-and-other-agents)): recommended when agents run unattended for long stretches.
+Create a private repository for the application. Copy `templates/` and `scripts/` from this playbook, `templates/agent/skills/` to `skills/`, `templates/AGENTS.template.md` to `AGENTS.md` (framing fills in its project parts later) and chapter 09 to `docs/wlanguage-traps.md` (the mapping reads it); add the `.gitignore` entries for `legacy/`, `analysis-local/`, HFSQL data files and `.env`; `python3 -m pip install pypdf` for the dossier. Optionally install the shared guard with its pre-commit hook and your agent's adapter ([04](04-project-memory.md#claude-code-codex-and-other-agents)): recommended when agents run unattended for long stretches.
 
 ## 3. Collect the sources
 
@@ -28,7 +28,7 @@ It finds `legacy/docs/*Documentation*.pdf` and `legacy/code/<project>.cpl` itsel
 python3 scripts/inspect_windev.py legacy --out analysis-local/inspect-$(date +%Y%m%d)
 ```
 
-Add `--fallback-encoding cp1252` for older non-Unicode sources, `--extra-ext .wwh` (repeatable) for element types not in the default list (compare with the project's element list in WINDEV), and `--block-key <key>` if `literal_keys` in the inventory shows other embedded sources worth extracting. Review `inventory.json` for binary files, nested projects and missing global procedures; request the missing exports from WINDEV. Review `secret-hints.json`: credentials found are **to be revoked**, not reused. **Spot-check 3–5 `code/*.json` files** against the sources: if `context.names` does not show the right window/control, fix the inspector for your project's format before mapping on top of it.
+Add `--fallback-encoding cp1252` for older non-Unicode sources, `--extra-ext .wwh` (repeatable) for element types not in the default list (compare with the project's element list in WINDEV), and `--block-key <key>` if `literal_keys` in the inventory shows other embedded sources worth extracting. Review `inventory.json` for binary files, nested projects and missing global procedures; request the missing exports from WINDEV. Review `secret-hints.json`: credentials found are **to be revoked**, not reused. **Spot-check 3–5 `code/<path under legacy/>.json` files (e.g. `code/code/WIN_X.wdw.json`)** against the sources: if `context.names` does not show the right window/control, fix the inspector for your project's format before mapping on top of it.
 
 The inspector is deliberately shallow: it extracts code blocks with their window/control path and raw event code, raw XDD metadata, a **parity seed** (one row per block, table and unresolved export), and secret locations. It never guesses meanings. See [scripts/README](scripts/README.md).
 

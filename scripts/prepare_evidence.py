@@ -79,6 +79,7 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
     else:
         print('no <project>.cpl compile folder in legacy/code: event codes stay inferred')
     report = run('evidence_report.py', paths['inspect'], *(['--dossier', dossier] if dossier else []),
+                 *(['--compiled', docs / 'mapping/event-codes.json'] if compile_dir else []),
                  '--out', docs / 'evidence-report.md', *(['--language', language] if language else []))
     paths.update(evidence_report=str(docs / 'evidence-report.md'), navigation=str(docs / 'navigation.md'))
     if any(Path(paths['inspect'], 'schema').rglob('*.json')):

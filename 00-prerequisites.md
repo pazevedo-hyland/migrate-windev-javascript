@@ -52,7 +52,7 @@ Use a native Windows VM when you must test Windows-specific behavior (printing, 
 
 ## E. Collect the legacy material
 
-Create `legacy/` (ignored by Git) with a fixed layout. The quality of the analysis depends on it.
+Create `legacy/` (ignored by Git, but copied privately to every machine where agents work: parity evidence cites `legacy/<path>:<line>`) with a fixed layout. The quality of the analysis depends on it.
 
 | Folder | Content | How to obtain |
 |---|---|---|

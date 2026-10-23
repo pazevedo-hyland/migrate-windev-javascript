@@ -92,7 +92,7 @@ def check(matrix, seed=None, require_complete=False, element=None, check_files=F
     return errors, summary
 
 
-VAGUE = re.compile(r'not extracted|not proven|unknown|read from the image|untested|\bprobably\b|\bcheck\b', re.I)
+VAGUE = re.compile(r'not extracted|not proven|unknown|read from the image|untested|\bprobably\b|to be checked|\bto check\b', re.I)
 
 
 def lint_note(path):

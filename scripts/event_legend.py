@@ -40,6 +40,13 @@ def compiled_labels(data):
 QUERY_STRING = re.compile(rb'(?:[\x20-\x7e]|[\xc2-\xf4][\x80-\xbf]+){3,}')
 
 
+def names_in(data, name):
+    """The whole name (not a prefix of a longer one: WIN_Data is not WIN_Data_Inicio) in ASCII or UTF-16."""
+    ascii_name = re.compile(rb'(?<![\w])' + re.escape(name.encode()) + rb'(?![\w])')
+    wide = re.compile(rb'(?<![\w]\x00)' + re.escape(name.encode('utf-16-le')) + rb'(?![\w]\x00)')
+    return bool(ascii_name.search(data) or wide.search(data))
+
+
 def report_queries(compile_dir):
     """{report: [{'item', 'caption'}]}: the items an embedded report query selects, from the compiled report
     (`.wbe`). The dossier does not print embedded queries; their compiled form keeps item names and captions
@@ -69,17 +76,23 @@ def legend(source_dir, compile_dir):
         for path in Path(compile_dir).rglob(pattern):
             compiled.setdefault(path.name.split('.')[0].lower(), path)
     votes = collections.defaultdict(collections.Counter)
+    references = {}  # element -> other elements its compiled code names (opened, printed, called)
     observations = []  # (raw codes, compiled labels) per control, for the elimination passes
     procedures = collections.Counter()  # slot types of local procedures, proven by their PROCEDURE line
     windows = 0
     sources = sorted(Path(source_dir).glob('*.[wW][dD][wW]')) + sorted(Path(source_dir).glob('*.[wW][dD][eE]'))
+    queries = sorted(Path(source_dir).glob('*.[wW][dD][rR]'))
+    element_names = {p.stem for p in sources + queries}
     for source in sources:
         wcw = compiled.get(source.stem.lower())
         text = inspector.decode_text(source.read_bytes())
         if wcw is None or text is None:
             continue
         windows += 1
-        labels = compiled_labels(wcw.read_bytes())
+        data = wcw.read_bytes()
+        labels = compiled_labels(data)
+        references[source.stem] = {name for name in element_names if name.lower() != source.stem.lower()
+                                   and names_in(data, name)}
         events = collections.defaultdict(set)
         own = {source.stem.lower(), inspector.element_name(text, source.stem).lower(), 'mywindow', 'mafenêtre',
                'mafenetre', 'myreport', 'monetat'}
@@ -127,7 +140,8 @@ def legend(source_dir, compile_dir):
     for code, counter in sorted(votes.items(), key=lambda item: -sum(item[1].values())):
         (best, count), total = counter.most_common(1)[0], sum(counter.values())
         result[code] = {'event': best, 'evidence': count, 'conflicts': {k: v for k, v in counter.items() if k != best}}
-    return {'windows': windows, 'codes': result, 'report_queries': report_queries(compile_dir)}
+    return {'windows': windows, 'codes': result, 'report_queries': report_queries(compile_dir),
+            'compiled_references': {k: sorted(v) for k, v in sorted(references.items()) if v}}
 
 
 def markdown(data):
