@@ -52,6 +52,14 @@ python3 scripts/prepare_evidence.py            # defaults: legacy/, analysis-loc
 
 Runs the inspector, dossier extraction, event legend, evidence report and navigation map, schema draft and layout drawings in order, into fresh dated folders, and writes their paths to `analysis-local/latest.json`. Finds the dossier PDF in `legacy/docs/` and the compile folder in `legacy/code/` itself and says when one is missing. About 15 seconds on the real project (2,303-page dossier, `--no-images`).
 
+## `unit_evidence.py` — one unit's evidence in one JSON
+
+```sh
+python3 scripts/unit_evidence.py WIN_Table_Clientes --out analysis-local/units/WIN_Table_Clientes.json
+```
+
+Seed rows, code blocks with event meanings, encoded actions with every other slot holding the same action ID (with or without code), parsed dossier fields, callers, calls out, gaps and runtime questions for one window or report, from the paths in `analysis-local/latest.json`. The mapper starts from it; the reviewer diffs it against a newer pack to see what changed.
+
 ## `dossier_extract.py` — WINDEV's project documentation as data
 
 ```sh

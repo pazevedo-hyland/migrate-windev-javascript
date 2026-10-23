@@ -70,6 +70,12 @@ def check(matrix, seed=None, require_complete=False, element=None):
         missing = [r['id'] for r in seed_rows if r['id'] not in ids]
         # Seed rows may be refined or excluded, never silently dropped.
         errors.extend(f'seed row missing from matrix: {i}' for i in missing)
+        # A SRC- row the current seed no longer has describes evidence that changed: re-check it against the
+        # new inspector output, then delete it or turn it into a RULE- row.
+        seeded = {r['id'] for r in seed_rows}
+        stale = [i for i, row in ((r['id'], r) for r in rows)
+                 if i.startswith('SRC-') and i not in seeded and (not element or row.get('element') == element)]
+        errors.extend(f'matrix row not in the current seed (stale evidence): {i}' for i in stale)
     counts = {s: sum(1 for r in rows if (r.get('status') or '').strip() == s) for s in STATUSES}
     total = len(rows)
     done = counts['verified'] + counts['excluded']

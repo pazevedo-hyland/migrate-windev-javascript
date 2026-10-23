@@ -61,6 +61,13 @@ class ParityCheckTests(unittest.TestCase):
         self.assertIn('U-nn', errors[0])
         self.assertIn('the dossier folder', errors[1])
 
+    def test_stale_seed_rows_are_reported(self):
+        errors, _ = self.run_check([row('SRC-old', 'specified', target_behavior='same'),
+                                    row('SRC-new', 'specified', target_behavior='same'),
+                                    row('RULE-X-001', 'specified', target_behavior='same')],
+                                   seed=[row('SRC-new', 'unmapped', confidence='unresolved')])
+        self.assertEqual(errors, ['matrix row not in the current seed (stale evidence): SRC-old'])
+
     def test_evidence_rules(self):
         errors, _ = self.run_check([
             row('R1', 'verified', target_behavior='same', implemented_in='src/a.ts'),

@@ -44,6 +44,22 @@ class PrepareEvidenceTests(unittest.TestCase):
         self.assertIn('Encoded actions (1 distinct, 1 slots)', report)
         self.assertIn('WIN_A[WIN_A] --> WIN_B[WIN_B]', navigation)
 
+    def test_unit_evidence_pack(self):
+        unit_evidence = load('scripts/unit_evidence.py')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'legacy/code').mkdir(parents=True)
+            (root / 'legacy/code/WIN_A.wdw').write_text(WINDOW, encoding='utf-8')
+            (root / 'legacy/code/WIN_C.wdw').write_text(WINDOW.replace('WIN_A', 'WIN_C'), encoding='utf-8')
+            module.prepare(root / 'legacy', root / 'analysis-local', root / 'docs')
+            latest = json.loads((root / 'analysis-local/latest.json').read_text(encoding='utf-8'))
+            data = unit_evidence.pack('win_a', latest)
+        self.assertEqual(len(data['seed_rows']), 2)  # the code block and the encoded action
+        self.assertEqual(data['blocks'][0]['control'], 'WIN_A/BTN_Ok')
+        action = data['encoded_actions'][0]
+        self.assertEqual([s['element'] for s in action['same_action_elsewhere']], ['WIN_C'])  # same value elsewhere
+        self.assertEqual(data['calls']['Open'], [{'line': 15, 'argument': 'WIN_B'}])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -33,9 +33,25 @@ From the inspector `layout` (pixels, absolute in the window) and the dossier (an
 | Legacy name | Source (file/query/array) | Columns (name, item, format, width, editable) | Sort / filter | Row actions | Totals | Parity IDs |
 |---|---|---|---|---|---|---|
 
+## Selection and display state
+
+| Moment | Selected row / current record | What dependent controls show | Evidence or U-id |
+|---|---|---|---|
+| On open | | | |
+| After a search or filter change | | | |
+| After add / modify / delete | | | |
+| Empty result | | | |
+
+## Built-in control features
+
+Table sort and per-column search, saved column configuration, Enter handling, drop-down search… (dossier `flags`): each has a parity row, or is excluded by an ADR.
+
+| Control | Feature | On? | Interaction with the code's filters | Parity ID |
+|---|---|---|---|---|
+
 ## Messages
 
-| Trigger | Exact legacy text (with placeholders resolved: what each `+ x` prints) | Type (Info/Error/YesNo/Dialog) and title | Buttons and result | Parity ID |
+| Trigger | Exact legacy text (with placeholders resolved: what each `+ x` prints) | Type (Info/Error/YesNo/Dialog), title, icon | Buttons (labels per language), default button, Esc / close box result | Parity ID |
 |---|---|---|---|---|
 
 ## Data edge cases
