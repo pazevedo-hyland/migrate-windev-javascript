@@ -5,6 +5,7 @@
 A fresh agent with no human mapped, built and scored the vehicle list and form on the pilot (verify green, pixels 97.8 %, layout 76 % / 89 %) and reported 20 frictions. Fixed here:
 
 ### Changed
+- Every slice clicks through its golden scenarios in the UI (`ui-check/<slice>.flows.spec.ts`, example from the pilot's vehicle slice: 5 flows, all passing). The UI check alone only proved structure and look.
 - One rule for silent evidence (`AGENTS.md`): an answer, else a proposal (confidence `assumed`, may be verified, counted apart on the progress page), else the safest option with a `U-` item. A proposal that makes something destructive easier takes the safe choice until answered. Never stop for a question.
 - ADRs decided by evidence or default are Accepted at once; the owner may supersede them.
 - `parity_check.py`: confidence `assumed`; renamed seed rows matched to their new ID; `--element A,B` scopes every check (rule rows by context); `--check-files` resolves seed paths under `legacy/`; note summaries printed.
