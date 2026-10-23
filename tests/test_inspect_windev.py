@@ -177,6 +177,41 @@ custom_note :
         hints = module.secret_hints('w.wdw', blocks)
         self.assertEqual([h['line'] for h in hints], [blocks[4]['start_line']])
 
+    def test_encoded_slots_find_predefined_actions(self):
+        text = '''window :
+ name : WIN_Form
+ controls :
+  -
+    name : BTN_Ok
+    internal_properties : AAAA
+    type : 4
+    code_elements :
+     p_codes :
+      -
+        code : |1-
+         Save()
+        internal_properties : BBBB
+        type : 18
+  -
+    name : BTN_Cancel
+    internal_properties : CCCC
+    type : 4
+    code_elements :
+     p_codes :
+      -
+        internal_properties : DDDD
+        type : 18
+      -
+        type : 161
+        enabled : false
+'''
+        blocks = module.extract_blocks(text)
+        slots = module.encoded_slots(text, blocks)
+        # Control-level properties are not slots; the code-less Cancel click is an encoded action.
+        self.assertEqual([('/'.join(s['names']), s['event'], s['has_code']) for s in slots],
+                         [('WIN_Form/BTN_Ok', '18', True), ('WIN_Form/BTN_Cancel', '18', False)])
+        self.assertTrue(blocks[0]['encoded_properties'])
+
     def test_literal_blocks_keep_lines_and_stop_at_sibling(self):
         text = 'name : Save\n  code : |1-\n   IF stock < 0 THEN\n   \tError("Stock")\n   END\n  type : 14\n'
         blocks = module.extract_blocks(text)

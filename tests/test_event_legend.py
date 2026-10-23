@@ -46,6 +46,13 @@ def compiled(*labels):
 
 
 class EventLegendTests(unittest.TestCase):
+    def test_compiled_labels_of_optional_and_nested_events(self):
+        data = b''.join(s.encode('utf-16-le') + b'\x00\x00' for s in (
+            'Left button down on EDT_Senha (WM_LBUTTONDOWN)', 'Initialization of BTN_X ( SC_Bar )', 'Exit from EDT_Nome'))
+        labels = module.compiled_labels(data)
+        self.assertEqual((labels['EDT_Senha'], labels['BTN_X'], labels['EDT_Nome']),
+                         ({'Left button down'}, {'Initialization'}, {'Exit'}))
+
     def test_legend_from_compiled_labels(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

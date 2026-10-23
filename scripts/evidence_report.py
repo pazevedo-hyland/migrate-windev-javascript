@@ -96,6 +96,11 @@ def coverage(inspect_dir, dossier_dir, schema_tables):
             gaps.append(f'{name}: {len(missing)} controls without dossier description: {", ".join(missing[:8])}')
         if dossier and not row['image']:
             gaps.append(f'{name}: no image in the dossier')
+        if (dossier or {}).get('data_source') == 'Embedded query':
+            gaps.append(f'{name}: embedded query — its SQL is not in the dossier (export it from the report editor, '
+                        'or derive it from a legacy printout on known data)')
+        encoded = [s for s in data.get('encoded_slots', []) if not s['has_code']]
+        row['encoded_actions'] = len(encoded)
     for name, query in sorted(queries.items()):
         rows.append({'element': name, 'kind': 'query', 'sql': bool(query.get('sql')),
                      'parameters': len(query.get('parameters', []))})
@@ -214,11 +219,11 @@ def runtime_questions(inspect_dir, dossier_dir, language='pt-PT'):
 
 def markdown(rows, gaps, used, questions):
     lines = ['# Evidence report', '', '## 1. Coverage', '',
-             '| Element | Kind | Code blocks | Controls | Dossier | Described | Captions | Image | Dialogs | SQL | Items |',
-             '|---|---|---|---|---|---|---|---|---|---|---|']
+             '| Element | Kind | Code blocks | Encoded actions | Controls | Dossier | Described | Captions | Image | Dialogs | SQL | Items |',
+             '|---|---|---|---|---|---|---|---|---|---|---|---|']
     for r in rows:
         cell = lambda key: ('✅' if r[key] is True else '❌' if r[key] is False else r[key]) if key in r else ''
-        lines.append(f"| {r['element']} | {r['kind']} | {cell('code_blocks')} | {cell('controls')} | {cell('dossier')} | "
+        lines.append(f"| {r['element']} | {r['kind']} | {cell('code_blocks')} | {cell('encoded_actions')} | {cell('controls')} | {cell('dossier')} | "
                      f"{cell('described')} | {cell('captions')} | {cell('image')} | {cell('dialogs')} | {cell('sql')} | "
                      f"{cell('items')} |")
     lines += ['', f'### Gaps ({len(gaps)})', ''] + [f'- {g}' for g in gaps] + ['', '## 2. Platform usage', '']
@@ -259,7 +264,8 @@ def main():
     first = first_window(args.dossier)
     for row in rows:
         if row['kind'] in ('window', 'report') and not caller_index.get(row['element']) and row['element'] != first:
-            gaps.append(f"{row['element']}: no caller found in code (unreachable, dynamic, or the project's first window)")
+            gaps.append(f"{row['element']}: no caller found in code (a predefined button action — see encoded actions —, "
+                        "dynamic, unreachable, or the project's first window)")
     args.out.write_text(markdown(rows, gaps, used, questions), encoding='utf-8')
     args.out.with_suffix('.json').write_text(json.dumps(
         {'files': len(inventory['files']), 'coverage': rows, 'gaps': gaps, 'questions': questions, 'callers': caller_index,

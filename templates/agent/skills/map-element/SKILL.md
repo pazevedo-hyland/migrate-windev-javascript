@@ -7,12 +7,13 @@ description: Map one legacy WINDEV element (window, report, query, procedure set
 
 Input: one unit name. Paths are relative to the repository root; the locations named here are the defaults — when your stage prompt gives other paths, use those. Read in full: the unit's dossier extract if present (`<dossier dir>/<kind>/<unit>.json`: captions, tab order, masks, query SQL — cite it as `dossier: <unit>/<control>`), the unit's source in `legacy/`, its extracted blocks in the inspector output (`<inspect dir>/code/…/<file>.json`), `docs/wlanguage-traps.md` and `docs/mapping/event-codes.md`. Never modify legacy files, never run anything from them, never copy credential values (locations only). Do not write application code.
 
-Read the parsed fields of the dossier extract first (`title`, `controls.<name>.caption`, `tab_order`, `input_mask`, `input_type`, `state`, `flags` — checkbox properties such as `Indep. HFSQL ctx.`, `Required input`, `Multiline` — for analysis items `keys` (`Unique Key`, `Key with Duplicates`), and for queries `sql`). A field missing from the extract is "not extracted", never false: check `index.json` → `coverage` and its warnings; open `lines` only for what the parsed fields do not cover.
+Read the parsed fields of the dossier extract first (`title`, `controls.<name>.caption`, `tab_order`, `input_mask`, `input_type`, `state`, `flags` — checkbox properties such as `Indep. HFSQL ctx.`, `Required input`, `Multiline` — for analysis items `keys` (`Unique Key`, `Key with Duplicates`), for reports `margins_mm`, per control `flags` (`Divisible`, `Auto.Resiz`, `Border`), `calculation` and `preset`, and for queries `sql`). `tab_order` numbers count within their parent container (a supercontrol has its own sequence). A field missing from the extract is "not extracted", never false: check `index.json` → `coverage` and its warnings; open `lines` only for what the parsed fields do not cover.
 
 ## Scope
 
 - **Rows of the unit**: seed rows whose `element` column equals the unit name — not every row that mentions it. Keep every `SRC-*` ID.
-- **A block** is a non-empty code block (one seed row). Empty event slots are not rows; mention them only when meaningful (e.g. a Print button with no code).
+- **A block** is a non-empty code block (one seed row). Empty event slots are not rows; mention them only when meaningful.
+- **An encoded action** is an event slot with no code but encoded `internal_properties` (seed `kind` = `encoded-action`, listed in the inspector output's `encoded_slots`): WINDEV keeps a button's predefined action there (close, validate, print a report, open a window). It is behavior: keep its row, describe what the evidence proves (button type from the dossier, caption, what the window offers otherwise), and leave the action itself `unmapped` with a `U-nn` unless the dossier or code proves it. Blocks with `encoded_properties: true` may run such an action besides their code. Template system buttons repeated on every window (`BTN_SYST_FERMER`, `BTN_SYST_MINIMIZE`…) may all cite one shared rule row.
 - **Follow one level of callers and callees**: take the callers from `docs/evidence-report.json` (`callers.<unit>`: `<source file>:<line> (<function> in <caller>)`, relative to the inspected folder) instead of searching, and read those call sites, plus the windows, procedures and queries the unit opens or calls. Cross-window behavior (shared file buffers and filters, globals, parameters, returned values) is where the risky rules are.
 
 ## Write `docs/mapping/<unit>.md`
@@ -38,9 +39,9 @@ For a report (`.wde`), write `docs/reports/<unit>.md` from `templates/report-spe
 
 Exact columns of `templates/parity.template.csv`.
 
-- `evidence`: repository-relative `path:line` (seed evidence is relative to the inspected folder: prefix it, e.g. `legacy/code/`).
+- `evidence`: `;`-separated items, each a repository-relative `path:line` (seed evidence is relative to the inspected folder: prefix it, e.g. `legacy/code/`), a JSON file with the field (`<dossier dir>/windev-window/WIN_X.json (controls.BTN_Ok.flags)`), or a screenshot/export file. `parity_check.py` rejects anything vaguer.
 - `confidence`: `verified` (read directly in code/schema), `inferred` (reasoned; say how in `legacy_behavior`), `unresolved`.
-- `status`: `specified` with `target_behavior` = `Preserve legacy behavior` when the legacy behavior is understood; `unmapped` when an unresolved item blocks it (cite `U-nn` in `legacy_behavior`). Changes to legacy behavior are decided later by ADR, not here.
+- `status`: `specified` with `target_behavior` = `Preserve legacy behavior` when the legacy behavior is understood; `unmapped` when an unresolved item blocks it — cite its `U-nn` in `legacy_behavior` (the validator requires it). Changes to legacy behavior are decided later by ADR, not here.
 - A block whose code is clear but whose outcome depends on an unresolved item (e.g. the window may or may not close afterwards): keep the block's `SRC-*` row `specified` for what the code does, and put the unresolved part in its own `RULE-*` row, `unmapped`, citing the `U-nn`.
 - New rule rows: `RULE-<UNIT-ABBREVIATION>-NNN` (e.g. `RULE-ORF-001`), for rules spanning several blocks or windows.
 - New event-code meanings you infer: add them to `docs/mapping/event-codes.md` with the evidence, labelled inferred.

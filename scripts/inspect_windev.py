@@ -151,6 +151,28 @@ def extract_blocks(text, keys=('code',)):
     return blocks
 
 
+def encoded_slots(text, blocks):
+    """Event slots carrying encoded `internal_properties`: WINDEV keeps a button's predefined action there
+    (close, validate, print a report, open a window…). A slot with no code is behavior visible nowhere else;
+    a slot with code may run an action besides it. Marks the matching blocks and returns the slots."""
+    lines = text.splitlines()
+    parsed = structure(lines, literal_mask(lines))
+    coded = {(tuple(b['context']['names']), b['context']['siblings'].get('type')): b for b in blocks}
+    slots = []
+    for i, entry in enumerate(parsed):
+        if not entry or entry[1] != 'internal_properties':
+            continue
+        context = block_context(parsed, i, entry[0], entry[3])
+        siblings = context['siblings']
+        if 'type' not in siblings or 'name' in siblings:
+            continue  # a control's or window's own properties, not an event slot
+        block = coded.get((tuple(context['names']), siblings['type']))
+        if block:
+            block['encoded_properties'] = True
+        slots.append({'names': context['names'], 'event': siblings['type'], 'line': i + 1, 'has_code': bool(block)})
+    return slots
+
+
 def control_layout(text):
     """Every control and table column in source order, with its position inside the window.
 
@@ -383,13 +405,22 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
                     name = element_name(text, path.stem)
                     layout = control_layout(text)
                     controls = [item['name'] for item in layout]
+                    slots = encoded_slots(text, blocks)
                     destination.write_text(json.dumps({'path': relative, 'name': name, 'controls': controls, 'layout': layout,
-                                                       'dialogs': dialogs(text), 'blocks': blocks},
+                                                       'dialogs': dialogs(text), 'encoded_slots': slots, 'blocks': blocks},
                                                       indent=2, ensure_ascii=False), encoding='utf-8')
                     entry.update(status='text', name=name, code_blocks=len(blocks), controls=len(controls),
                                  literal_keys=literal_keys(text),
-                                 encoded_properties='internal_properties' in text)
+                                 encoded_properties='internal_properties' in text,
+                                 encoded_actions=sum(1 for s in slots if not s['has_code']))
                     seeds.extend(seed_rows(relative, kind, blocks, name))
+                    # A code-less slot with encoded properties is behavior too (a predefined action): seed it.
+                    for slot in slots:
+                        if not slot['has_code']:
+                            names = '/'.join(slot['names'])
+                            seeds.append(seed_row(seed_id(relative, names, slot['event'], 'encoded'), 'encoded-action',
+                                                  name, f"{relative}:{slot['line']}", names + ' [encoded action]',
+                                                  slot['event']))
                     hints.extend(secret_hints(relative, blocks))
             inventory.append(entry)
     with (output / 'parity-seed.csv').open('w', newline='', encoding='utf-8') as handle:

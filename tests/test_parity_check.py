@@ -49,6 +49,18 @@ class ParityCheckTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(summary['complete_percent'], 66.7)
 
+    def test_evidence_forms_and_unresolved_citation(self):
+        errors, _ = self.run_check([
+            row('R1', 'specified', target_behavior='same',
+                evidence='code/WIN_A.wdw:3; dossier: WIN_A/BTN_Ok; dossier/windev-window/WIN_A.json (flags.Resizable)'),
+            row('R2', 'unmapped', confidence='unresolved', legacy_behavior='Closes? See U-02'),
+            row('R3', 'unmapped', confidence='inferred', legacy_behavior='Probably closes the window'),
+            row('R4', 'specified', target_behavior='same', evidence='the dossier folder')])
+        self.assertEqual(len(errors), 2)
+        self.assertIn('R3', errors[0])
+        self.assertIn('U-nn', errors[0])
+        self.assertIn('the dossier folder', errors[1])
+
     def test_evidence_rules(self):
         errors, _ = self.run_check([
             row('R1', 'verified', target_behavior='same', implemented_in='src/a.ts'),

@@ -14,7 +14,8 @@ import json
 from pathlib import Path
 import re
 
-LABEL = re.compile(r'^(.*?) (?:of |from |in )?([A-Za-z_]\w*)(?: \( .* \))?$')
+# "Click BTN_X", "Exit from EDT_X", "Initialization of BTN_X ( SC_Parent )", "Left button down on EDT_X (WM_LBUTTONDOWN)"
+LABEL = re.compile(r'^(.*?) (?:of |from |in |on )?([A-Za-z_]\w*)(?: \( .* \)| \([A-Z_]+\))?$')
 UTF16 = re.compile(rb'(?:[\x20-\x7e\xc0-\xff]\x00){4,}')
 
 
@@ -67,6 +68,9 @@ def legend(source_dir, compile_dir):
             if 'none' in codes and 'Global declarations' in named:
                 votes['none']['Global declarations'] += 1
                 codes.discard('none')
+            # A control whose only coded event and only compiled label are its initialization names that code.
+            if named - {'Global declarations'} == {'Initialization'} and len(codes - {'none'}) == 1:
+                votes[next(iter(codes - {'none'}))]['Initialization'] += 1
             named -= {'Initialization', 'Global declarations'}
             coded = codes - {'14'} if len(codes) > 1 else codes
             if len(coded) == 1 and len(named) == 1:

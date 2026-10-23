@@ -26,6 +26,7 @@ DETAIL = re.compile(r'^(Button|Edit control|Caption|Image|Supercontrol|Table|Col
 WINDOW_ROW = re.compile(r'^([A-Za-z_][\w$]*) (-?\d+) (-?\d+) (\d+) (\d+) (\d+)(?: (.*))?$')
 REPORT_ROW = re.compile(r'^([A-Za-z_][\w$]*) ([A-Z][a-z]+(?: [a-z]+)*) (-?\d+\.\d+) (-?\d+\.\d+) (\d+\.\d+) (\d+\.\d+)(?: (.*))?$')
 STATES = ('Active', 'Read-only', 'Read-onl', 'Grayed', 'Inactive')
+BUTTON_TYPES = ('Normal', 'Validate', 'Abort', 'Cancel', 'Help', 'Interrupt')
 INPUT_TYPES = ('Text', 'Numeric', 'Date', 'Time', 'Currency', 'Duration', 'Date and Time', 'Password')
 FIELDS = {'Caption': 'caption', 'Tab order': 'tab_order', 'Input mask': 'input_mask', 'Input size': 'input_size',
           'Image': 'image', 'Background image': 'background_image', 'Initial value': 'initial_value',
@@ -58,11 +59,11 @@ def ticks(content):
 
 # Labels as printed by an English-language WINDEV. A dossier printed by another UI language uses other
 # words: add them here (the coverage summary of extract() shows when nothing was recognised).
-CONTROL_TABLE = {'X position'}          # header that starts a table of controls
+CONTROL_TABLE = {'X position', 'Height (mm)'}  # header that starts a table of controls (windows; reports)
 KEY_TABLE = {'Unique Key'}              # header that starts an analysis item table with key columns
 # Table columns that hold words or numbers, even when every cell of a page happens to be empty.
 TEXT_COLUMNS = {'X position', 'Y position', 'Width', 'Height', 'Plane', 'Initial state', 'Button type', 'Input type',
-                'Caption', 'Type', 'Direction', 'Default value'}
+                'Caption', 'Type', 'Direction', 'Default value', 'Height (mm)', 'Width (mm)', 'Thick.', 'Line', 'Position'}
 COUNT_COLUMN = re.compile(r'^Nb\.')    # "Nb. columns", "Nb. tabs/row": numbers, not checkboxes
 TYPE_WORDS = re.compile(r'integer|String|Memo|Boolean|Date|Time|real|Decimal|identifier|key|Currency|Duration')
 
@@ -76,7 +77,9 @@ def checkboxes(content, carry=None):
     boolean column a check mark means True and an empty cell False. Tables continue across pages
     without repeating their header: pass the same `carry` dict for consecutive pages of one element.
     """
-    runs = [(float(x), float(y), text.replace('\\(', '(').replace('\\)', ')')) for x, y, text in TEXT_RUN.findall(content)]
+    # Footnote markers ("Table ¹") are not part of a header name.
+    runs = [(float(x), float(y), re.sub(r'\s*\xb9$', '', text.replace('\\(', '(').replace('\\)', ')')))
+            for x, y, text in TEXT_RUN.findall(content)]
     marks = ticks(content)
     numeric = lambda t: re.fullmatch(r'-?[\d.]+', t) is not None
     if not runs:
@@ -98,11 +101,16 @@ def checkboxes(content, carry=None):
     for x, y, label in runs:
         if not any(abs(x - column) < 0.5 for column in grid) or in_table(y) or re.fullmatch(r'\w+_\w+', label):
             continue
+        if ':' in label or label.startswith('Part ') or re.search(r'\d+/\d+/\d+', label):
+            continue  # headings ("Number of elements in window: 18"), breadcrumbs, dates
         # A checkbox property has nothing else on its row within its column (no value text).
         if any(x < lx < x + GRID_CELL[1] and abs(ly - y) < 3 for lx, ly, _ in runs):
             continue
         cell = (x + GRID_CELL[0], x + GRID_CELL[1])
         properties[label] = any(cell[0] <= tx <= cell[1] and -4 <= ty - y <= 10 for tx, ty in marks)
+    # A page with no check mark in any grid cell has no checkbox grid (image pages, section openers).
+    if not any(any(x + GRID_CELL[0] <= tx <= x + GRID_CELL[1] for x in grid) for tx, _ in marks):
+        properties = {}
     rows = {}
     for floor, header_y, kind, carried in tables:
         headers = carried or sorted((x, t) for x, y, t in runs if abs(y - header_y) < 0.5 and x > margin + 50)
@@ -244,6 +252,8 @@ def parse_rows(lines, report=False):
             kind = next((t for t in rest if t in INPUT_TYPES), None)
             if kind:
                 row['input_type'] = kind
+            if rest and rest[-1] in BUTTON_TYPES:
+                row['button_type'] = rest[-1]  # last column of a button's row: "Active Validate"
             rows[match[1]] = row
     return rows
 
@@ -315,6 +325,20 @@ def collect(pages):
                                        ('Page format', 'page_format')):
                         if line.startswith(key + ' ') and field not in item:
                             item[field] = line[len(key) + 1:].strip()
+                margins = dict(re.findall(r'(Top|Bottom|Left|Right) margin \(mm\) ([\d.]+)', '\n'.join(lines)))
+                if margins:
+                    item['margins_mm'] = {side.lower(): float(value) for side, value in margins.items()}
+                # "Details of <Calculation> controls": "COUNTER Counter Numeric" (type, then mask);
+                # "Details of <Preset> controls": "NUMNBPAGES [PAGENUM]/[NBPAGES]".
+                field = None
+                for line in control_lines:
+                    heading = re.match(r'Details of <(\w+)> controls', line)
+                    if heading:
+                        field = {'Calculation': 'calculation', 'Preset': 'preset'}.get(heading[1])
+                        continue
+                    name, _, rest = line.partition(' ')
+                    if field and name in controls and rest.strip():
+                        controls[name][field] = rest.strip()
             if kind == 'Query':
                 item['sql'] = parse_sql(item['lines'])
                 item.update(parse_query(sections.get('Information on the result', []) +
@@ -335,7 +359,9 @@ def extract(pdf, out, images=True):
         if len(header) > 2 and 'code' in header[-1].lower():
             continue  # code listings ("Code", "Control code") hold no checkboxes
         contents = page.get_contents()
-        carry = carries.setdefault(tuple(header), {})  # same element and section: a table may continue
+        # A table may continue on the next page of the same element (analysis: of the same file), even when
+        # that page starts a new section heading.
+        carry = carries.setdefault(tuple(header[:4] if header[0] == 'Analysis' else header[:2]), {})
         properties, controls = checkboxes(contents.get_data().decode('latin1') if contents is not None else '', carry)
         item = elements[header[0]][header[1]]
         if properties and header[0] == 'WINDEV window':  # reports and queries have no property grid
@@ -401,8 +427,13 @@ def parsed_coverage(elements):
         'analysis_items_with_keys': f"{sum(1 for e in items if 'keys' in e)}/{len(items)}",
         'queries_with_sql': f"{sum(1 for q in queries.values() if q.get('sql'))}/{len(queries)}",
     }
+    reports = {k: v for k, v in elements.get('Report', {}).items() if k != '_general'}
+    # Not a parsing gap: the dossier does not print a report's embedded query. It needs an export.
+    counts['reports_with_embedded_query'] = sum(1 for r in reports.values() if r.get('data_source') == 'Embedded query')
     warnings = []
     for name, value in counts.items():
+        if not isinstance(value, str):
+            continue
         found, total = map(int, value.split('/'))
         if total and found < total / 2:
             warnings.append(f'{name} {value}: layout or labels not recognised (see CONTROL_TABLE, KEY_TABLE, '

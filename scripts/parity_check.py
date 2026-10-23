@@ -4,12 +4,16 @@ import argparse
 import csv
 import json
 from pathlib import Path
+import re
 
 REQUIRED = ['id', 'kind', 'element', 'evidence', 'confidence', 'target_behavior',
             'implemented_in', 'test', 'decision', 'status']
 STATUSES = ['unmapped', 'specified', 'implemented', 'verified', 'excluded']
 CONFIDENCE = {'verified', 'inferred', 'unresolved'}
 DONE = {'verified', 'excluded'}
+# One evidence item: a source location, a dossier or analysis reference, or a file (screenshot, export, golden).
+# A JSON file may name the field: "dossier/windev-window/WIN_X.json (controls.BTN_Ok.flags)".
+EVIDENCE = re.compile(r'\S+:\d+(?:-\d+)?|(?:dossier|analysis|export|golden|runtime): ?\S.*|.*\S\.[A-Za-z0-9]{2,5}(?: \(.+\))?')
 
 
 def read_csv(path):
@@ -39,6 +43,13 @@ def check(matrix, seed=None, require_complete=False, element=None):
             errors.append(f'{where}: confidence must be verified, inferred or unresolved')
         if not value['evidence']:
             errors.append(f'{where}: evidence is required (path:line, export or screenshot)')
+        for item in filter(None, (i.strip() for i in value['evidence'].split(';'))):
+            if not EVIDENCE.fullmatch(item):
+                errors.append(f'{where}: evidence "{item}" is not path:line, dossier: <unit>/<control>, '
+                              'analysis: <file>.<item>, export:/golden:/runtime: <ref> or a file')
+        legacy = (row.get('legacy_behavior') or '').strip()
+        if value['status'] == 'unmapped' and legacy and not re.search(r'\bU-\d+', legacy):
+            errors.append(f'{where}: an unmapped row with described behavior must cite the unresolved item (U-nn) blocking it')
         if value['status'] in ('specified', 'implemented', 'verified') and not value['target_behavior']:
             errors.append(f'{where}: {value["status"]} rows need target_behavior')
         if value['status'] in ('implemented', 'verified') and not value['implemented_in']:
