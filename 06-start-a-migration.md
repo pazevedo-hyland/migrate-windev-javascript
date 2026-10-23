@@ -1,6 +1,6 @@
 # 06 — Start a migration
 
-The universal sequence. Beyond it, **what to build and in which order is decided at framing** ([03](03-scope-and-architecture.md)), not by this guide.
+The universal sequence. Beyond it, **what to build and in which order is decided at framing** ([03](03-scope-and-architecture.md)), not by this guide. An agent can run all of it unattended from [templates/kickoff-prompt.md](templates/kickoff-prompt.md); this chapter is what that prompt follows.
 
 ## 1. Set up once
 

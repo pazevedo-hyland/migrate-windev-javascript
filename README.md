@@ -26,6 +26,8 @@ These are the recommended defaults the planner brings to framing; every choice i
 
 ## The journey
 
+**Shortest path:** fill `legacy/` (step 1), open your coding agent (Claude Code, Codex…) in the empty application folder and paste [templates/kickoff-prompt.md](templates/kickoff-prompt.md). It runs steps 2–5 on its own — evidence, mapping, framing with defaults, foundation, then slice after slice — and resumes from the roadmap if stopped. The steps below are what it does, for a human-driven run.
+
 ### Step 0 — Infrastructure *(once)*
 Accounts, Git host (it replaces the WINDEV source manager), an isolated machine for the coding agent, a legacy Windows environment with WINDEV, and a nightly test machine if possible → [00](00-prerequisites.md), [02](02-infrastructure.md).
 
@@ -72,7 +74,7 @@ At the end of the roadmap: `parity_check.py --require-complete` passes, golden s
 | [Scripts](scripts/README.md) | Inspector, parity gate, export comparator |
 | [Upstream audit](docs/upstream-audit.md) | Where every upstream section lives now, and what was replaced |
 
-**Templates** ([templates/](templates/)): `AGENTS.template.md`, `CLAUDE.template.md`, local instruction files, `PromptInit.md`, `mapping-prompt.md`, `prompt-stage.md`, ADR, handoff, roadmap, parity matrix, window spec, golden scenario, compare config, agent-neutral skills (`review`, `map-element`, `review-mapping`), shared guard with a Git pre-commit hook, and a Claude Code adapter (settings).
+**Templates** ([templates/](templates/)): `AGENTS.template.md`, `CLAUDE.template.md`, local instruction files, `kickoff-prompt.md` (autonomous run), `PromptInit.md`, `mapping-prompt.md`, `prompt-stage.md`, ADR, handoff, roadmap, parity matrix, window spec, golden scenario, compare config, agent-neutral skills (`review`, `map-element`, `review-mapping`), shared guard with a Git pre-commit hook, and a Claude Code adapter (settings).
 
 ## Audience
 

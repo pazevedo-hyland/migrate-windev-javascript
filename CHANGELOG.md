@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-23 — one prompt to start
+
+### Added
+- `templates/kickoff-prompt.md`: one prompt for an autonomous agent (Claude Code, Codex…) to run the whole migration — setup, evidence, data profile, mapping, framing with defaults, foundation, then slices in roadmap order — resuming from the roadmap and handoff when restarted; states whether the data is demo or personal.
+
 ## 2026-10-23 — profile the real data
 
 ### Added
