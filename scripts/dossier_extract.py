@@ -319,9 +319,13 @@ def collect(pages):
             lines = item['lines']
             general = sections.get('General information', [])
             for line in general:
-                for key, field in (('Title', 'title'), ('Window type', 'window_type'), ('Query type', 'query_type')):
+                for key, field in (('Title', 'title'), ('Window type', 'window_type'), ('Query type', 'query_type'),
+                                   ('Opening mode (Desktop)', 'opening_mode'), ('Close icon', 'close_icon')):
                     if line.startswith(key + ' ') and field not in item:
                         item[field] = strip_language(line[len(key) + 1:].strip())
+                size = re.match(r'X position (-?\d+) Y position (-?\d+) Width (\d+) Height (\d+)$', line)
+                if size and kind == 'WINDEV window' and 'size' not in item:
+                    item['size'] = {'x': int(size[1]), 'y': int(size[2]), 'width': int(size[3]), 'height': int(size[4])}
             if 'file_lines' in item:
                 item['files'] = {}
                 for name, file_lines in item.pop('file_lines').items():

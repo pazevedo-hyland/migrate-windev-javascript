@@ -132,6 +132,13 @@ class DossierExtractTests(unittest.TestCase):
         self.assertEqual(coverage['windows_with_flags'], '0/2')
         self.assertTrue(any('windows_with_flags' in w for w in coverage['warnings']))
 
+    def test_window_general_fields(self):
+        window = module.collect([page('WINDEV window', 'WIN_O', 'General information', body=(
+            'Title PT: Ordens\nWindow type Free window\nOpening mode (Desktop) Centered in the parent window\n'
+            'X position 0 Y position 0 Width 1024 Height 600\nClose icon Yes\n'))])['WINDEV window']['WIN_O']
+        self.assertEqual((window['opening_mode'], window['size']['width'], window['size']['height'], window['close_icon']),
+                         ('Centered in the parent window', 1024, 600, 'Yes'))
+
     def test_table_columns_details_rows_and_flags(self):
         window = module.collect([page('WINDEV window', 'WIN_T', 'Information on controls', body=(
             'Table : TABLE_Clientes\nTable column\nType\nWidth\nCOL_Codigo\n 80 Active Right Center Numeric\n'
