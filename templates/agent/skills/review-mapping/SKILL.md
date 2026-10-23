@@ -9,7 +9,7 @@ Input: one unit name. Read its mapping note, its screen or report spec and its p
 
 ## Checks, in this order
 
-1. **Mechanical first.** `python3 scripts/parity_check.py docs/parity/<unit>.csv --seed <inspect dir>/parity-seed.csv --element <unit>`. Missing seed rows, duplicate or stale IDs, evidence in no recognised form, `unmapped` rows without their `U-` item: list them as they come.
+1. **Mechanical first.** `python3 scripts/parity_check.py docs/parity/<unit>.csv --seed docs/parity/parity-seed.csv --element <unit> --check-files`. Missing seed rows, duplicate or stale IDs, evidence in no recognised form, `unmapped` rows without their `U-` item: list them as they come.
 2. **Newer evidence.** Build the unit's current evidence pack (`python3 scripts/unit_evidence.py <unit> --out /tmp/<unit>.json`) and `diff` it with the pack the mapper kept (`analysis-local/units/<unit>.json`). List what is new — encoded actions and their action IDs, flags, structured fields, settled event codes — and which statements or unresolved items it changes. No kept pack: compare the cited extract versions by hand.
 3. **Every slot has a row.** Each code block and each encoded action of the unit (`blocks` and `encoded_slots` in the inspector output) is covered. Empty, disabled slots without encoded properties need no row.
 4. **Every `verified` claim.** Open the cited line: it states the claim, and nothing the claim depends on is still unresolved. A row mixing verified parts (code, structure) with inferred ones (an image reading, a button-type default) is split or downgraded.

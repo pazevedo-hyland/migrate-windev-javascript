@@ -4,7 +4,10 @@
       "Read(./.env)",
       "Read(./.env.*)",
       "Edit(./legacy/**)",
-      "Edit(./analysis-local/**)"
+      "Edit(./analysis-local/**)",
+      "Edit(./scripts/guard.py)",
+      "Edit(./.githooks/**)",
+      "Edit(./.claude/**)"
     ]
   },
   "hooks": {

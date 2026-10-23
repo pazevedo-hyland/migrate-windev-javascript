@@ -8,7 +8,7 @@ Accounts, tools, legacy Windows environment, isolated agent machine, test machin
 
 ## 2. Create the project repository
 
-Create a private repository for the application. Copy `templates/` and `scripts/` from this playbook; add the `.gitignore` entries for `legacy/`, `analysis-local/`, HFSQL data files and `.env`. Install the skills, the shared guard with its pre-commit hook, and your agent's adapter ([04](04-project-memory.md#claude-code-codex-and-other-agents)).
+Create a private repository for the application. Copy `templates/` and `scripts/` from this playbook, `templates/agent/skills/` to `skills/`, and chapter 09 to `docs/wlanguage-traps.md` (the mapping reads it); add the `.gitignore` entries for `legacy/`, `analysis-local/`, HFSQL data files and `.env`; `python3 -m pip install pypdf` for the dossier. Optionally install the shared guard with its pre-commit hook and your agent's adapter ([04](04-project-memory.md#claude-code-codex-and-other-agents)): recommended when agents run unattended for long stretches.
 
 ## 3. Collect the sources
 
@@ -22,7 +22,7 @@ One command runs the whole evidence pipeline in order — inspector, dossier ext
 python3 scripts/prepare_evidence.py
 ```
 
-It finds `legacy/docs/*Documentation*.pdf` and `legacy/code/<project>.cpl` itself (`--dossier-pdf`, `--compile-dir` to override) and says what is missing. Re-run it whenever `legacy/` changes: seed IDs do not change, so mapping rows stay attached. The steps below explain each part and its options; run one alone only to debug it.
+It finds `legacy/docs/*Documentation*.pdf` and `legacy/code/<project>.cpl` itself (`--dossier-pdf`, `--compile-dir` to override) and says what is missing. Pass `--language <code>` (WINDEV's language code of the app's texts, e.g. `pt-PT`, `fr-FR`) when the app is multilingual; otherwise each text's first language is used. Re-run it whenever `legacy/` changes: seed IDs do not change, so mapping rows stay attached. The steps below explain each part and its options; run one alone only to debug it.
 
 ```sh
 python3 scripts/inspect_windev.py legacy --out analysis-local/inspect-$(date +%Y%m%d)
@@ -35,7 +35,7 @@ The inspector is deliberately shallow: it extracts code blocks with their window
 ## 4a. Extract the dossier (if one exists)
 
 ```sh
-python3 scripts/dossier_extract.py legacy/docs/<project>_Documentation.pdf --out analysis-local/dossier
+python3 scripts/dossier_extract.py legacy/docs/<project>_Documentation.pdf --out analysis-local/dossier-<stamp>
 ```
 
 Per-element JSON (window title and type; each control's caption, tab order, input mask and size, button type, images; each query's SQL, parameters and conditions) plus each window's image as WINDEV draws it. Mapping notes and screen specs cite it as evidence (`dossier: WIN_X/BTN_Y`). It does not show runtime behavior (what Esc does on a dialog, dynamic states): that comes from the code, and when the code cannot settle it, from someone observing the running app — record it as `unresolved` until then.
@@ -60,7 +60,7 @@ The first prompt to the implementer is the **mapping** ([templates/mapping-promp
 - **other agents review** each note against the sources and screenshots;
 - consolidated outputs: `docs/legacy-inventory.md`, navigation map, `docs/screens/<WINDOW>.md`, and `docs/parity/parity.csv` imported from the seed plus manual rows (menus, shortcuts, rights, reports, jobs, integrations).
 
-Gate: `python3 scripts/parity_check.py docs/parity/parity.csv --seed <inspect dir>/parity-seed.csv` passes. This is the analysis brief.
+Gate: `python3 scripts/parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv --check-files` passes. This is the analysis brief.
 
 ## 6. Frame with the planner
 
@@ -82,7 +82,7 @@ Each stage ([05](05-work-loop.md)): planner writes the prompt → you paste it i
 
 ## 10. Parity and rollout
 
-Expand slice by slice until `parity_check.py --require-complete --seed …` passes. Then: replay all golden scenarios, reconcile a full import, test concurrent edits if applicable, check native integrations on the real target OSes, rehearse backup/restore and cutover ([08](08-data-migration.md#cutover)). Agree which intentional improvements replace legacy behavior before expanding scope.
+Expand slice by slice until `parity_check.py --require-complete --seed docs/parity/parity-seed.csv` passes. Then: replay all golden scenarios, reconcile a full import, test concurrent edits if applicable, check native integrations on the real target OSes, rehearse backup/restore and cutover ([08](08-data-migration.md#cutover)). Agree which intentional improvements replace legacy behavior before expanding scope.
 
 ---
 

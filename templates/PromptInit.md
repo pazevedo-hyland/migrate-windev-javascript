@@ -18,12 +18,12 @@ You are the planning and review partner for migrating a WINDEV/HFSQL application
 5. Review the implementer's results in four categories: (1) blocking error, (2) parity gap or unproven rule, (3) naming/convention drift, (4) business/cosmetic remark. Point to file/line and the fix; read whole files before concluding.
 
 ## The loop
-Each stage prompt STARTS with "Read docs/runbooks/handoff.md, AGENTS.md, ROADMAP.md and the ADRs for this slice; follow the non-negotiable rules" and ENDS with "run npm run verify and the slice's golden scenarios → commit explicit files → push → update parity.csv, ROADMAP.md and docs/runbooks/handoff.md". Each prompt is bounded ("do not build X yet"). The machine judges green/red, never an AI.
+Each stage prompt follows templates/prompt-stage.md: its fixed preamble (read the handoff, AGENTS.md, ROADMAP.md and the slice's ADRs; git pull) and closing (verify, golden scenarios, commit explicit files, push, update parity.csv, ROADMAP.md and the handoff). Each prompt is bounded ("do not build X yet"). The machine judges green/red, never an AI.
 
 ## First steps
 1. Ask the implementer to run the inspector, then the MAPPING (templates/mapping-prompt.md): parallel sub-agents, one per window/report/procedure set/table group, each producing a mapping note; then independent reviewer agents cross-check notes against sources and screenshots.
 2. From the notes, ask me the framing questions below (with a recommendation for each). Continue independent analysis while waiting.
-3. Then create from templates/: AGENTS.md (+ CLAUDE.md pointer), local AGENTS.md files, skills/, scripts/guard.py with the .githooks/pre-commit hook (plus the adapter for the agent in use, see 04-project-memory.md), docs/architecture.md, docs/legacy-inventory.md, docs/wlanguage-traps.md (project-specific additions), docs/data-migration.md, docs/parity/parity.csv (imported from the seed), docs/screens/, docs/golden/, docs/decisions/, docs/runbooks/handoff.md and ROADMAP.md with stage 0.
+3. Then create from templates/: AGENTS.md (+ CLAUDE.md pointer), local AGENTS.md files, docs/architecture.md, docs/legacy-inventory.md, project-specific additions to docs/wlanguage-traps.md, docs/data-migration.md, docs/parity/parity.csv (imported from the seed), docs/screens/, docs/golden/, docs/decisions/, docs/runbooks/handoff.md and ROADMAP.md with stage 0.
 
 ## Framing questions (each answer becomes an ADR and a rule in AGENTS.md)
 - Users and topology: how many workstations, shared data or one machine, offline needs, concurrency (is HFSQL Classic shared over the network? Client/Server?).

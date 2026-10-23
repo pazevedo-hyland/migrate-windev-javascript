@@ -11,23 +11,30 @@ type WindowConfig = {
   ignore: Record<string, string>;
 };
 type Config = {
-  inspectDir: string;
-  /** Legacy window images: the dossier extract's images/ folder (or any <WINDOW>.png|jpg folder). */
-  legacyScreenshots: string;
+  /** inspect_windev.py output; default: "inspect" in analysis-local/latest.json (prepare_evidence.py). */
+  inspectDir?: string;
+  /** Legacy window images (<WINDOW>.png|jpg); default: docs/evidence/images (committed). */
+  legacyScreenshots?: string;
   report: string;
-  /** dossier_extract.py output: legacy captions are compared when present. */
+  /** dossier_extract.py output, for caption comparison; default: "dossier" in analysis-local/latest.json. */
   dossierDir?: string;
-  /** Caption language in the dossier, e.g. "PT". */
+  /** Caption language in the dossier, e.g. "PT"; default: the first language of each caption. */
   language?: string;
   windows: Record<string, WindowConfig & { captionIgnore?: Record<string, string> }>;
 };
 
 const root = process.cwd();
 const config: Config = JSON.parse(readFileSync(join(root, "ui-check.config.json"), "utf-8"));
+const latestPath = join(root, "analysis-local", "latest.json");
+const latest: { inspect?: string; dossier?: string } = existsSync(latestPath) ? JSON.parse(readFileSync(latestPath, "utf-8")) : {};
+config.inspectDir ??= latest.inspect;
+config.dossierDir ??= latest.dossier;
+config.legacyScreenshots ??= "docs/evidence/images";
+if (!config.inspectDir) throw new Error("no inspector output: run python3 scripts/prepare_evidence.py first");
 
 /** Legacy control names per window, from inspect_windev.py output (code/<file>.wdw.json). */
 function legacyControls(window: string): string[] {
-  const stack = [resolve(root, config.inspectDir, "code")];
+  const stack = [resolve(root, config.inspectDir!, "code")];
   while (stack.length) {
     const dir = stack.pop()!;
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -51,7 +58,8 @@ function legacyCaptions(window: string): Record<string, string> {
   for (const [name, control] of Object.entries<{ kind?: string; caption?: string | Record<string, string> }>(controls)) {
     // Tables, supercontrols and loopers carry an internal caption that WINDEV does not display.
     if (["Table", "Supercontrol", "Looper"].includes(control.kind ?? "")) continue;
-    const caption = typeof control.caption === "string" ? control.caption : control.caption?.[config.language ?? "PT"];
+    const caption = typeof control.caption === "string" ? control.caption
+      : control.caption && (control.caption[config.language ?? ""] ?? Object.values(control.caption)[0]);
     if (caption) captions[name] = caption;
   }
   return captions;
@@ -92,7 +100,7 @@ for (const [window, settings] of Object.entries(config.windows)) {
 test.afterAll(() => {
   const rows = results.map((r) => {
     const legacy = [`${r.window}.png`, `${r.window}.jpg`, join(r.window, "screenshot.png")]
-      .map((name) => resolve(root, config.legacyScreenshots, name))
+      .map((name) => resolve(root, config.legacyScreenshots!, name))
       .find((path) => existsSync(path)) ?? "";
     const legacyCell = legacy ? `<img src="file://${legacy}">` : "<em>no legacy screenshot yet</em>";
     return `<tr><td><b>${r.window}</b><br>${r.total - r.missing.length}/${r.total} controls, ${r.ignored} ignored` +

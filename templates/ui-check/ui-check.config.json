@@ -1,8 +1,4 @@
 {
-  "inspectDir": "analysis-local",
-  "legacyScreenshots": "analysis-local/dossier/images",
-  "dossierDir": "analysis-local/dossier",
-  "language": "PT",
   "report": "ui-report",
   "windows": {
     "WIN_Table_Clientes": {

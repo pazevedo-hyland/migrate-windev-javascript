@@ -52,7 +52,7 @@ Columns of `templates/parity.template.csv`.
 Validate:
 
 ```sh
-python3 scripts/parity_check.py docs/parity/<unit>.csv --seed <inspect dir>/parity-seed.csv --element <unit> \
+python3 scripts/parity_check.py docs/parity/<unit>.csv --seed docs/parity/parity-seed.csv --element <unit> \
   --check-files --note docs/mapping/<unit>.md --note docs/screens/<unit>.md   # or docs/reports/<unit>.md
 ```
 

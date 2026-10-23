@@ -21,7 +21,7 @@ No unrequested rewrites. Propose; the human decides. Do not reopen accepted deci
 - No destructive schema change or edited committed migration; no secret committed.
 - Money/quantity/date semantics and IDs above 2^53 follow the ADRs.
 - Keyboard order, focus, masks and messages match `docs/screens/<WINDOW>.md`.
-- Every row moved to `verified` cites a test that asserts its behavior, and no part of it is the implementer's own choice for an unresolved item (sort order, Esc, selection after delete…); otherwise it must be `implemented` with the choice in the handoff.
+- Every row moved to `verified` passes the five checks in `AGENTS.md` ("No guessing"); otherwise it must be `implemented` with the choice in the handoff.
 - Checks in the handoff were actually executed (commands and output); unavailable native checks are listed. Browser mocks are not proof of packaged native behavior.
 - `parity.csv`, `ROADMAP.md` and the handoff reflect what was really delivered.
 

@@ -158,8 +158,8 @@ def calls(inspect_dir):
     return found
 
 
-def text_in(labels, language):
-    return labels.get(language) or next(iter(labels.values()), '?')
+def text_in(labels, language=None):
+    return (labels.get(language) if language else None) or next(iter(labels.values()), '?')
 
 
 def callers(used):
@@ -221,7 +221,7 @@ def first_window(dossier_dir):
     return None
 
 
-def runtime_questions(inspect_dir, dossier_dir, language='pt-PT'):
+def runtime_questions(inspect_dir, dossier_dir, language=None):
     """What the code and the dossier cannot settle. Identical dialogs are asked once."""
     questions = []
     windows, _, _, _ = dossier_items(dossier_dir)
@@ -252,7 +252,7 @@ def runtime_questions(inspect_dir, dossier_dir, language='pt-PT'):
     return questions
 
 
-def encoded_actions(inspect_dir, dossier_dir, language='pt-PT'):
+def encoded_actions(inspect_dir, dossier_dir, language=None):
     """Event slots with encoded properties grouped by action ID (equal encoded values = same predefined action),
     largest first; slots that also have code are included and marked. Answering one group (WINDEV: the control's
     Actions tab, or clicking it in the app) settles all its slots."""
@@ -337,7 +337,7 @@ def main():
     parser.add_argument('inspect_dir', type=Path, help='inspect_windev.py output')
     parser.add_argument('--dossier', type=Path, help='dossier_extract.py output')
     parser.add_argument('--out', type=Path, required=True, help='Markdown report (a .json sibling is written too)')
-    parser.add_argument('--language', default='pt-PT', help="the application's language for dialog texts")
+    parser.add_argument('--language', help="the application's language for dialog texts (default: each text's first)")
     args = parser.parse_args()
     inventory = load_json(args.inspect_dir / 'inventory.json')
     tables = set()

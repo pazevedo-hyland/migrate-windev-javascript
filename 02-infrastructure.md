@@ -30,7 +30,7 @@ Everything goes through Git. The planner reads a clone, the implementer works on
 Application CI runs **one command the agent can also run locally**: `npm run verify`, which chains:
 
 - `npm ci`, type-check, lint, unit/domain tests (Vitest), browser workflow tests with mocked IPC;
-- `python3 scripts/parity_check.py docs/parity/parity.csv` (fails on invalid or unevidenced rows);
+- `python3 scripts/parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv` (fails on invalid or unevidenced rows and on seed rows missing or stale);
 - for Rust: `cargo fmt --check`, `cargo clippy --locked -- -D warnings`, `cargo test --locked`;
 - bindings regeneration followed by `git diff --exit-code` (Rust/TypeScript contract drift).
 

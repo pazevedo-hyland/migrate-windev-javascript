@@ -16,7 +16,7 @@ Goal: map the whole legacy application into docs/mapping/ and docs/parity/parity
    - docs/legacy-inventory.md: sources, coverage, binary or missing exports to request (queries, encoded properties, reports), nested projects, external dependencies, hardcoded secrets to revoke (location only, never the value).
    - docs/mapping/entities.md, screens.md (navigation map: start from the generated docs/navigation.md — proven call sites — and add what it cannot see: encoded actions once answered, dynamic targets, modal or not, parameters, returned values), workflows.md, permissions.md, reports.md, jobs-and-integrations.md.
    - docs/parity/parity.csv: merge the per-unit CSVs, then import every remaining parity-seed.csv row unchanged (keep IDs), and add rows for menus, shortcuts, rights, reports, jobs and integrations not covered by code blocks.
-6. Run python3 scripts/parity_check.py docs/parity/parity.csv --seed analysis-local/parity-seed.csv and fix every error.
+6. Run python3 scripts/parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv --check-files and fix every error.
 7. Write the handoff: coverage numbers, unresolved items, exports needed from WINDEV, questions for the human.
 
 Never execute legacy code. Numeric event and type codes stay raw in the notes; their meanings live only in docs/mapping/event-codes.md (verified) and event-codes-inferred.md (inferred until documentation, a screenshot or the running app confirms them).

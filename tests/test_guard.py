@@ -38,6 +38,8 @@ class GuardTests(unittest.TestCase):
             self.decide('Bash', command='git commit -am "wip"'),
             self.decide('Bash', command='rm -rf legacy'),
             self.decide('Bash', command='git commit --no-verify -m x'),
+            self.decide('Edit', file_path='scripts/guard.py', new_string='x'),
+            self.decide('Write', file_path='.claude/settings.json', content='{}'),
         ]
         self.assertTrue(all(cases), cases)
 

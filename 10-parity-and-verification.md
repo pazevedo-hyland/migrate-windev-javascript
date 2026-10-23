@@ -16,8 +16,8 @@ Rules of the matrix, enforced by `scripts/parity_check.py`:
 - every row has evidence and a confidence (`verified` / `inferred` / `unresolved`);
 - status flows `unmapped → specified → implemented → verified`, or `excluded`;
 - `specified` needs a target behavior; `implemented` needs `implemented_in`; `verified` needs the **test that ran** and cannot keep `unresolved` legacy behavior; `excluded` needs a decision reference;
-- a row is `verified` only when its test asserts the row's behavior **and** no part of that behavior is an implementer's choice for an unresolved item (e.g. what Esc does on a dialog nobody has observed). Otherwise it stays `implemented` and the choice goes to the handoff as a decision — or the unresolved part is split into its own row. The checker cannot see this; the review must;
-- the migration is complete when `parity_check.py --require-complete --seed …` passes.
+- a row is `verified` only when it passes the five checks of the AGENTS template's "No guessing" section ([templates/AGENTS.template.md](templates/AGENTS.template.md)): above all, its test asserts the behavior and no part of it is an implementer's choice for an unresolved item. Otherwise it stays `implemented`. The checker cannot see this; the review must;
+- the migration is complete when `parity_check.py --require-complete --seed docs/parity/parity-seed.csv` passes. `docs/parity/parity-seed.csv` is the committed copy of the inspector's seed, refreshed by `prepare_evidence.py`.
 
 Run it in `npm run verify` (without `--require-complete`) on every commit, and with `--require-complete` as the final release gate.
 
@@ -65,7 +65,7 @@ Import reconciliation ([08](08-data-migration.md#import-and-reconciliation)): co
 | Every commit | `npm run verify` (types, lint, unit, IPC-mocked workflows, `parity_check.py`, bindings diff) |
 | End of slice | Golden scenarios of the slice; parity rows `verified`; native smoke on at least one target OS |
 | Nightly | Full rebuild, all tests, all golden scenarios, report pushed to `reports` |
-| Release | All of the above on every target OS + `parity_check.py --require-complete --seed …` + reconciliation of a full import + cutover rehearsal |
+| Release | All of the above on every target OS + `parity_check.py --require-complete --seed docs/parity/parity-seed.csv` + reconciliation of a full import + cutover rehearsal |
 
 ## 8. What agents must not do
 

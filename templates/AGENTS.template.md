@@ -3,7 +3,7 @@
 <2–3 lines: what the application does and for whom. Replaces the WINDEV/HFSQL application <legacy name>.>
 
 Read `docs/runbooks/handoff.md`, `ROADMAP.md` and the ADRs touching your slice before changing anything.
-Keep this file short (≈60 lines). Details live in `docs/`; local rules live in the nearest `AGENTS.md`.
+Keep this file short (about 100 lines). Details live in `docs/`; local rules live in the nearest `AGENTS.md`.
 
 ## Repository map
 
@@ -34,7 +34,16 @@ Need more: `python3 scripts/prepare_evidence.py` regenerates `analysis-local/` f
 8. Generated files (bindings, scaffolds) are regenerated, not edited.
 9. Never claim a check passed unless you ran it. Record checks you could not run.
 10. Do not re-open accepted decisions without new evidence. Read whole files before concluding.
-11. A guard block (`scripts/guard.py`, pre-commit) is deliberate: report it in the handoff; never bypass it (`--no-verify`, renames, other paths).
+11. If a guard is installed (`scripts/guard.py`, pre-commit), a block is deliberate: report it in the handoff; never bypass it (`--no-verify`, renames, other paths).
+
+## Work autonomously; ask the human only for these
+
+Run the stage end to end without asking for confirmation. Stop and ask (or record under "Decisions needed" and continue with other work) only when:
+
+- a decision belongs to the human: an ADR choice, a change to legacy behavior, an unresolved `U-` item that blocks the slice and has no interim default;
+- an action is destructive or irreversible: deleting or rewriting data, a destructive migration, force-pushing, deleting files you did not create;
+- something needs a person or a machine you do not have: WINDEV, the running legacy app, credentials, a Windows or printer check;
+- the evidence contradicts an accepted decision.
 
 ## No guessing
 
@@ -65,7 +74,7 @@ Identifiers you invent (test ids for controls that do not exist in legacy, helpe
 npm run verify          # typecheck + lint + unit + parity check: must pass before every commit
 npm run test:e2e        # browser workflow tests with mocked IPC
 npm run tauri -- build  # native package for this OS
-python3 scripts/parity_check.py docs/parity/parity.csv   # parity progress and validity
+python3 scripts/parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv   # parity progress and validity
 <golden scenarios, bindings generation, migration commands…>
 ```
 

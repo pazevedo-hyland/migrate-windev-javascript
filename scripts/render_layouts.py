@@ -13,7 +13,7 @@ COLORS = {'BTN': '#d6e4ff', 'EDT': '#ffffff', 'TABLE': '#f3f3f3', 'COL': '#ecece
           'STC': 'none', 'CBOX': '#e8f5e9', 'IMG': '#f3e5f5', 'SC': 'none', 'TAB': 'none', 'LAYOUT': 'none'}
 
 
-def captions_from_dossier(dossier_dir, language='PT'):
+def captions_from_dossier(dossier_dir, language=None):
     """{window: {legacy control name: caption}} from dossier_extract.py output."""
     captions = {}
     if not dossier_dir:
@@ -21,7 +21,8 @@ def captions_from_dossier(dossier_dir, language='PT'):
     for path in Path(dossier_dir, 'windev-window').glob('*.json'):
         for name, control in json.loads(path.read_text(encoding='utf-8')).get('controls', {}).items():
             caption = control.get('caption') or control.get('title')  # table columns have a title
-            caption = caption.get(language) if isinstance(caption, dict) else caption
+            if isinstance(caption, dict):  # {"PT": "Cancelar", "GB": "Cancel"}: the requested language, else the first
+                caption = caption.get(language) or next(iter(caption.values()), None)
             if caption:
                 captions.setdefault(path.stem, {})[name] = caption
     return captions
@@ -49,7 +50,7 @@ def svg(window, layout, captions):
     return '\n'.join(parts)
 
 
-def render(inspect_dir, out, dossier_dir=None, language='PT'):
+def render(inspect_dir, out, dossier_dir=None, language=None):
     out.mkdir(parents=True, exist_ok=True)
     captions = captions_from_dossier(dossier_dir, language)
     rendered = []
@@ -74,7 +75,7 @@ def main():
     parser.add_argument('inspect_dir', type=Path, help='inspect_windev.py output directory')
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--dossier', type=Path, help='dossier_extract.py output, for the real captions')
-    parser.add_argument('--language', default='PT', help='caption language in the dossier')
+    parser.add_argument('--language', help='caption language in the dossier (PT, GB…); default: the first given')
     args = parser.parse_args()
     rendered = render(args.inspect_dir, args.out, args.dossier, args.language)
     print(f'{len(rendered)} windows rendered, {sum(1 for _, c in rendered if c)} with dossier captions')

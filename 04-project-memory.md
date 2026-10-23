@@ -21,7 +21,7 @@ The principle: **separate** the central memory, detailed documentation, decision
 │   ├── mapping/               ← one note per legacy unit; event-codes.md (generated) + event-codes-inferred.md
 │   ├── screens/               ← one spec per window (templates/window-spec.md)
 │   ├── reports/               ← one spec per report (templates/report-spec.md)
-│   ├── golden/                ← golden scenarios + compare.json
+│   ├── golden/                ← golden scenarios: spec, sanitized before/after data, compare.json
 │   ├── parity/parity.csv      ← behavior parity matrix: the definition of done
 │   ├── decisions/             ← ADRs: one decision = one file
 │   └── runbooks/
@@ -40,11 +40,11 @@ Everything above `.claude/` works with any coding agent; agent-specific files ar
 
 ## Root `AGENTS.md` — SHORT
 
-A compass, not an encyclopedia: about 50–60 lines.
+A compass, not an encyclopedia: about 100 lines.
 
 - the **mission** (3 lines);
 - the **repository map**;
-- the **non-negotiable rules** (8–10 hard rules);
+- the **non-negotiable rules** (about 10 hard rules) and **when to ask the human** (otherwise work autonomously);
 - the **real commands** (`npm run verify`…);
 - **pointers** to `docs/*` and to local instruction files.
 
@@ -85,11 +85,11 @@ The handoff format is fixed by [templates/handoff.md](templates/handoff.md): Del
 
 ## Hooks — deterministic guardrails
 
-An AI can forget an instruction; a hook cannot. One rule set, [templates/agent/guard.py](templates/agent/guard.py) (copy to `scripts/guard.py`; tested in this playbook), applied at three points:
+**Optional.** The method works without it: agents follow `AGENTS.md` and stop to ask the human only where it says so. The guard is a safety net for long unattended runs — an AI can forget an instruction, a hook cannot. One rule set, [templates/agent/guard.py](templates/agent/guard.py) (copy to `scripts/guard.py`; tested in this playbook), applied at up to three points:
 
 | Layer | Applies to | How |
 |---|---|---|
-| **Commit** (mandatory) | every agent and human | [templates/agent/pre-commit](templates/agent/pre-commit) → `scripts/guard.py --staged`, installed with `git config core.hooksPath .githooks`. Refuses legacy files, HFSQL data files, backups, `.env*` (except `.env.example`), modified or deleted committed migrations, destructive SQL in new migrations, secret-like content |
+| **Commit** | every agent and human | [templates/agent/pre-commit](templates/agent/pre-commit) → `scripts/guard.py --staged`, installed with `git config core.hooksPath .githooks`. Refuses legacy files, HFSQL data files, backups, `.env*` (except `.env.example`), modified or deleted committed migrations, destructive SQL in new migrations, secret-like content |
 | **Before each tool call** (where supported) | agents with pre-tool hooks | Claude Code: [templates/claude/settings.json](templates/claude/settings.json) → `scripts/guard.py --hook`. Other agents: call `--command "<cmd>"` or `--write <path>` (content on stdin) from their hook or wrapper; exit 2 means blocked. Also blocks force-push, `git add -A`, `commit -a`, `--no-verify`, edits to legacy and generated folders |
 | **CI** (backstop) | everything pushed | `npm run verify` + parity gate; branch protection on `main` |
 
@@ -102,8 +102,11 @@ Pair the guard with the agent's own sandbox and approval settings (workspace-onl
 The rules live in `AGENTS.md`, skills are Markdown files, guardrails run in Git and CI — so the method works with any coding agent. Install once per application repository:
 
 ```sh
-cp -R templates/agent/skills skills && cp templates/agent/guard.py scripts/guard.py
-mkdir -p .githooks && cp templates/agent/pre-commit .githooks/ && git config core.hooksPath .githooks   # every clone
+cp -R templates/agent/skills skills
+# Optional guard (recommended for unattended runs)
+cp templates/agent/guard.py scripts/guard.py
+mkdir -p .githooks && cp templates/agent/pre-commit .githooks/ && chmod +x .githooks/pre-commit
+git config core.hooksPath .githooks   # every clone
 # Claude Code only
 cp templates/CLAUDE.template.md CLAUDE.md && mkdir -p .claude
 cp templates/claude/settings.json .claude/ && cp -R skills .claude/skills

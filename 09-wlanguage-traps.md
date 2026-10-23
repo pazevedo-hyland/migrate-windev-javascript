@@ -105,7 +105,7 @@ Agents fail silently where WLanguage and TypeScript **look** alike but behave di
 - **Globals** declared in the project initialization code or window global declarations are visible across windows (`WIN_X.variable`). Inventory them; replace with explicit stores.
 - **Paths**: `fExeDir`, `fCurrentDir`, `fDataDir`, backslashes, drive letters → Tauri path API (`appDataDir`, `appConfigDir`) and `path.join`.
 - **INI/registry**, environment variables, command-line parameters (`CommandLine`) → explicit config with a Windows migration path.
-- **Printing, external programs, DLL/COM, email** → adapters ([07 §G](07-platform-replacements.md#g-desktop-integrations)).
+- **Printing, external programs, DLL/COM, email** → adapters ([07 §G](https://github.com/pazevedo-hyland/migrate-windev-javascript/blob/main/07-platform-replacements.md#g-desktop-integrations)).
 
 ## How to use this chapter
 

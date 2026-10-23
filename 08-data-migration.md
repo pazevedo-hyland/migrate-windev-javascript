@@ -56,7 +56,7 @@ The guide does not choose your database for you: decide with evidence and record
 XDD contains raw schema metadata, not customer records. The inspector keeps numeric WINDEV type/key codes raw instead of inventing SQL or TypeScript meanings. Name them with evidence, then draft:
 
 ```sh
-python3 scripts/schema_draft.py analysis-local --dossier analysis-local/dossier --out docs/schema/schema-draft.md
+python3 scripts/schema_draft.py <inspect dir> --dossier <dossier dir> --out docs/schema/schema-draft.md   # run by prepare_evidence.py
 ```
 
 It pairs each XDD type code with the type name the dossier prints for the same item (a legend backed by WINDEV, as for events), takes structure, key type, size, default and null support from the XDD (complete, unlike PDF parsing), and writes a draft SQLite DDL (`.sql`, loadable as is) plus the **decisions** it cannot make for you: unsigned 64-bit integers, binary reals that may be money, exact decimals, WINDEV date/time text formats, memos, password items. A code the dossier never names stays `unresolved`. The draft is input for the database ADR; it declares no foreign keys unless the analysis has links — when it has none, relations live in code (`HReadSeek` on shared items) and the mapping notes must name them. Review key options (case/accent), relationships and null behavior before writing migrations.

@@ -1,6 +1,6 @@
 # Scripts
 
-Python 3.10+, standard library only. No WINDEV runtime, network or AI credentials required. Run the tests with `python3 -m unittest discover -s tests -v`.
+Python 3.10+, standard library only — except `dossier_extract.py`, which needs `python3 -m pip install pypdf`. No WINDEV runtime, network or AI credentials required. Run the tests with `python3 -m unittest discover -s tests -v`.
 
 ## `inspect_windev.py` — inventory, context and parity seed
 
@@ -39,7 +39,7 @@ Outputs contain business logic and possibly secrets: keep them local (`analysis-
 ## `parity_check.py` — the parity gate
 
 ```sh
-python3 scripts/parity_check.py docs/parity/parity.csv [--seed analysis-local/inspect-1/parity-seed.csv] [--require-complete]
+python3 scripts/parity_check.py docs/parity/parity.csv [--seed docs/parity/parity-seed.csv] [--element <unit>] [--require-complete] [--check-files] [--note <md>]
 ```
 
 Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). With `--seed`, every seed row must still exist. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
@@ -64,7 +64,7 @@ Seed rows, code blocks with event meanings, encoded actions with every other slo
 
 ```sh
 pip install pypdf
-python3 scripts/dossier_extract.py legacy/docs/<project>_Documentation.pdf --out analysis-local/dossier [--no-images]
+python3 scripts/dossier_extract.py legacy/docs/<project>_Documentation.pdf --out <dossier dir> [--no-images]
 ```
 
 WINDEV's project technical documentation states what the text sources encrypt. The extractor writes one JSON per element (`windev-window/`, `report/`, `query/`, `analysis/`, `project/`) with the raw section text plus parsed fields — window `title` and `window_type`; per control `caption`, `tab_order`, `input_mask`, `input_size`, `image`, `background_image`, `anchoring`; per query `sql`, `parameters`, `conditions`; per analysis file its description and items with `caption`, `type` as WINDEV names it ("8-byte real", "Decimal", "Automatic identifier (8 bytes)"), `size` and `default` — and each element's image under `images/`. **Checkbox properties** are read from the check marks the dossier draws (they are not text): window-level `flags` such as `Indep. HFSQL ctx.`, `Resizable`, `Title bar`, and per control `flags` from the control tables (`Visible`, `Password`, `Required input`, `Multiline`, `Blank if zero`, `NULL if empty`…), and per analysis item `keys` (`Unique Key`, `Key with Duplicates`). Tables continuing on the next page without a header and long control names cut at 31 characters are handled.
@@ -75,7 +75,7 @@ WINDEV's project technical documentation states what the text sources encrypt. T
 ## `schema_draft.py` — draft schema and decisions from the analysis
 
 ```sh
-python3 scripts/schema_draft.py analysis-local --dossier analysis-local/dossier --out docs/schema/schema-draft.md
+python3 scripts/schema_draft.py <inspect dir> --dossier <dossier dir> --out docs/schema/schema-draft.md
 ```
 
 XDD structure (items, raw type codes, key type, size, default, null support) + dossier type names and captions → a type-code legend, a draft SQLite DDL that loads as is, and a list of per-column decisions for the database ADR. On the real project: 17 tables, 135 columns, 14 type codes named, 35 decisions (unsigned 8-byte codes, 8-byte reals, decimals, date/time formats); the XDD also exposed items the PDF parser missed, now fixed.
@@ -83,7 +83,7 @@ XDD structure (items, raw type codes, key type, size, default, null support) + d
 ## `evidence_report.py` — is the evidence complete?
 
 ```sh
-python3 scripts/evidence_report.py analysis-local/inspect-1 --dossier analysis-local/dossier --out docs/evidence-report.md [--language pt-PT]
+python3 scripts/evidence_report.py <inspect dir> --dossier <dossier dir> --out docs/evidence-report.md [--language pt-PT]
 ```
 
 Merges the inspector output and the dossier extract into one report before mapping starts:
@@ -106,7 +106,7 @@ The text sources store events as raw codes (18, 17, 34…). The compiled per-win
 ## `render_layouts.py` — every legacy window drawn from source
 
 ```sh
-python3 scripts/render_layouts.py analysis-local/inspect-1 --out analysis-local/layouts [--dossier analysis-local/dossier]
+python3 scripts/render_layouts.py <inspect dir> --out <layouts dir> [--dossier <dossier dir>]
 ```
 
 Draws every window to scale from the inspector's control positions (one SVG each plus `index.html`), labelled with legacy control names, or with the real captions when a dossier extract is given. No WINDEV and no running app needed: it covers every window, reachable or not.

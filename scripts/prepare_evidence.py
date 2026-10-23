@@ -2,6 +2,7 @@
 """Run the whole evidence pipeline in the right order, with consistent paths: stage 0 in one command.
 
   inspect_windev.py   legacy/              -> analysis-local/inspect-<stamp>/   (code, layout, encoded slots, XDD, seed)
+                                           -> docs/parity/parity-seed.csv      (committed copy, for the parity gate)
   dossier_extract.py  legacy/docs/*.pdf    -> analysis-local/dossier-<stamp>/   (when a dossier exists)
   event_legend.py     legacy/code + .cpl   -> docs/mapping/event-codes.md       (when the compile folder exists)
   evidence_report.py                       -> docs/evidence-report.md, docs/navigation.md
@@ -48,7 +49,7 @@ def publish_images(dossier, layouts, target):
     return str(target)
 
 
-def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language='pt-PT', images=True):
+def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language=None, images=True):
     legacy, analysis, docs = Path(legacy), Path(analysis), Path(docs)
     stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
     dossier_pdf = dossier_pdf or next(iter(sorted(Path(legacy, 'docs').glob('*[Dd]ocumentation*.pdf'))), None)
@@ -57,8 +58,16 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
     (docs / 'mapping').mkdir(parents=True, exist_ok=True)
     (docs / 'schema').mkdir(parents=True, exist_ok=True)
     run('inspect_windev.py', legacy, '--out', paths['inspect'])
+    # A committed copy of the seed: the parity gate runs in CI and on machines without analysis-local/.
+    (docs / 'parity').mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(Path(paths['inspect'], 'parity-seed.csv'), docs / 'parity/parity-seed.csv')
+    paths['seed'] = str(docs / 'parity/parity-seed.csv')
     dossier = None
     if dossier_pdf:
+        try:
+            import pypdf  # noqa: F401  (only dossier_extract.py needs it)
+        except ImportError:
+            raise SystemExit('the dossier PDF needs pypdf: python3 -m pip install pypdf')
         dossier = paths['dossier'] = str(analysis / f'dossier-{stamp}')
         run('dossier_extract.py', dossier_pdf, '--out', dossier, *([] if images else ['--no-images']))
         paths['coverage'] = json.loads(Path(dossier, 'index.json').read_text(encoding='utf-8'))['coverage']
@@ -70,7 +79,7 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
     else:
         print('no <project>.cpl compile folder in legacy/code: event codes stay inferred')
     report = run('evidence_report.py', paths['inspect'], *(['--dossier', dossier] if dossier else []),
-                 '--out', docs / 'evidence-report.md', '--language', language)
+                 '--out', docs / 'evidence-report.md', *(['--language', language] if language else []))
     paths.update(evidence_report=str(docs / 'evidence-report.md'), navigation=str(docs / 'navigation.md'))
     if any(Path(paths['inspect'], 'schema').rglob('*.json')):
         run('schema_draft.py', paths['inspect'], *(['--dossier', dossier] if dossier else []),
@@ -94,7 +103,8 @@ def main():
     parser.add_argument('--docs', default='docs', help='where generated documents go')
     parser.add_argument('--dossier-pdf', type=Path, help='default: legacy/docs/*Documentation*.pdf')
     parser.add_argument('--compile-dir', type=Path, help='default: legacy/code/*.cpl')
-    parser.add_argument('--language', default='pt-PT', help="the application's language for dialog texts")
+    parser.add_argument('--language', help="the application's language for dialog texts, as WINDEV names it (pt-PT, "
+                                           "fr-FR…); default: the first language of each text")
     parser.add_argument('--no-images', action='store_true', help='skip dossier images (faster)')
     args = parser.parse_args()
     paths = prepare(args.legacy, args.analysis, args.docs, args.dossier_pdf, args.compile_dir, args.language,

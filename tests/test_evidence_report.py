@@ -72,7 +72,7 @@ class EvidenceReportTests(unittest.TestCase):
             (root / 'dossier/query/QRY_A.json').write_text(json.dumps({'sql': '', 'parameters': []}))
             rows, gaps = module.coverage(root / 'inspect', root / 'dossier', {'Clientes'})
             used = module.calls(root / 'inspect')
-            questions = module.runtime_questions(root / 'inspect', root / 'dossier')
+            questions = module.runtime_questions(root / 'inspect', root / 'dossier', 'pt-PT')
         self.assertIn('WIN_A: 1 controls without dossier description: EDT_X', gaps)  # case-insensitive match
         self.assertIn('WIN_B: no dossier entry (captions, tab order, masks unknown)', gaps)
         self.assertIn('QRY_A: query without SQL in the dossier', gaps)

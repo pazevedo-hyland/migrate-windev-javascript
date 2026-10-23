@@ -33,12 +33,12 @@ Accounts, Git host (it replaces the WINDEV source manager), an isolated machine 
 Switch the WINDEV project to **text format**, generate the **SQL script** from the analysis, export queries and sanitized **CSV** data, take **screenshots named after each window**, keep sample **report PDFs** with their inputs → [00 §E](00-prerequisites.md#e-collect-the-legacy-material). Tip: WINDEV 2026's AI Companion `/init_projet` writes a project-context file — add it to `legacy/docs/`.
 
 ### Step 2 — Inspect and map *(before any code)*
-If the project folder has WINDEV's documentation PDF (`<project>_Documentation.pdf`), extract it first: `python3 scripts/dossier_extract.py <pdf> --out analysis-local/dossier`.
+Put WINDEV's documentation PDF (`<project>_Documentation.pdf`, the "dossier") in `legacy/docs/`, then run the whole evidence pipeline:
 
 ```sh
-python3 scripts/inspect_windev.py legacy/code --out analysis-local/inspect-1
+python3 scripts/prepare_evidence.py
 ```
-The inspector inventories sources, extracts code blocks with their window/control/event context, reads raw XDD metadata, flags hardcoded-secret locations and writes a **parity seed** (one row per block, table and missing export). Then parallel sub-agents map every element and other agents cross-review them ([mapping prompt](templates/mapping-prompt.md)) → [06](06-start-a-migration.md).
+It inspects the sources (code blocks with their window/control/event context, encoded button actions, XDD schema, hardcoded-secret locations, a **parity seed** with one row per behavior), extracts the dossier (captions, checkboxes, columns, SQL, images), verifies event codes from the compile folder, and writes the evidence report, navigation map, schema draft and an answer sheet for the human. Then parallel sub-agents map every element and other agents cross-review them ([mapping prompt](templates/mapping-prompt.md)) → [06](06-start-a-migration.md).
 
 ### Step 3 — Framing *(the initialization prompt)*
 Paste [templates/PromptInit.md](templates/PromptInit.md) into the planning session. It asks **the questions that change the plan** (topology, persistence, OS, rights, reports, UI fidelity, integrations, order — **your** choices), then sets up `AGENTS.md`, ADRs, guards, the parity matrix and the roadmap.

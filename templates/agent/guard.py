@@ -17,6 +17,7 @@ import sys
 READ_ONLY = ('legacy/', 'analysis-local/', 'origine/')
 MIGRATIONS = 'src-tauri/migrations/'
 GENERATED = ('src/bindings/',)
+HUMAN_OWNED = ('scripts/guard.py', '.githooks/', '.claude/')  # the guardrails themselves
 NEVER_COMMIT = re.compile(r'(\.(fic|ndx|mmo|ftx|bak|bkp)$|(^|/)\.env(\.(?!example$)[^/]+)?$)', re.I)
 DESTRUCTIVE_SQL = re.compile(r'\b(DROP\s+(TABLE|COLUMN|INDEX|VIEW)|TRUNCATE|DELETE\s+FROM\s+\w+\s*;)', re.I)
 SECRETS = re.compile(r'(-----BEGIN [A-Z ]*PRIVATE KEY-----|\bgh[pousr]_[A-Za-z0-9]{30,}|\bAKIA[0-9A-Z]{16}\b'
@@ -54,6 +55,8 @@ def check_write(path, text, root):
     path = relative(path, root)
     if path.startswith(READ_ONLY):
         return f'{path} is legacy evidence: read it, never modify it.'
+    if path.startswith(HUMAN_OWNED):
+        return f'{path} belongs to the human (guardrails and agent configuration): propose the change in the handoff.'
     if path.startswith(GENERATED):
         return f'{path} is generated: change the source and regenerate.'
     if path.startswith(MIGRATIONS):
