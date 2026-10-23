@@ -75,6 +75,7 @@ npm run verify          # typecheck + lint + unit + parity check: must pass befo
 npm run test:e2e        # browser workflow tests with mocked IPC
 npm run tauri -- build  # native package for this OS
 python3 scripts/parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv   # parity progress and validity
+python3 scripts/progress_dashboard.py --title "<App>"   # docs/progress/index.html for non-technical readers
 <golden scenarios, bindings generation, migration commands…>
 ```
 

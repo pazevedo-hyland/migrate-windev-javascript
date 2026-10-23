@@ -15,7 +15,7 @@ Stage "<name>" (roadmap #<n>):
 
 Done means: npm run verify passes, the golden scenarios for these rows pass, and each row you mark verified names the test that proves it. A row whose behavior includes your own choice for an unresolved legacy item stays implemented; put the choice under "Decisions needed". List checks you could not run (e.g. native printing on Windows).
 
-At the end: commit explicit files with a clear message, push, update docs/parity/parity.csv, ROADMAP.md and docs/runbooks/handoff.md (Delivered / Assumptions and differences / Checks actually executed / Remaining work / Decisions needed).
+At the end: commit explicit files with a clear message, push, update docs/parity/parity.csv, ROADMAP.md and docs/runbooks/handoff.md, regenerate the progress page (python3 scripts/progress_dashboard.py --title "<App>") and commit it with them (Delivered / Assumptions and differences / Checks actually executed / Remaining work / Decisions needed).
 ```
 
 ## Writing reminders

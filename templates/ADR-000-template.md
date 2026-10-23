@@ -4,6 +4,7 @@ Copy to `docs/decisions/00X-title.md`. Numbers increase and are never reused. An
 
 - Date: <YYYY-MM-DD>
 - Status: Proposed / Accepted / Superseded by ADR-0YY
+- Decided by: evidence (agent, from the cited evidence) / default (recommendation applied, no answer yet) / human (<name>)
 - Parity rows affected: <IDs, or none>
 
 ## Context and evidence

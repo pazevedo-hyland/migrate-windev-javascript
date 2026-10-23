@@ -60,6 +60,14 @@ python3 scripts/unit_evidence.py WIN_Table_Clientes --out analysis-local/units/W
 
 Seed rows, code blocks with event meanings, encoded actions with every other slot holding the same action ID (with or without code), parsed dossier fields, callers, calls out, gaps and runtime questions for one window or report, from the paths in `analysis-local/latest.json`. The mapper starts from it; the reviewer diffs it against a newer pack to see what changed.
 
+## `progress_dashboard.py` — migration progress for non-technical readers
+
+```sh
+python3 scripts/progress_dashboard.py --title "My App"     # writes docs/progress/index.html (+ .json)
+```
+
+One self-contained HTML page from what the process already maintains — parity matrix and seed, mapping notes and specs, answer sheet, ADRs, Git history: the share of legacy behaviors verified in the new app, screens and reports done / being built / mapped / not started, questions waiting for the WINDEV expert, decisions waiting for the owner, progress over time (from the history of `docs/parity/`) and recent commits. Each stage regenerates and commits it; open it in a browser, no server needed.
+
 ## `dossier_extract.py` — WINDEV's project documentation as data
 
 ```sh

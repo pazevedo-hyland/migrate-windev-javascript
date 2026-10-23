@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-23 — decisions for non-technical owners, progress page
+
+### Added
+- `scripts/progress_dashboard.py`: one self-contained HTML page of migration progress for non-technical readers (behaviors verified, screens and reports by stage, questions and decisions waiting, progress over time from Git), regenerated at each stage.
+- Compile folder evidence: embedded report query items; compiled references between elements (each list window names the report it prints).
+
+### Changed
+- Framing (PromptInit): technical decisions are made from evidence and recorded as ADRs the owner can overturn; the owner gets at most seven plain-language business questions with recommended defaults; the WINDEV person gets the answer sheet. ADRs record who decided (evidence, default, human).
+
 ## 2026-10-23 — one-command evidence, unit packs, answer sheet
 
 ### Added

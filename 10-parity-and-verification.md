@@ -21,6 +21,8 @@ Rules of the matrix, enforced by `scripts/parity_check.py`:
 
 Run it in `npm run verify` (without `--require-complete`) on every commit, and with `--require-complete` as the final release gate.
 
+
+**Progress for everyone.** `python3 scripts/progress_dashboard.py` turns the matrix into `docs/progress/index.html`: the share of behaviors verified, each screen and report as not started → mapped → being built → done, the questions waiting for the WINDEV expert and the decisions waiting for the owner, and the progress line over time. Each stage regenerates it, so a non-technical owner follows the migration by opening one file.
 ## 2. Golden scenarios (characterization tests)
 
 The only robust proof that totals, rounding, statuses and reports match is to **record the legacy application and replay the target** on identical inputs ([template](templates/golden-scenario.md)):
