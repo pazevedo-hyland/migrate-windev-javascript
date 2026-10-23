@@ -18,7 +18,13 @@ continue with the first slice not Done. Otherwise start at step 1.
 2. Set up this folder as the application repository as chapter 06 §2 says (templates/, scripts/, skills/,
    AGENTS.md from the template, chapter 09 as docs/wlanguage-traps.md, anchored .gitignore). The guard is optional:
    skip it unless the playbook's agent adapter for you is ready to install.
-3. Evidence (06 §4): scripts/prepare_evidence.py, then scripts/data_profile.py on the data copy. Read
+3. Data copy: if legacy/data/ holds no data.sqlite but legacy/ holds HFSQL files (.fic/.ndx/.mmo), make one on
+   Windows: copy those files to a scratch folder outside legacy/, create an ODBC data source on the copy with the
+   HFSQL driver (PowerShell Add-OdbcDsn, or the ODBC administrator; 32- or 64-bit as scripts/windows/README.md
+   explains), and run scripts/windows/export_odbc.py --out on a new folder, then move its data.sqlite and
+   manifest.json to legacy/data/. A count mismatch stops the export: report it. For an HFSQL server, ask for a
+   backup copy instead. Without Windows or the driver, record it under "Decisions needed" and go on.
+   Evidence (06 §4): scripts/prepare_evidence.py, then scripts/data_profile.py on legacy/data/data.sqlite. Read
    docs/evidence-report.md, docs/evidence/encoded-actions.md (Proposed answers), docs/navigation.md,
    docs/schema/schema-draft.md and docs/data/profile.md. Port faithfully first; make it idiomatic in the
    roadmap's cleanup slices.
