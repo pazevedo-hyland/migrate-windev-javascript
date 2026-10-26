@@ -39,11 +39,13 @@ continue with the first slice not Done. Otherwise start at step 1.
    leaves of docs/navigation.md towards the workflows that use them.
    With "Stop after: framing", stop here: commit, and leave the handoff with what was found, the decisions taken by
    default and what the owner should check before the foundation starts.
-6. Slices, in ROADMAP order, one at a time, each as templates/prompt-stage.md says: write the stage brief into
-   docs/runbooks/stage-<n>.md, build, verify (npm run verify, UI check and click-through flows, parity check), update
+6. Slices, in dependency order, each as templates/prompt-stage.md says: reuse docs/runbooks/current-stage.md for
+   the active brief. After one complete persisted workflow and shared primitives, use parallel implementation
+   waves for independent workflow families (05-work-loop.md); one integration owner, isolated writers and lean
+   worker packets. Build, verify (npm run verify, UI check and click-through flows, parity check), update
    docs/parity/parity.csv, ROADMAP.md and the handoff, regenerate the progress page
-   (scripts/progress_dashboard.py), commit. Each slice gets an independent review (two when it is risky) and one fixer, as
-   the stage prompt says. Then the next slice.
+   (scripts/progress_dashboard.py), commit. Review/fix the integrated delivery under the stage prompt and accepted
+   project policy. Distinguish initial implementation from acceptance; never mark unverified work complete.
    With "Stop after: foundation", stop once the foundation rows are Done.
 7. Stop only when every parity row is verified or excluded, or when every remaining slice waits on a decision
    no default covers; the handoff then lists exactly what is needed from whom.

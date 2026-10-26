@@ -28,7 +28,7 @@ Need more: `python3 scripts/prepare_evidence.py` regenerates `analysis-local/` f
 1. Verify before coding: read the real legacy source, schema, exports and library APIs. Never invent a column, table, control, rule or API member.
 2. Every business rule cites evidence (`path:line`, export, screenshot) and a confidence: verified, inferred, assumed or unresolved.
 3. Preserve legacy behavior unless an accepted ADR records the change. A screen that renders is not parity.
-4. Data-structure changes are proposed to the human first. No silent destructive "fixes"; no editing committed migrations.
+4. Data-structure choices need an accepted ADR; use delegated defaults only within the owner's authority. No silent destructive "fixes"; no editing committed migrations.
 5. One user save = one command = one transaction. Validate input at the native/server boundary; parameterize all SQL.
 6. Money, quantities and durations use the representation fixed in ADR-<n>; IDs above 2^53 cross IPC as strings. Check `docs/wlanguage-traps.md` when translating WLanguage.
 7. No secrets in Git (licences, connection strings, tokens → environment variables or ignored local config).
@@ -43,7 +43,7 @@ Need more: `python3 scripts/prepare_evidence.py` regenerates `analysis-local/` f
 
 Run the stage end to end without asking for confirmation. Stop and ask (or record under "Decisions needed" and continue with other work) only when:
 
-- a decision belongs to the human: an ADR choice, a change to legacy behavior, an unresolved `U-` item that blocks the slice and has no interim default;
+- a decision has no accepted proposal or authorized safe reversible default: an ADR choice, behavior change or unresolved `U-` item;
 - an action is destructive or irreversible: deleting or rewriting data, a destructive migration, force-pushing, deleting files you did not create;
 - something needs a person or a machine you do not have: WINDEV, the running legacy app, credentials, a Windows or printer check;
 - the evidence contradicts an accepted decision.
@@ -56,7 +56,7 @@ When the evidence does not say what the legacy app does (encoded designer proper
 2. **A proposal**: the answer sheet's `Proposed` column, a `proposed:` line in `docs/evidence-report.md`, or an ADR decided by default. Build it; the row's `confidence` is `assumed` and cites it (`proposed: A-xxxxxx`, `proposed: Q-nn`, the ADR). Tests may pin it and the row may reach `verified`; the progress page counts it as "on assumptions" until a person confirms it. **Exception:** when the proposal makes something destructive easier (the default button of a delete confirmation, an overwrite), use the safe choice instead and keep the row `implemented` with a `U-` item until it is answered.
 3. **Nothing**: implement the safest reversible option, mark it in code with `// UNRESOLVED U-nn: <choice>`, list it under "Decisions needed" in the handoff, and keep the row `implemented` (or split the unresolved part into its own row). Do not write tests that pin it (sort order, selection after delete, Esc behavior, inferred colors): compare as sets or assert only what is known.
 
-Never stop for an unanswered question: one of the three always applies.
+Continue independent work when no safe default covers a question. Do not invent missing SQL or destructive business semantics. A tested target default does not answer a legacy U question; keep it visible.
 - A user-facing text that does not exist in legacy (a new error message) is a choice: it needs approval before the row is `verified`.
 
 Before marking a row `verified`, check all of these and report them in the handoff:
@@ -95,6 +95,8 @@ python3 scripts/progress_dashboard.py --title "<App>"   # docs/progress/index.ht
 ## Work tracking
 
 Ticket key of the current slice: in `ROADMAP.md`. Branch `<KEY>-<slug>`, commits start with `<KEY>:`.
+After one proven workflow, use independent implementation families where useful (wave packet in `templates/prompt-stage.md`). One integration owner controls shared contracts and tracking; workers own disjoint files/worktrees, receive exact IDs/evidence/contracts and return frozen changes, focused checks and per-row claims. Review the combined delivery under the accepted project policy.
+Keep one reusable active brief and a rolling handoff; do not add a runbook per worker. Report built targets, verified targets and source questions separately. Initial implementation is not final acceptance; preserve seed IDs and source provenance.
 
 ## Pointers
 

@@ -3,7 +3,7 @@
 Copy, fill the core, keep the **preamble** and **closing** unchanged.
 
 ```text
-First read docs/runbooks/handoff.md, AGENTS.md, ROADMAP.md and the ADRs for this slice. Follow the non-negotiable rules. Start with git pull when the branch has a remote.
+First read docs/runbooks/handoff.md, AGENTS.md, ROADMAP.md and the ADRs for this slice. Follow the non-negotiable rules. Synchronize only as project policy allows.
 
 Stage "<name>" (roadmap #<n>):
 - Parity rows: <IDs>. Evidence: <legacy paths:lines, exported SQL, screenshots, docs/screens/<WINDOW>.md, golden scenarios>.
@@ -17,6 +17,8 @@ Done means: npm run verify passes, the golden scenarios for these rows pass — 
 
 Before closing: an independent review of the slice with skills/review (a separate sub-agent or session); a slice touching money, stock or totals, the data import, deleting or overwriting data, or a multi-window workflow gets a second, independent one. One fixer applies their findings. An agent that cannot start a separate session reviews in a separate pass after clearing its context, reading only the diff, this prompt, the ADRs and the evidence, and says so in the handoff.
 
+For a parallel wave, apply closing reviews to the integrated delivery, not separately to every worker. An accepted project ADR may allow coordinator self-review for initial implementations; disclose it and keep those rows implemented until the acceptance review/checks. Workers return changes and claims; the coordinator owns the closing below.
+
 At the end: update docs/parity/parity.csv, ROADMAP.md and docs/runbooks/handoff.md (Delivered / Assumptions and differences / Checks actually executed / Remaining work / Decisions needed), regenerate the progress page (python3 scripts/progress_dashboard.py --title "<App>"), then commit all of it as explicit files with a clear message; push only if the project allows it.
 ```
 
@@ -25,7 +27,18 @@ At the end: update docs/parity/parity.csv, ROADMAP.md and docs/runbooks/handoff.
 - Always keep the preamble (handoff + instructions) and the closing (verify, commit, handoff).
 - Give precise goals and constraints, not the detailed "how": the implementer chooses the implementation, the human arbitrates in review.
 - Restate any decision made since the last session, or point to its ADR.
-- One workflow per stage. If a stage needs more than one session, split it.
+- Bound work by a complete workflow or related workflow family. Parallelize independent families after shared prerequisites; keep an integration owner.
+
+## Parallel wave packet
+
+Add these fields to the core prompt for each implementation worker:
+
+- Role/ownership: <family, exact parity IDs, base commit, owned files; shared files and tracking excluded>.
+- Context: <source/spec/mapping references, unresolved questions and accepted target defaults; API/schema/UI contracts and dependency owners>.
+- Runtime/checks: <isolated worktree, database/profile, ports/build namespace, focused normal/boundary/failure checks>.
+- Return: <frozen commit or file hashes; one claim per ID: target behavior, file::symbol, test actually run, decision, known gaps>. Identify existing coverage separately from newly implemented paths; preserve source confidence and U questions.
+
+The coordinator handles shared prerequisites before dependent workers consume them, then integration, combined verification and tracking. No worker edits aggregate parity or creates a permanent process runbook.
 
 ## Reusable instructions (pick according to accepted choices)
 

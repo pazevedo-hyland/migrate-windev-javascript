@@ -98,9 +98,13 @@ Then: the Tauri app in the accepted structure, bindings generation, schema v1 mi
 
 Build **one complete workflow** with synthetic data, then with imported data: UI + domain + command + persistence + tests + golden scenario. A good workshop example: customer → vehicle → repair order → saved order, then material and labor lines with totals and a printable report.
 
+## 8a. Expand through parallel implementation waves
+
+Once the first workflow proves the shared contracts and reusable controls, independent workflow families can be built together. Use available implementation workers in isolated worktrees and keep one integration owner for contracts, checks and tracking. Reuse established open-source components before building generic UI or reporting machinery; extracted RAD layouts provide structure, not business behavior. See [05 — parallel waves](05-work-loop.md#parallel-implementation-waves) and the [stage packet](templates/prompt-stage.md#parallel-wave-packet).
+
 ## 9. Run the loop
 
-Each stage ([05](05-work-loop.md)): planner writes the prompt → you paste it into the implementer → it executes, verifies, commits, pushes, writes the handoff → you `git pull` → the planner reviews (4 categories) → decisions become ADRs → parity and roadmap updated.
+Each stage or integrated wave follows [05](05-work-loop.md): bounded prompt → implement → verify and review/fix → update parity, roadmap and rolling handoff → commit. Pull or push only when project policy authorizes it; local delivery is sufficient when the owner publishes.
 
 ## 10. Parity and rollout
 

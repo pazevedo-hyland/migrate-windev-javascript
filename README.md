@@ -46,7 +46,7 @@ It inspects the sources (code blocks with their window/control/event context, en
 Paste [templates/PromptInit.md](templates/PromptInit.md) into the planning session. It asks **the questions that change the plan** (topology, persistence, OS, rights, reports, UI fidelity, integrations, order — **your** choices), then sets up `AGENTS.md`, ADRs, guards, the parity matrix and the roadmap.
 
 ### Step 4 — The loop *(the core of the work)*
-For each roadmap slice: the planner writes a bounded prompt → the implementer builds UI + domain + command + tests, runs `npm run verify` and golden scenarios, commits, pushes, writes the handoff → you `git pull` → the planner reviews in four categories → decisions become ADRs → parity and status updated → [05](05-work-loop.md), [01](01-principles-and-roles.md).
+For each roadmap slice or independent workflow-family wave: bounded prompt → real UI + domain + command + persistence + tests → integrated verification and review/fix → parity, status and rolling handoff → explicit commit; synchronize only as project policy allows. Parallel implementation starts after a proven workflow and shared primitives; built coverage remains separate from acceptance → [05](05-work-loop.md), [01](01-principles-and-roles.md).
 
 ### Step 5 — Nightly test machine *(if possible)*
 Rebuilds the database, replays every test and golden scenario, pushes a timestamped report — the safety net → [02](02-infrastructure.md#test-machine-the-nightly-safety-net).

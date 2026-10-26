@@ -10,27 +10,21 @@ The planner keeps an **ordered list of slices** in `ROADMAP.md` ([template](temp
 
 ## The cycle of a stage
 
-```text
- (1) Planner writes the PROMPT ─▶ (2) Implementer EXECUTES ─▶ (3) Human: git pull
-       preamble + closing            code, tests, verify,         (clone up to date)
-       │                             commit, push, HANDOFF               │
-       ▼                                                                 ▼
- (5) status + parity + ADR ◀─────── (4) Planner REVIEWS (4 categories) ◀─┘
-```
+Prompt → implement → verify and review/fix → update tracking and handoff → commit → synchronize if authorized. A parallel wave has the same integration boundary as a single slice.
 
 **1. The prompt** ([template](templates/prompt-stage.md)) **always** starts with:
 
-> "First read `docs/runbooks/handoff.md`, `AGENTS.md`, `ROADMAP.md` and the ADRs for this slice. Follow the non-negotiable rules. Start with `git pull`."
+> "First read `docs/runbooks/handoff.md`, `AGENTS.md`, `ROADMAP.md` and the ADRs for this slice. Follow the non-negotiable rules. Synchronize only as project policy allows."
 
 …and **always** ends with:
 
-> "Run `npm run verify` and the slice's golden scenarios → commit explicit files → push → update `parity.csv`, `ROADMAP.md` and `docs/runbooks/handoff.md`."
+> "Run `npm run verify` and the slice's golden scenarios → review/fix → update `parity.csv`, `ROADMAP.md`, progress and `docs/runbooks/handoff.md` → commit explicit files; push only if authorized."
 
 Each prompt is **bounded** ("do not build X yet") and lists its parity rows, evidence, normal/boundary/failure cases, and intentional changes.
 
-**2. The implementer executes** in the repository and **tests for real** (not just "it compiles"), commits, pushes, writes the handoff.
+**2. The implementer executes** in the repository and **tests for real** (not just "it compiles"). Workers return their bounded changes to the integration owner.
 
-**3. The human** runs `git pull` on the clone.
+**3. The integration owner** assembles the delivery on the agreed base and verifies the combined result. Synchronize other clones only under the project's Git policy.
 
 **4. The planner reviews** with the [review skill](templates/agent/skills/review/SKILL.md) and reports **only** real findings:
 
@@ -41,7 +35,7 @@ Each prompt is **bounded** ("do not build X yet") and lists its parity rows, evi
 
 No unrequested rewrites. The planner proposes; the human decides.
 
-Review is not optional. In the pilot (playbook validation on a real WINDEV app) the first implementation pass over-claimed 8 of 18 `verified` rows (guesses on unresolved behavior, a test that could never fail, placeholders); with the "No guessing" rules in `AGENTS.md` and one fix stage driven by the review findings, an independent audit found 2 of 17. Plan a review-fix stage after each slice, and never change ADRs while a stage is running — the implementer cannot apply decisions it never saw.
+Review is not optional. In the pilot the first pass over-claimed 8 of 18 `verified` rows; after the "No guessing" rules and review fixes, an independent audit found 2 of 17. Review the integrated slice or wave. An accepted project ADR may defer independent review of initial implementations in favor of coordinator self-review and focused checks; disclose this, retain acceptance work and do not promote those rows to `verified` in that delivery. Review/fix remains required before final acceptance. Communicate any decision change to every affected worker before integration.
 
 **5. Decisions → ADRs**, parity and roadmap status updated, next stage.
 
@@ -70,6 +64,8 @@ A rule is not migrated because a screen exists. A slice is done when:
 
 Example: a repair-order save is complete when validation, material/time recording, failure handling, persistence after restart and report totals behave as agreed.
 
+An **initial implementation** milestone may close with `implemented` rows and named acceptance work in the roadmap. It is not slice acceptance or migration completion; unavailable source/native confirmation need not block unrelated implementation.
+
 ## Checks to use
 
 - Domain tests for money/time/stock rules, named with parity IDs.
@@ -82,10 +78,20 @@ Example: a repair-order save is complete when validation, material/time recordin
 
 Use the smallest meaningful set for the change; expand when failures or new risks justify it. The npm scripts are defined by the foundation slice ([06 §7](06-start-a-migration.md#7-foundations)).
 
+## Parallel implementation waves
+
+- Start after the first persisted workflow and shared primitives work together. Group related screens/reports into complete workflow families; do not assign all UI to one worker and all persistence to another. Keep real foundation dependencies.
+- One coordinator owns the base commit, shared contracts, migrations, dependencies, generated outputs and aggregate tracking. Workers request shared changes from that owner. Size the wave to available slots, leaving capacity for integration; rotate workers as families finish.
+- Give each worker a [lean packet](templates/prompt-stage.md#parallel-wave-packet), not the full chat history. Isolate writers in worktrees and use separate test databases, enrollment profiles, ports, caches and build outputs. Preserve untouched source/data backups and the owner's running demo.
+- Workers implement real consuming paths and run focused checks. Return a frozen commit or explicit file/hash manifest, per-row implementation claims, executed checks and known gaps. A rendered screen, placeholder button or file-presence assertion is not behavior coverage.
+- The coordinator checks the base and frozen files, integrates explicit changes, reviews/fixes the combined result and runs the full verification gate once for that result. Repeat affected checks after fixes; broaden when failures or shared changes justify it. Exercise an ordinary save/reopen/report journey through the built app; browser mocks do not prove native persistence, preview or printing. Label results with OS and commit.
+- Only the coordinator updates parity, roadmap, progress and the rolling handoff. Preserve stable seed IDs and source provenance; report built targets, verified targets and unanswered source questions separately ([10](10-parity-and-verification.md#1-a-closed-world-inventory)). Claiming existing code or adopting a default is not a newly written feature or proof of legacy behavior.
+- Keep one reusable `docs/runbooks/current-stage.md` brief and the latest closed handoff; Git retains history. Worker packets/manifests can be temporary. Put durable choices in the applicable ADR/spec/porting pattern, not a new runbook per worker.
+
 ## Running agents for long stretches
 
-- One slice per session; start each session fresh from the handoff rather than a long chat history.
-- Use sub-agents to read legacy sources in parallel and to review; keep their conclusions in `docs/`, not only in chat.
+- Resume from durable state with a bounded slice or workflow-family packet; avoid requiring one fresh session per screen.
+- Use sub-agents for implementation, source reading and review where useful; record durable conclusions in the canonical docs.
 - When blocked by a human decision, record it in the handoff under "Decisions needed", mark the slice `Blocked`, and move to the next **independent** slice.
 - Never relax a test, a parity status or a guard to get green. If a legacy behavior seems wrong, preserve it and raise it as a decision.
 

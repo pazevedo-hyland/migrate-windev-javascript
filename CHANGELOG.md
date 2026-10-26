@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-26 — parallel implementation after a proven workflow
+
+- Broad workflow-family waves with isolated writers, lean evidence packets, frozen deliveries and one integration owner for contracts, verification and tracking.
+- Separate initial target implementation, acceptance and unresolved legacy knowledge; preserve final parity/native gates and disclose the accepted review policy.
+- Reuse one active brief and rolling handoff; align kickoff/stage/roadmap templates and honor project-specific Git authorization.
+
 ## 2026-10-23 — a cold start that follows only the guide
 
 A fresh agent given only the kickoff prompt and the guide, on a folder with the project dropped in as is, found 21 problems the earlier runs' detailed briefs had hidden. Fixed:

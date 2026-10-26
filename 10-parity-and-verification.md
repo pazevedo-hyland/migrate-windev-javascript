@@ -23,6 +23,9 @@ Run it in `npm run verify` (without `--require-complete`) on every commit, and w
 
 
 **Progress for everyone.** `python3 scripts/progress_dashboard.py` turns the matrix into `docs/progress/index.html`: the share of behaviors verified, each screen and report as not started → mapped → being built → done, the questions waiting for the WINDEV expert and the decisions waiting for the owner, and the progress line over time. Each stage regenerates it, so a non-technical owner follows the migration by opening one file.
+
+For broad implementation waves, also report **built = implemented + verified**, verified targets, exclusions and unanswered source/U items, with explicit denominators. A built percentage measures target coverage; it is not legacy parity or release readiness. Keep assumption-backed targets visible. Linking existing code or testing an accepted default does not prove newly recovered legacy knowledge; never upgrade source confidence just because target tests pass. Initial implementation milestones retain an acceptance backlog; the final `--require-complete` gate is unchanged.
+
 ## 2. Golden scenarios (characterization tests)
 
 The only robust proof that totals, rounding, statuses and reports match is to **record the legacy application and replay the target** on identical inputs ([template](templates/golden-scenario.md)):
@@ -68,7 +71,8 @@ Import reconciliation ([08](08-data-migration.md#import-and-reconciliation)): co
 | When | Gate |
 |---|---|
 | Every commit | `npm run verify` (types, lint, unit, IPC-mocked workflows, `parity_check.py`, bindings diff) |
-| End of slice | Golden scenarios of the slice; parity rows `verified`; native smoke on at least one target OS |
+| Initial implementation wave | Focused worker checks, integrated verification and review under project policy; rows may remain `implemented` with named acceptance work |
+| Slice acceptance | Golden scenarios of the slice; parity rows `verified` or approved `excluded`; native smoke on at least one target OS |
 | Nightly | Full rebuild, all tests, all golden scenarios, report pushed to `reports` |
 | Release | All of the above on every target OS + `parity_check.py --require-complete --seed docs/parity/parity-seed.csv` + reconciliation of a full import + cutover rehearsal |
 

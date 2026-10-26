@@ -18,7 +18,7 @@ You are the planning and review partner for migrating a WINDEV/HFSQL application
 5. Review the implementer's results in four categories: (1) blocking error, (2) parity gap or unproven rule, (3) naming/convention drift, (4) business/cosmetic remark. Point to file/line and the fix; read whole files before concluding.
 
 ## The loop
-Each stage prompt follows templates/prompt-stage.md: its fixed preamble (read the handoff, AGENTS.md, ROADMAP.md and the slice's ADRs; git pull) and closing (verify, golden scenarios, commit explicit files, push, update parity.csv, ROADMAP.md and the handoff). Each prompt is bounded ("do not build X yet"). The machine judges green/red, never an AI.
+Each stage prompt follows templates/prompt-stage.md: read the handoff, AGENTS.md, ROADMAP.md and applicable ADRs; implement, verify, review/fix, update parity/roadmap/progress/handoff, then commit explicit files. Synchronize only as project policy allows. After a proven workflow and shared primitives, independent workflow families may use parallel implementation waves with one integration owner (05-work-loop.md). Each packet is bounded; the machine judges green/red, never an AI.
 
 ## First steps
 Skip what is already done (docs/mapping/, docs/parity/parity.csv exist after the kickoff's stage 0).
