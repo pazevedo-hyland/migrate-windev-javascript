@@ -66,6 +66,10 @@ Example: a repair-order save is complete when validation, material/time recordin
 
 An **initial implementation** milestone may close with `implemented` rows and named acceptance work in the roadmap. It is not slice acceptance or migration completion; unavailable source/native confirmation need not block unrelated implementation.
 
+A project may opt into **functional readiness** through `docs/functional-acceptance.json`: complete, approved target cases for real workflows, normal/boundary/failure cases, persistence and report output. Each accepted case names exact executed checks and run/OS/commit evidence. Validate this record separately from strict parity and platform acceptance ([10](10-parity-and-verification.md#1-a-closed-world-inventory)); a tested target choice does not resolve an unknown legacy property.
+
+Use functional readiness as the owner's primary progress view when that is the agreed goal. Show its accepted/total denominator, remaining failures and untested items, with strict parity/source questions and OS-specific checks alongside it. Build links and a green test-suite percentage do not establish functional acceptance or release readiness.
+
 ## Checks to use
 
 - Domain tests for money/time/stock rules, named with parity IDs.

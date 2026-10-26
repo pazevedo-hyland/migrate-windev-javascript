@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import re
 import unittest
 
@@ -39,6 +40,14 @@ class DocumentationTests(unittest.TestCase):
         header = (ROOT / 'templates/parity.template.csv').read_text(encoding='utf-8').splitlines()[0]
         from helpers import load
         self.assertEqual(header.split(','), load('scripts/inspect_windev.py').SEED_COLUMNS)
+
+    def test_functional_acceptance_template_is_valid_pending_scope(self):
+        from helpers import load
+        data = json.loads((ROOT / 'templates/functional-acceptance.template.json').read_text(encoding='utf-8'))
+        result = load('scripts/functional_acceptance.py').assess_data(data, ['WIN_Example'], ROOT)
+        self.assertEqual((result['passed'], result['total']), (0, 1))
+        self.assertEqual(result['units']['WIN_Example']['status'], 'pending')
+        self.assertEqual(result['environments'], [])
 
 
 class MergeMarkerTests(unittest.TestCase):

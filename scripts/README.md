@@ -74,7 +74,18 @@ Seed rows, code blocks with event meanings, encoded actions with every other slo
 python3 scripts/progress_dashboard.py --title "My App"     # writes docs/progress/index.html (+ .json)
 ```
 
-One self-contained HTML page from what the process already maintains — parity matrix and seed, mapping notes and specs, answer sheet, ADRs, Git history: the share of legacy behaviors verified in the new app, screens and reports done / being built / mapped / not started, assumptions to confirm with the WINDEV expert, decisions waiting for the owner, progress over time (from the history of `docs/parity/`) and recent commits. Each stage regenerates and commits it; open it in a browser, no server needed.
+One self-contained HTML page: functional acceptance first, then implementation coverage, proven behaviors, strict completion, source questions, platform evidence and recent commits. The matrix, seed, mapping notes, answer sheet and ADRs retain their roles. History remains strict completion (verified + approved exclusions); Windows and macOS visual measurements stay separate. Without an acceptance inventory the functional headline is unassessed, never inferred from built links. Each stage regenerates and commits the page; open it in a browser, no server needed.
+
+## `functional_acceptance.py` — optional target acceptance gate
+
+```sh
+python3 scripts/functional_acceptance.py --check
+python3 scripts/functional_acceptance.py --require-complete
+```
+
+Start from [the pending example](../templates/functional-acceptance.template.json), remap its units and declare the complete required workflow scope in `docs/functional-acceptance.json`. Version 1 contains `cases`, `runs` and separate `platform` capabilities. Cases use exact check file/title pairs; runs attest successful `file::title` checks, commands, OS and tested commit. Pending cases require a concrete `gap`. Record real executions before adding evidence or marking a case `verified`; the tool validates attestations, not whether tests assert the whole requirement.
+
+Missing screens/reports create pending unassessed gaps. Stale run evidence becomes pending without changing the ledger or strict parity CSV. Cited tests and `CODE_PATHS` are compared against the tested ancestor commit, including untracked inputs. Adapt those paths to the actual project's application, assets, configuration, golden/runtime fixtures and native probes; ordinary report/status documentation can change without invalidating proof. `--require-complete` fails until every required functional case passes; platform capabilities retain their own OS-specific status and never change this denominator.
 
 ## `screen_layout.py`, `skin_assets.py`, `visual_compare.py` — a screen that looks like the legacy one
 

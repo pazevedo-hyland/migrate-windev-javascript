@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-26 — functional acceptance and strict parity
+
+- Define functional readiness against complete approved target scope and executed behavior assertions, independently of strict parity/source confidence and platform evidence.
+- Recognize source-derived checks for readable legacy rules; retain encoded properties and native behavior as explicit evidence gaps.
+- Align workflow and agent/stage instructions; passing tests and built links do not create an acceptance percentage.
+- Add the portable acceptance validator, primary functional dashboard and synthetic pending template, with tests for missing scope, stale witnesses, independent parity and platform evidence.
+
 ## 2026-10-26 — parallel implementation after a proven workflow
 
 - Broad workflow-family waves with isolated writers, lean evidence packets, frozen deliveries and one integration owner for contracts, verification and tracking.

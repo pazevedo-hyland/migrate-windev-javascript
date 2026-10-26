@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "runs": {},
+  "cases": [
+    {
+      "id": "FA-001",
+      "units": ["WIN_Example"],
+      "requirement": "Save and reopen agreed values; a failed save leaves no partial changes.",
+      "checks": [],
+      "status": "pending",
+      "gap": "Replace the example unit, declare the full approved scope and execute exact behavior checks.",
+      "evidence": []
+    }
+  ],
+  "platform": []
+}

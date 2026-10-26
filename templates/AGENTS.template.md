@@ -13,7 +13,8 @@ Keep this file short (about 100 lines). Details live in `docs/`; local rules liv
 - `src/infrastructure/` — Tauri IPC (or API) adapters. `src/bindings/` is generated: never edit by hand.
 - `src-tauri/src/commands/` — one Rust command per business operation, one transaction each.
 - `src-tauri/migrations/` — ordered SQL migrations; committed ones are immutable. See local `AGENTS.md`.
-- `docs/parity/parity.csv` — behavior parity matrix: the definition of done.
+- `docs/parity/parity.csv` — behavior parity matrix: strict migration completion.
+- `docs/functional-acceptance.json` — optional approved target cases and executed run/OS/commit evidence; validate before counting functional readiness.
 - `docs/porting.md` — this project's concrete pattern (file, function, component) for each WLanguage construct it uses, over `docs/wlanguage-traps.md`; every slice follows it.
 - `legacy/`, `analysis-local/` — private, ignored, read-only evidence. Never execute legacy code.
 - `skills/` — playbooks to follow; `scripts/` — evidence pipeline, parity gate, comparator, guard. Humans own `scripts/guard.py`, `.githooks/` and agent configuration: do not modify them.
@@ -82,6 +83,7 @@ npm run verify          # typecheck + lint + unit + parity check: must pass befo
 npm run ui:check        # UI check and click-through flows, browser preview with mocked IPC
 npm run tauri -- build  # native package for this OS
 python3 scripts/parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv   # parity progress and validity
+python3 scripts/functional_acceptance.py --check   # if adopted: validate target scope and executed evidence
 python3 scripts/progress_dashboard.py --title "<App>"   # docs/progress/index.html for non-technical readers
 <golden scenarios, bindings generation, migration commands…>
 ```
@@ -97,6 +99,7 @@ python3 scripts/progress_dashboard.py --title "<App>"   # docs/progress/index.ht
 Ticket key of the current slice: in `ROADMAP.md`. Branch `<KEY>-<slug>`, commits start with `<KEY>:`.
 After one proven workflow, use independent implementation families where useful (wave packet in `templates/prompt-stage.md`). One integration owner controls shared contracts and tracking; workers own disjoint files/worktrees, receive exact IDs/evidence/contracts and return frozen changes, focused checks and per-row claims. Review the combined delivery under the accepted project policy.
 Keep one reusable active brief and a rolling handoff; do not add a runbook per worker. Report built targets, verified targets and source questions separately. Initial implementation is not final acceptance; preserve seed IDs and source provenance.
+If functional readiness is adopted, maintain `docs/functional-acceptance.json`: required cases (`id`, `units`, `requirement`, exact `checks` file/title, `verified|pending`, run/OS/commit evidence) and executed run metadata. Missing screens/reports create pending unassessed gaps; app/test changes invalidate affected witnesses. Adapt `CODE_PATHS` in the validator to this project's actual runtime inputs. Validate before counting accepted/required cases. Keep strict parity/source confidence and platform evidence separate; suite pass rates or built links do not supply acceptance, and tested target choices never resolve legacy U questions.
 
 ## Pointers
 

@@ -48,6 +48,8 @@ Paste [templates/PromptInit.md](templates/PromptInit.md) into the planning sessi
 ### Step 4 — The loop *(the core of the work)*
 For each roadmap slice or independent workflow-family wave: bounded prompt → real UI + domain + command + persistence + tests → integrated verification and review/fix → parity, status and rolling handoff → explicit commit; synchronize only as project policy allows. Parallel implementation starts after a proven workflow and shared primitives; built coverage remains separate from acceptance → [05](05-work-loop.md), [01](01-principles-and-roles.md).
 
+For an agreed functional-readiness goal, declare required target cases in `docs/functional-acceptance.json` ([template](templates/functional-acceptance.template.json)). The progress page leads with their executed evidence; strict parity, unanswered source questions and native platform acceptance remain separate → [10](10-parity-and-verification.md#1-a-closed-world-inventory).
+
 ### Step 5 — Nightly test machine *(if possible)*
 Rebuilds the database, replays every test and golden scenario, pushes a timestamped report — the safety net → [02](02-infrastructure.md#test-machine-the-nightly-safety-net).
 

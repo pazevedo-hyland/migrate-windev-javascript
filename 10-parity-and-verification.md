@@ -4,7 +4,7 @@
 
 ## 1. A closed-world inventory
 
-The parity matrix `docs/parity/parity.csv` ([template](templates/parity.template.csv)) is the definition of done. It is built in three layers:
+The parity matrix `docs/parity/parity.csv` ([template](templates/parity.template.csv)) defines strict migration completion. It is built in three layers:
 
 1. **Generated seed** — `scripts/inspect_windev.py` writes `parity-seed.csv`: one `SRC-*` row per extracted code block (window/control path + raw event code + `path:line`), one per XDD table, one per binary/unsupported source needing an export. IDs are stable across re-runs of the same sources. If an upgraded inspector names a block differently, `parity_check.py --seed` reports `matrix row SRC-old is now seed row SRC-new`: rename the row.
 2. **Manual rows** for what code blocks do not show: menu entries and shortcuts, Groupware rights, reports and labels, scheduled jobs, external integrations, imports/exports, printing and devices, INI/registry settings, installer/update behavior.
@@ -22,13 +22,19 @@ Rules of the matrix, enforced by `scripts/parity_check.py`:
 Run it in `npm run verify` (without `--require-complete`) on every commit, and with `--require-complete` as the final release gate.
 
 
-**Progress for everyone.** `python3 scripts/progress_dashboard.py` turns the matrix into `docs/progress/index.html`: the share of behaviors verified, each screen and report as not started → mapped → being built → done, the questions waiting for the WINDEV expert and the decisions waiting for the owner, and the progress line over time. Each stage regenerates it, so a non-technical owner follows the migration by opening one file.
+**Progress for everyone.** `python3 scripts/progress_dashboard.py` writes `docs/progress/index.html`: functional readiness first, then built/proven/strict parity counts, source questions, platform evidence and strict completion history. Without a functional acceptance inventory, the headline stays unassessed. Each stage regenerates the page so a non-technical owner can open one file.
 
 For broad implementation waves, also report **built = implemented + verified**, verified targets, exclusions and unanswered source/U items, with explicit denominators. A built percentage measures target coverage; it is not legacy parity or release readiness. Keep assumption-backed targets visible. Linking existing code or testing an accepted default does not prove newly recovered legacy knowledge; never upgrade source confidence just because target tests pass. Initial implementation milestones retain an acceptance backlog; the final `--require-complete` gate is unchanged.
 
+Projects may opt into **functional acceptance** in `docs/functional-acceptance.json` ([template](templates/functional-acceptance.template.json)). Each required case declares `id`, `units`, `requirement`, exact `checks` (`file`, `title`), `status` (`verified` or `pending`) and `evidence` (`run`, `os`, `commit`). Run metadata records which exact checks actually passed and the tested application commit. Requirements cite source rules or approved target decisions; assertions exercise real paths and would fail if the behavior disappeared. Validate the schema and evidence with `python3 scripts/functional_acceptance.py --check`; use `--require-complete` for this optional acceptance gate.
+
+The primary functional percentage is verified required cases / all declared required cases. Cover the complete approved workflow scope and every screen/report from the inventory: a missing unit creates a pending, unassessed gap. Untested and failed cases stay in the denominator; built links and a suite pass rate never create acceptance. Proof must remain compatible with its tested commit: application or test changes invalidate affected evidence; documentation-only changes do not. Keep strict parity/source confidence and platform capabilities (status, OS, commit) alongside this view. An approved target choice may pass while its legacy U question remains unanswered; unexecuted native checks remain unexecuted.
+
+Adapt the validator's `CODE_PATHS` to the actual project's application, assets, configuration, golden inputs, runtime-evidence JSON and native probes; cited test files are included automatically. Changing those inputs invalidates the witness. Ordinary report/status documentation may retain it. The validator checks recorded attestations; review still establishes that the exact tests ran and assert the full requirement.
+
 ## 2. Golden scenarios (characterization tests)
 
-The only robust proof that totals, rounding, statuses and reports match is to **record the legacy application and replay the target** on identical inputs ([template](templates/golden-scenario.md)):
+To compare observed legacy totals, rounding, statuses and reports, **record the legacy application and replay the target** on identical inputs ([template](templates/golden-scenario.md)):
 
 1. **Before**: export the relevant tables from the data copy (CSV + manifest; anonymised if the data is personal).
 2. **Act**: perform a scripted sequence in the legacy app (or with WINDEV's automated test scenarios, if the project has them).
@@ -36,7 +42,7 @@ The only robust proof that totals, rounding, statuses and reports match is to **
 4. **Replay** in the target from the same "before" state, through the use cases (fast tests) and end to end (slower).
 5. **Compare** with `scripts/compare_exports.py`: keys, renames, ignored technical columns and **declared** normalizations (decimal comma, date formats, trimming). Any undeclared difference fails.
 
-**No legacy runs available?** Expected results can be derived from the mapped rules on synthetic data, but label them `spec-derived` (they prove the code matches the spec, not the legacy app) and replace them with recorded scenarios when the app can run. Historical data is a golden dataset too: wherever the legacy app stored a derived value (order totals, stock levels, durations, statuses) next to its inputs, the target's domain functions must reproduce it from those inputs. Every disagreement is either a rule not yet understood or a data-quality issue to record.
+**Source-derived checks** can verify readable rules directly: derive expected results from the actual source, schema and accepted decisions on synthetic data, then exercise the real target path. Label scenarios `spec-derived` and identify source rules versus approved target choices; reserve `recorded` for observed legacy runs. A legacy run is not a prerequisite for testing a readable assignment or calculation. Such a test does not establish encoded SQL, missing designer properties or native engine behavior; retain those U questions and add static exports or recorded checks for the missing evidence. Historical data is a golden dataset too: wherever the legacy app stored a derived value (order totals, stock levels, durations, statuses) next to its inputs, the target's domain functions must reproduce it from those inputs. Every disagreement is either a rule not yet understood or a data-quality issue to record.
 
 Choose scenarios for: every workflow's happy path, each boundary (zero, negative, maximum, empty date), each error message, rounding with many lines, and every report. Record them early (stage 0–3), while the legacy app and its experts are available.
 
@@ -72,7 +78,8 @@ Import reconciliation ([08](08-data-migration.md#import-and-reconciliation)): co
 |---|---|
 | Every commit | `npm run verify` (types, lint, unit, IPC-mocked workflows, `parity_check.py`, bindings diff) |
 | Initial implementation wave | Focused worker checks, integrated verification and review under project policy; rows may remain `implemented` with named acceptance work |
-| Slice acceptance | Golden scenarios of the slice; parity rows `verified` or approved `excluded`; native smoke on at least one target OS |
+| Functional acceptance (opt-in) | Validated `docs/functional-acceptance.json`: every required case has passed its exact real behavior checks with compatible run/OS/commit evidence; all screens/reports are assessed; strict parity, U questions and platform evidence remain separate |
+| Strict parity acceptance | Golden scenarios of the slice; parity rows `verified` or approved `excluded`; native smoke on at least one target OS |
 | Nightly | Full rebuild, all tests, all golden scenarios, report pushed to `reports` |
 | Release | All of the above on every target OS + `parity_check.py --require-complete --seed docs/parity/parity-seed.csv` + reconciliation of a full import + cutover rehearsal |
 

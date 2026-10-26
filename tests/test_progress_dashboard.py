@@ -1,66 +1,196 @@
-import csv
+import json
 from pathlib import Path
-import subprocess
+import sys
 import tempfile
 import unittest
 
-from helpers import load
-
-module = load('scripts/progress_dashboard.py')
-COLUMNS = ['id', 'kind', 'element', 'context', 'event', 'evidence', 'confidence', 'legacy_behavior',
-           'target_behavior', 'implemented_in', 'test', 'decision', 'status']
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+from progress_dashboard import chart, matrix_rows, render, summarize
 
 
-def write(path, rows):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open('w', newline='', encoding='utf-8') as handle:
-        writer = csv.DictWriter(handle, fieldnames=COLUMNS)
-        writer.writeheader()
-        writer.writerows({c: r.get(c, '') for c in COLUMNS} for r in rows)
+class PlatformVisualProgressChecks(unittest.TestCase):
+    def summary_and_page(self, docs):
+        rows = [{'element': 'WIN_Form_Example', 'kind': 'window', 'status': 'implemented'}]
+        units = summarize(rows, docs)
+        page = render(units, {'decisions_pending': [], 'answer_sheet_open': 0,
+                              'answer_sheet_done': 0, 'unresolved_items': 0}, [], [], 'Example', 'fixed')
+        return units[0], page
+
+    def record(self, docs, platform, pixel, layout, date):
+        directory = docs / 'evidence' / 'visual'
+        if platform == 'darwin':
+            directory /= 'darwin'
+        directory.mkdir(parents=True, exist_ok=True)
+        filename = directory / 'WIN_Form_Example.json'
+        filename.write_text(json.dumps({'pixel_similarity': pixel, 'edge_overlap': layout, 'date': date}), encoding='utf-8')
+        return filename
+
+    def test_darwin_only_measurement_is_visible_and_labelled_without_inventing_windows_evidence(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            docs = Path(temporary)
+            filename = self.record(docs, 'darwin', 98.9, 96.7, '2026-10-25')
+            before = filename.read_bytes()
+            unit, page = self.summary_and_page(docs)
+            self.assertIsNone(unit['looks'])
+            self.assertEqual(unit['visuals'], {'darwin': {'pixel': 98.9, 'layout': 96.7}})
+            self.assertIn('macOS 96.7 %', page)
+            self.assertIn('pixel similarity 98.9 %', page)
+            self.assertNotIn('Windows 96.7', page)
+            self.assertEqual(filename.read_bytes(), before)
+            self.assertEqual(unit['statuses']['implemented'], 1)
+            self.assertEqual(unit['done'], 0)
+
+    def test_both_histories_remain_separate_in_fixed_order_and_legacy_looks_is_unchanged(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            docs = Path(temporary)
+            # Create the newer/higher-scoring Mac record first: neither date, score nor file order wins.
+            mac = self.record(docs, 'darwin', 99.1, 97.2, '2026-10-25')
+            windows = self.record(docs, 'windows', 94.5, 88.4, '2026-10-24')
+            before = {filename: filename.read_bytes() for filename in (mac, windows)}
+            unit, page = self.summary_and_page(docs)
+            self.assertEqual(unit['looks'], {'pixel': 94.5, 'layout': 88.4})
+            self.assertEqual(list(unit['visuals']), ['windows', 'darwin'])
+            self.assertEqual(unit['visuals'], {'windows': {'pixel': 94.5, 'layout': 88.4},
+                                             'darwin': {'pixel': 99.1, 'layout': 97.2}})
+            self.assertIn('Windows 88.4 %', page)
+            self.assertIn('macOS 97.2 %', page)
+            self.assertLess(page.index('Windows 88.4 %'), page.index('macOS 97.2 %'))
+            self.assertEqual({filename: filename.read_bytes() for filename in before}, before)
+
+    def test_missing_histories_stay_unmeasured_without_altering_behavior_progress(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            unit, page = self.summary_and_page(Path(temporary))
+            self.assertIsNone(unit['looks'])
+            self.assertEqual(unit['visuals'], {})
+            self.assertIn('<td class="visual">–</td>', page)
+            self.assertEqual(unit['stage'], 'built')
+            self.assertEqual((unit['done'], unit['total']), (0, 1))
 
 
-class ProgressDashboardTests(unittest.TestCase):
-    def test_stages_counts_and_history(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            git = lambda *a: subprocess.run(['git', '-C', str(root), *a], check=True, capture_output=True)
-            git('init', '-q')
-            git('config', 'user.email', 't@t')
-            git('config', 'user.name', 't')
-            seed = [{'id': f'SRC-{i}', 'kind': k, 'element': e, 'status': 'unmapped'}
-                    for i, (k, e) in enumerate([('window', 'WIN_A'), ('window', 'WIN_A'), ('window', 'WIN_B'),
-                                                ('report', 'RPT_C'), ('table', 'Clientes')])]
-            write(root / 'docs/parity/parity-seed.csv', seed)
-            git('add', 'docs')
-            git('commit', '-qm', 'seed')
-            write(root / 'docs/parity/WIN_A.csv', [dict(seed[0], status='verified'), dict(seed[1], status='excluded')])
-            write(root / 'docs/parity/WIN_B.csv', [dict(seed[2], status='implemented')])
-            (root / 'docs/mapping').mkdir()
-            (root / 'docs/mapping/RPT_C.md').write_text('U-RC-01 open\n', encoding='utf-8')
-            (root / 'docs/evidence').mkdir()
-            (root / 'docs/evidence/encoded-actions.md').write_text(
-                '| A-1 | 3 (BTN_X) | WIN_A.BTN_X | closes | WINDEV | Ana |\n| A-2 | 1 (BTN_Y) | WIN_B.BTN_Y | | | |\n'
-                '| Q-01 | Esc? | | | |\n', encoding='utf-8')
-            git('add', 'docs')
-            git('commit', '-qm', 'stage 1')
-            page, units = module.build(root / 'docs', 'Test')
-        stages = {u['name']: u['stage'] for u in units}
-        self.assertEqual(stages, {'WIN_A': 'done', 'WIN_B': 'building', 'RPT_C': 'mapped', 'Clientes': 'not started'})
-        self.assertIn('40.0%', page)  # 2 of 5 behaviors done
-        self.assertIn('<div class="big">2</div><div>assumptions to confirm with the WINDEV expert (work does not wait)</div>', page)
-        self.assertIn('<polyline', page)  # two commits touched the parity files
-        self.assertIn('stage 1', page)
+class BuiltAndProvenProgressChecks(unittest.TestCase):
+    def summary(self, statuses):
+        with tempfile.TemporaryDirectory() as temporary:
+            return summarize([{'element': 'WIN_Example', 'kind': 'window', 'status': status}
+                              for status in statuses], Path(temporary))[0]
 
-    def test_rule_rows_join_their_unit_and_renamed_seed_rows_count_once(self):
-        header = 'id,kind,element,context,event,status,confidence\n'
-        files = {'parity.csv': header + 'SRC-old,window,WIN_A,WIN_A/BTN_X,18,verified,assumed\n'
-                                         'RULE-1,rule,Delete guard,WIN_A/BTN_Y,,implemented,inferred\n',
-                 'parity-seed.csv': header + 'SRC-new,window,WIN_A,WIN_A/BTN_X,18,unmapped,unresolved\n'
-                                             'SRC-z,window,WIN_A,WIN_A/BTN_Z,18,unmapped,unresolved\n'}
-        rows = module.matrix_rows(files)
-        self.assertEqual(sorted(r['id'] for r in rows), ['RULE-1', 'SRC-old', 'SRC-z'])
-        units = module.summarize(rows, Path('/nonexistent'))
-        self.assertEqual([(u['name'], u['total'], u['assumed']) for u in units], [('WIN_A', 3, 1)])
+    def test_built_excludes_decisions_while_strict_completion_keeps_them(self):
+        unit = self.summary(['implemented', 'implemented', 'verified', 'excluded', 'specified', 'unmapped'])
+        self.assertEqual((unit['built'], unit['built_percent'], unit['proven'], unit['excluded']), (3, 50.0, 1, 1))
+        self.assertEqual((unit['done'], unit['total'], unit['stage']), (2, 6, 'building'))
+        page = render([unit], {'decisions_pending': ['pending-choice'], 'answer_sheet_open': 8,
+                              'answer_sheet_done': 2, 'unresolved_items': 4},
+                      [('2026-10-24', 20.0, 6), ('2026-10-25', 30.0, 6)], [], 'Example', 'fixed')
+        self.assertIn('<div class="hero"><div class="pct">—</div>', page)
+        self.assertIn('<div class="big">50.0%</div><div>implementation coverage</div>', page)
+        self.assertIn('3 of 6 behaviors · 2 built, awaiting proof · 1 approved exclusions outside the built count', page)
+        self.assertIn('<div class="big">16.7%</div><div>proven by verification</div>', page)
+        self.assertIn('<div class="big">33.3%</div><div>strict completion</div>', page)
+        self.assertIn('2/6 verified + approved exclusions (1 excluded)', page)
+        self.assertIn('3/6 built', page)
+        self.assertIn('1/6 proven', page)
+        self.assertIn('1 excluded</div>', page)
+        self.assertIn('pending-choice', page)
+        self.assertIn('2 answered · 4 open points', page)
+        self.assertNotIn('rebuilt <b>and proven</b>', page)
+
+    def test_fully_built_is_a_separate_stage_and_unknown_rows_do_not_close_it(self):
+        cases = [(['implemented'], 'built'),
+                 (['implemented', 'verified', 'excluded'], 'built'),
+                 (['implemented', 'specified'], 'building'),
+                 (['verified', 'unmapped'], 'building'),
+                 (['implemented', 'excluded', 'unmapped'], 'building'),
+                 (['verified', 'excluded'], 'done'),
+                 (['excluded'], 'done')]
+        for statuses, expected in cases:
+            with self.subTest(statuses=statuses):
+                unit = self.summary(statuses)
+                self.assertEqual(unit['stage'], expected)
+                self.assertEqual(unit['built'], statuses.count('implemented') + statuses.count('verified'))
+                self.assertEqual(unit['done'], statuses.count('verified') + statuses.count('excluded'))
+        unit = self.summary(['implemented', 'excluded'])
+        self.assertEqual(unit['built_percent'], 50.0)
+
+    def test_excluded_only_and_empty_matrices_never_report_built_work(self):
+        unit = self.summary(['excluded'])
+        self.assertEqual((unit['built'], unit['built_percent'], unit['proven']), (0, 0.0, 0))
+        questions = {'decisions_pending': [], 'answer_sheet_open': 0,
+                     'answer_sheet_done': 0, 'unresolved_items': 0}
+        page = render([unit], questions, [], [], 'Example', 'fixed')
+        self.assertIn('<div class="hero"><div class="pct">—</div>', page)
+        self.assertIn('<div class="big">0.0%</div><div>implementation coverage</div>', page)
+        self.assertIn('<div class="big">100.0%</div><div>strict completion</div>', page)
+        empty = render([], questions, [], [], 'Example', 'fixed')
+        self.assertIn('<div class="hero"><div class="pct">—</div>', empty)
+        self.assertIn('0 of 0 behaviors', empty)
+
+    def test_history_retains_original_strict_values_and_correctly_labels_exclusions(self):
+        original_points = [('2026-10-24', 20.0, 10), ('2026-10-25', 30.0, 10)]
+        graphic = chart(original_points)
+        self.assertIn('points="10.0,106.0 630.0,94.0"', graphic)
+        self.assertIn('strict completion over time: verified plus approved exclusions', graphic)
+        self.assertIn('2026-10-25 · 30.0%', graphic)
+        self.assertNotIn('verified share over time', graphic)
+        self.assertEqual(original_points, [('2026-10-24', 20.0, 10), ('2026-10-25', 30.0, 10)])
+
+    def test_aggregate_and_seed_behavior_identity_rules_are_unchanged(self):
+        header = 'id,element,context,event,status\n'
+        rows = matrix_rows({
+            'parity.csv': header + 'current,WIN_Example,WIN_Example/button,18,implemented\n',
+            'WIN_Example.csv': header + 'current,WIN_Example,WIN_Example/button,18,verified\n',
+            'parity-seed.csv': header + 'old,WIN_Example,WIN_Example/button,18,specified\n'
+                                      'missing,WIN_Example,WIN_Example/other,18,unmapped\n',
+        })
+        self.assertEqual([(row['id'], row['status']) for row in rows],
+                         [('current', 'implemented'), ('missing', 'unmapped')])
+
+    def test_target_defaults_do_not_hide_unconfirmed_source_behavior(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            rows = [{'element': 'WIN_Example', 'kind': 'window', 'status': status, 'confidence': confidence}
+                    for status, confidence in [('implemented', 'unresolved'), ('unmapped', 'unresolved'),
+                                               ('verified', 'verified'), ('excluded', 'unresolved')]]
+            unit = summarize(rows, Path(temporary))[0]
+        self.assertEqual((unit['built'], unit['proven'], unit['source_unresolved'], unit['built_on_defaults']),
+                         (2, 1, 3, 1))
+        page = render([unit], {'decisions_pending': [], 'answer_sheet_open': 0,
+                              'answer_sheet_done': 0, 'unresolved_items': 0}, [], [], 'Example', 'fixed')
+        self.assertIn('<div class="big">1</div><div>built using target defaults</div>', page)
+        self.assertIn('3 source behaviors still unconfirmed', page)
+        self.assertIn('1/4 proven', page)
+
+
+class FunctionalReadinessProgressChecks(unittest.TestCase):
+    def test_functional_proof_is_primary_without_promoting_unknown_source_or_native_hosts(self):
+        from functional_acceptance import assess_data
+        with tempfile.TemporaryDirectory() as temporary:
+            docs = Path(temporary)
+            (docs / 'flow.ts').write_text('actual test fixture')
+            rows = [{'element': 'WIN_Example', 'kind': 'window', 'status': 'implemented',
+                     'confidence': 'unresolved'}]
+            units = summarize(rows, docs)
+            commit = 'a' * 40
+            data = {'version': 1, 'runs': {'actual': {'os': 'macOS arm64', 'commit': commit,
+                     'commands': ['actual fixture command'], 'checks': ['flow.ts::save and reopen']}},
+                    'cases': [{'id': 'save', 'units': ['WIN_Example'], 'requirement': 'Save and reopen.',
+                               'status': 'verified', 'checks': [{'file': 'flow.ts', 'title': 'save and reopen'}],
+                               'evidence': [{'run': 'actual', 'os': 'macOS arm64', 'commit': commit}]}],
+                    'platform': [{'id': 'windows-print', 'os': 'Windows x64', 'units': ['WIN_Example'],
+                                  'requirement': 'Native print.', 'status': 'pending', 'checks': [],
+                                  'gap': 'Windows printer check not run.'}]}
+            functional = assess_data(data, ['WIN_Example'], docs, compatible=lambda *_: True)
+            page = render(units, {'decisions_pending': [], 'answer_sheet_open': 0,
+                                 'answer_sheet_done': 0, 'unresolved_items': 1}, [], [], 'Example', 'fixed', functional)
+        self.assertIn('<div class="hero"><div class="pct">100.0%</div>', page)
+        self.assertIn('1/1 required checks', page)
+        self.assertIn('1<small>/1</small></div><div>screens functionally verified', page)
+        self.assertIn('Windows x64 · pending', page)
+        self.assertIn('Windows printer check not run.', page)
+        self.assertIn('<div class="big">0.0%</div><div>strict completion</div>', page)
+        self.assertEqual((units[0]['stage'], units[0]['proven'], units[0]['source_unresolved']), ('built', 0, 1))
+        self.assertEqual(rows[0]['confidence'], 'unresolved')
+        self.assertIn('data-f="functional-verified"', page)
+        self.assertIn('class="built functional-verified"', page)
+        self.assertIn('flow.ts :: save and reopen', page)
+
 
 if __name__ == '__main__':
     unittest.main()

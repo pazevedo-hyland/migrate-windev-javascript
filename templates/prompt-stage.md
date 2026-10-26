@@ -8,12 +8,15 @@ First read docs/runbooks/handoff.md, AGENTS.md, ROADMAP.md and the ADRs for this
 Stage "<name>" (roadmap #<n>):
 - Parity rows: <IDs>. Evidence: <legacy paths:lines, exported SQL, screenshots, docs/screens/<WINDOW>.md, golden scenarios>.
 - Expected behavior: <normal case, boundary case, failure case with exact legacy message>.
+- Functional acceptance (if adopted): <docs/functional-acceptance.json required case IDs/units/requirements, exact check file/title and executed run/OS/commit evidence; retain pending cases and unassessed screens/reports>.
 - Intentional changes: <none, or ADR references>.
 - Deliverables: <domain rules + tests named with parity IDs, Rust command + transaction, UI, golden scenario, migration if any>.
 - Constraints: inspect the real schema and library APIs before coding; port every construct with its pattern in docs/porting.md (and its trap in docs/wlanguage-traps.md); <architecture constraints from ADRs>.
 - Out of scope: <explicit limits — "do not build X yet">.
 
 Done means: npm run verify passes, the golden scenarios for these rows pass — also clicked through the UI in ui-check/<slice>.flows.spec.ts (templates/ui-check/flows.example.spec.ts) —, each row you mark verified names the test that proves it, and every window and message box the slice opens is built from its generated layout with the skin kit, configured in ui-check.config.json and passes npm run ui:check (controls, captions, visual score recorded and not lower than before) — attach the side-by-side images to the handoff. Unknown legacy behavior follows AGENTS.md "No guessing": a proposal makes the row `assumed` (it may be verified); a choice of your own with no proposal keeps it implemented, listed under "Decisions needed". List checks you could not run (e.g. native printing on Windows).
+
+If functional acceptance is adopted, update docs/functional-acceptance.json, run python3 scripts/functional_acceptance.py --check and report verified/required cases separately from strict parity/source confidence and platform acceptance. App/test changes invalidate affected run witnesses; ordinary report/status documentation changes do not. Count complete declared scope, not tests passed or built links. Source-derived expectations can prove readable rules; tested target choices do not answer encoded legacy questions or prove unexecuted native behavior.
 
 Before closing: an independent review of the slice with skills/review (a separate sub-agent or session); a slice touching money, stock or totals, the data import, deleting or overwriting data, or a multi-window workflow gets a second, independent one. One fixer applies their findings. An agent that cannot start a separate session reviews in a separate pass after clearing its context, reading only the diff, this prompt, the ADRs and the evidence, and says so in the handoff.
 

@@ -64,6 +64,7 @@ This table traces **every upstream section** to its place in this playbook, so n
 ## Additions beyond upstream
 
 - [09 — WLanguage traps](../09-wlanguage-traps.md) and [10 — Parity and verification](../10-parity-and-verification.md).
+- Optional functional acceptance against declared required cases, with executed evidence kept separate from strict parity/source confidence and platform acceptance ([05](../05-work-loop.md#definition-of-done-for-a-slice), [10](../10-parity-and-verification.md#1-a-closed-world-inventory)).
 - One guard rule set for Git, agent hooks and CI; agent-neutral skills (Claude Code, Codex, others).
 - Inspector with window/control/event context, parity seed and secret hints; `parity_check.py`; `compare_exports.py`; tested hook guard and pre-commit hook.
 - Templates: mapping prompt, map-element skill, roadmap, parity matrix, window spec, golden scenario, compare config.
