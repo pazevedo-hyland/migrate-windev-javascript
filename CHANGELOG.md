@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-26 — reusable workflow verification
+
+- Extract configurable Playwright CRUD/reopen, cancel, invalid-save, search/selection and confirmation assertions with independent persistence snapshots and explicit business expectations.
+- Add two SQLite-backed synthetic consumers, automatic-ID/reload checks and negative tests detecting missing writes, unrelated mutations and rejected writes. Configure the same helpers against two existing application workflows during extraction.
+- Point migration agents to the test contracts; keep application-specific expectations, parity witnesses and native acceptance explicit.
+
 ## 2026-10-26 — reusable migration starter
 
 - Add a new-directory project generator and deterministic, ownership-checked RAD screen generation from extracted layouts; handwritten business bindings remain separate.

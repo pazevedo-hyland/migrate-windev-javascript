@@ -11,7 +11,7 @@ Keep this file short (about 100 lines). Details live in `docs/`; local rules liv
 - `src/domain/` — pure TypeScript business rules. No React, Tauri, Node or I/O imports.
 - `src/application/` — use cases and repository/command interfaces.
 - `src/infrastructure/` — Tauri IPC (or API) adapters. `src/bindings/` is generated: never edit by hand.
-- When the starter is adopted: `packages/ui/`, `packages/reports/` hold reusable source packages; `src/generated/` holds generator-owned layouts/catalogue; `src/adapters.ts` and application code hold maintained business bindings.
+- When the starter is adopted: `packages/ui/`, `packages/reports/` hold reusable source packages; `packages/testing/` holds configurable workflow assertions; `src/generated/` holds generator-owned layouts/catalogue; `src/adapters.ts` and application code hold maintained business bindings.
 - `src-tauri/src/commands/` — one Rust command per business operation, one transaction each.
 - `src-tauri/migrations/` — ordered SQL migrations; committed ones are immutable. See local `AGENTS.md`.
 - `docs/parity/parity.csv` — behavior parity matrix: strict migration completion.
@@ -75,7 +75,7 @@ Identifiers you invent (test ids for controls that do not exist in legacy, helpe
 
 <Topology (local SQLite / shared server API), supported OSes, permissions model, report engine, grid/form libraries, update channel, external system access mode (read-only / limited writes / none)…>
 
-For React/Tauri foundations, read `templates/starter/README.md` in the playbook and reuse compatible UI/reporting packages. `create_project.py` requires a new directory; integrate from a separate scaffold when this repository already exists. Use `screen_layout.py` → `generate_screens.py` for structure, then bind real data/actions outside generated files. Retain unknown metadata and acceptance gaps; neutral previews, demo CRUD and passing starter tests do not prove the migrated application. Extend baseline verification with the project's required gates.
+For React/Tauri foundations, read `templates/starter/README.md` in the playbook and reuse compatible UI/reporting packages. `create_project.py` requires a new directory; integrate from a separate scaffold when this repository already exists. Use `screen_layout.py` → `generate_screens.py` for structure, then bind real data/actions outside generated files. Configure `packages/testing` scenarios with actual UI drivers, independent persistence readers and source-derived expected values. Retain unknown metadata and acceptance gaps; neutral previews, demo CRUD and passing starter tests do not prove the migrated application. Extend baseline verification with the project's required gates.
 
 ## Commands
 

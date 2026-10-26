@@ -45,6 +45,8 @@ continue with the first slice not Done. Otherwise start at step 1.
    replacing evidence, decisions or maintained code. Use scripts/screen_layout.py then scripts/generate_screens.py
    for RAD screen structure; handwritten data/business bindings stay outside src/generated/. Extend the starter's
    baseline verify command with this project's lint, parity, bindings and native checks. A scaffold is not parity.
+   Reuse packages/testing workflow assertions with this app's real UI driver, independent persistence reader and
+   evidence-derived expected values; synthetic starter passes do not verify project behavior.
    Slices, in dependency order, each as templates/prompt-stage.md says: reuse docs/runbooks/current-stage.md for
    the active brief. After one complete persisted workflow and shared primitives, use parallel implementation
    waves for independent workflow families (05-work-loop.md); one integration owner, isolated writers and lean
