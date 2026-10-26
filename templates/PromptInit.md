@@ -34,10 +34,10 @@ A. Decide from evidence (ADR "Accepted — decided from evidence"; the human may
 - Number, money, date and ID representation: from the schema draft's decisions (decimals → integer minor units or TEXT decimals; unsigned 8-byte codes as strings across IPC; WINDEV date/time text kept until a reason to change).
 - OS: Windows first (WINDEV is Windows); others only if B1 says so.
 - UI: visually near-identical to the legacy app — layout, captions, tab order, keys and messages from the screen specs and dossier images, and the project's own skin template (its images, the skinned title bar instead of the native one); no redesign. Each screen records its visual score against the dossier image; the owner approves the look. A modern restyle is only done if the owner asks for it (new ADR).
-- Reports: fixed layouts as in the dossier, previewed then printed or saved as PDF.
+- Reports: fixed layouts as in the dossier, previewed then printed or saved as PDF. The starter renderer needs a Node host and provisioned Chromium; decide hosting and distribution within the accepted topology. Its pure geometry adapter can be reused independently; Node does not run inside the Tauri webview.
 - Rights: what the code does (Groupware calls, login windows, user tables); no new permission model.
 - Integrations, files, INI settings, external programs, scheduled tasks: exactly those in the evidence report's platform usage; each one gets a parity row.
-- Libraries, build, CI, installer, update channel: the proposed target of chapter 03 (03-scope-and-architecture.md).
+- Libraries, build, CI, installer, update channel: the proposed target of chapter 03 (03-scope-and-architecture.md). For React/Tauri, evaluate `templates/starter/README.md` first: reuse its portable UI/reporting packages and RAD generator where compatible. Record the choice; preserve existing repository evidence/decisions when integrating a separate scaffold. Business bindings and project acceptance gates remain explicit; a neutral preview does not satisfy a replica decision.
 - Build order: data and import first, then screens from the leaves of docs/navigation.md (lookups, simple lists and forms) towards the workflows that use them.
 - Evidence policy: compile-folder event codes and answered runtime questions count as verified.
 

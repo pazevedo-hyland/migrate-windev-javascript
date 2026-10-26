@@ -110,6 +110,6 @@ Tested on a real WINDEV 28 project (51 windows, 17 tables):
 
 ## Verification and limits
 
-`python3 -m unittest discover -s tests -v` runs the toolkit tests (inspector, parity gate, comparator, guard in all modes, documentation links and anchors). Native application checks belong to each application repository. This repository does not include a runnable Tauri app, a WLanguage compiler, an HFSQL reader or a query decoder.
+`python3 -m unittest discover -s tests -v` runs the toolkit tests (inspector, parity gate, comparator, guard in all modes, documentation links and anchors). The [runnable starter](templates/starter/README.md) has its own synthetic UI/PDF checks and Tauri shell; business and native acceptance belong to each application repository. No WLanguage compiler, HFSQL reader or query decoder is included.
 
 See [NOTICE](NOTICE), [LICENSE](LICENSE), [CHANGELOG](CHANGELOG.md) and [CONTRIBUTING](CONTRIBUTING.md).

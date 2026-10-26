@@ -15,6 +15,8 @@ The sample definition is in `examples/layouts/`; regenerate it with the guide's 
 
 `packages/reports` shares offline HTML/CSS pagination (Paged.js), PDF output (Playwright/Chromium), paper/band geometry and pinned fonts. Report data, grouping, calculations and event logic remain application-owned. `npm run report:demo` explicitly uses installed Chrome for development; configure a pinned executable/version/SHA for deployment. Chromium distribution and native printing are separate deployment tasks.
 
+The report renderer runs on a Node host, outside the Tauri webview. Decide its hosting/distribution during framing; using the UI starter does not choose a server topology. The pure report geometry adapter can be consumed independently.
+
 Use the Node/npm versions in `package.json` and an installed Google Chrome. The real PDF assertions also require Python with `pypdf==6.21.2` (`python3 -m pip install pypdf==6.21.2` in a virtual environment); set `PYTHON` to that environment's Python executable. There are no browser downloads during tests.
 
 ```sh

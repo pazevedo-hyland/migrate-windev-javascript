@@ -39,7 +39,13 @@ continue with the first slice not Done. Otherwise start at step 1.
    leaves of docs/navigation.md towards the workflows that use them.
    With "Stop after: framing", stop here: commit, and leave the handoff with what was found, the decisions taken by
    default and what the owner should check before the foundation starts.
-6. Slices, in dependency order, each as templates/prompt-stage.md says: reuse docs/runbooks/current-stage.md for
+6. Foundation: when framing selects React/Tauri, read the playbook's templates/starter/README.md and reuse its
+   compatible portable UI/reporting packages before building shared controls. scripts/create_project.py creates only a new
+   directory; generate in a separate sibling and integrate reviewed foundation files into this repository without
+   replacing evidence, decisions or maintained code. Use scripts/screen_layout.py then scripts/generate_screens.py
+   for RAD screen structure; handwritten data/business bindings stay outside src/generated/. Extend the starter's
+   baseline verify command with this project's lint, parity, bindings and native checks. A scaffold is not parity.
+   Slices, in dependency order, each as templates/prompt-stage.md says: reuse docs/runbooks/current-stage.md for
    the active brief. After one complete persisted workflow and shared primitives, use parallel implementation
    waves for independent workflow families (05-work-loop.md); one integration owner, isolated writers and lean
    worker packets. Build, verify (npm run verify, UI check and click-through flows, parity check), update

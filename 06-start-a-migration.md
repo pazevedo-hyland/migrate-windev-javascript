@@ -74,6 +74,8 @@ UI style is one of these choices: a **WINDEV-like replica** (same layout, fields
 
 For a framing choice of React/Tauri, the [runnable starter](templates/starter/README.md) reuses windows, RAD controls, tables, dialogs and HTML/PDF reporting. Run `python3 scripts/create_project.py ../my-app --name my-app` from this playbook, then `cd ../my-app && npm ci && npm run dev`. It creates a new directory only. If the framed repository already exists, generate into a separate directory and integrate the reviewed foundation while preserving its evidence, decisions and maintained files. Add `--layouts <layout-json-directory> --language <code>` to scaffold extracted screens. Later, `generate_screens.py --input <layouts> --output <app>/src/generated` refreshes only unchanged generator-owned files. Keep handwritten bindings outside that directory. Generated structure does not translate queries/business events or verify parity. The manual foundation below remains an alternative; do not layer a second scaffold over the starter.
 
+The starter's `verify` covers its baseline types/build/unit/browser checks. During foundation, add the project's required lint, parity, bindings, database and native gates; passing the starter alone does not close the migration foundation or acceptance.
+
 - Scaffold with `npm create tauri-app@latest` (React + TypeScript), then `npm i -D @playwright/test vitest eslint` and `npm i @tauri-apps/api`. Playwright drives the installed Chrome (`channel: "chrome"`): no browser download.
 - `package.json` scripts — Python through `node scripts/py.mjs` so they run on Windows too:
   ```json

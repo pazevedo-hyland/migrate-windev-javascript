@@ -11,6 +11,7 @@ Keep this file short (about 100 lines). Details live in `docs/`; local rules liv
 - `src/domain/` — pure TypeScript business rules. No React, Tauri, Node or I/O imports.
 - `src/application/` — use cases and repository/command interfaces.
 - `src/infrastructure/` — Tauri IPC (or API) adapters. `src/bindings/` is generated: never edit by hand.
+- When the starter is adopted: `packages/ui/`, `packages/reports/` hold reusable source packages; `src/generated/` holds generator-owned layouts/catalogue; `src/adapters.ts` and application code hold maintained business bindings.
 - `src-tauri/src/commands/` — one Rust command per business operation, one transaction each.
 - `src-tauri/migrations/` — ordered SQL migrations; committed ones are immutable. See local `AGENTS.md`.
 - `docs/parity/parity.csv` — behavior parity matrix: strict migration completion.
@@ -33,7 +34,7 @@ Need more: `python3 scripts/prepare_evidence.py` regenerates `analysis-local/` f
 5. One user save = one command = one transaction. Validate input at the native/server boundary; parameterize all SQL.
 6. Money, quantities and durations use the representation fixed in ADR-<n>; IDs above 2^53 cross IPC as strings. Check `docs/wlanguage-traps.md` when translating WLanguage.
 7. No secrets in Git (licences, connection strings, tokens → environment variables or ignored local config).
-8. Generated files (bindings, scaffolds) are regenerated, not edited.
+8. Regenerate declared generated outputs (bindings, `src/generated/`); keep handwritten adapters, queries and events outside them. Scaffolded application sources become maintained code after initialization.
 9. Never claim a check passed unless you ran it. Record checks you could not run.
 10. Do not re-open accepted decisions without new evidence. Read whole files before concluding.
 11. Several agents in one checkout: never `git stash`, `git reset`, `git checkout -- .`, `git clean` or a rebase; stage and commit only the files you changed, by name; one writer per file; slow commands (full build, full test suite) run by one agent at a time. Separate sessions writing code get separate worktrees.
@@ -73,6 +74,8 @@ Identifiers you invent (test ids for controls that do not exist in legacy, helpe
 ## Project-specific rules (filled in at framing, each backed by an ADR)
 
 <Topology (local SQLite / shared server API), supported OSes, permissions model, report engine, grid/form libraries, update channel, external system access mode (read-only / limited writes / none)…>
+
+For React/Tauri foundations, read `templates/starter/README.md` in the playbook and reuse compatible UI/reporting packages. `create_project.py` requires a new directory; integrate from a separate scaffold when this repository already exists. Use `screen_layout.py` → `generate_screens.py` for structure, then bind real data/actions outside generated files. Retain unknown metadata and acceptance gaps; neutral previews, demo CRUD and passing starter tests do not prove the migrated application. Extend baseline verification with the project's required gates.
 
 ## Commands
 
