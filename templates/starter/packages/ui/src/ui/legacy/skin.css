@@ -1,0 +1,110 @@
+/* Original, image-free starter theme. Hosts may override these classes with their own measured skin. */
+.wd-frame { position: relative; box-sizing: border-box; overflow: hidden; font: 12px system-ui, sans-serif; color: #182331; background: #f7f8fa; border-radius: 5px; box-shadow: 0 4px 14px #18233120; }
+.wd-frame::before { content: ""; position: absolute; inset: 0; box-sizing: border-box; border: 1px solid #9ca9ba; border-radius: inherit; pointer-events: none; }
+.wd-frame--image::before { border-width: var(--wd-frame-border-width, 25px 8px 8px); border-image: var(--wd-frame) var(--wd-frame-slice, 25 8 8 8) fill stretch; }
+.wd-client { position: absolute; inset: 0; }
+.wd-title { position: absolute; line-height: 22px; white-space: nowrap; overflow: hidden; font-weight: 600; user-select: none; }
+.wd-default-chrome { position: absolute; top: 4px; right: 4px; display: flex; gap: 2px; }
+.wd-default-chrome button { position: relative; width: 28px; height: 24px; font: 16px/1 system-ui, sans-serif; color: inherit; border: 0; border-radius: 3px; background: transparent; }
+.wd-default-chrome button:hover { background: #dfe6ee; }
+.wd-default-chrome button:focus-visible { outline: 2px solid #2563b9; outline-offset: -2px; }
+.wd-button { position: absolute; box-sizing: border-box; margin: 0; padding: 0 6px; border: 1px solid #a8b4c3; border-radius: 3px; background: #fff; color: inherit; font: inherit; line-height: 1.25; display: flex; align-items: center; justify-content: center; gap: 5px; cursor: default; border-image: var(--wd-background-0, none) 4 fill stretch; }
+.wd-button:hover { background-color: #eef3f9; border-color: #6988ad; border-image-source: var(--wd-background-1, none); }
+.wd-button:active { background-color: #dce7f5; border-image-source: var(--wd-background-2, none); }
+.wd-button:focus-visible { outline: 2px solid #2563b9; outline-offset: -2px; border-image-source: var(--wd-background-3, none); }
+.wd-button:disabled { opacity: .55; border-image-source: var(--wd-background-4, none); }
+.wd-button-icon { display: block; flex: none; width: 16px; height: 16px; background: var(--wd-icon-0, none) center / contain no-repeat; }
+.wd-button:hover .wd-button-icon { background-image: var(--wd-icon-1, none); }
+.wd-button:active .wd-button-icon { background-image: var(--wd-icon-2, none); }
+.wd-button:focus-visible .wd-button-icon { background-image: var(--wd-icon-3, none); }
+.wd-button:disabled .wd-button-icon { background-image: var(--wd-icon-4, none); }
+.wd-button.wd-chrome-button { padding: 0; background: var(--wd-background-0, #fff) center / 100% 100% no-repeat; }
+.wd-button.wd-chrome-button:hover { background-image: var(--wd-background-1, none); }
+.wd-button.wd-chrome-button:active { background-image: var(--wd-background-2, none); }
+.wd-field { position: absolute; font: inherit; color: inherit; }
+.wd-field label { position: absolute; left: 2px; top: 0; height: 100%; display: flex; align-items: center; }
+.wd-edit { position: absolute; top: 2px; height: calc(100% - 4px); box-sizing: border-box; margin: 0; padding: 2px 4px; font: inherit; color: inherit; border: 1px solid #a8b4c3; border-radius: 2px; background: #fff; }
+.wd-edit:focus { outline: 2px solid #2563b9; outline-offset: -2px; }
+.wd-edit:disabled { opacity: .6; }
+.wd-combo { padding: 0 2px; }
+.wd-password-reveal { position: absolute; right: 1px; top: 3px; height: calc(100% - 6px); width: 21px; margin: 0; padding: 0; border: 0; background: white; color: #445569; display: flex; align-items: center; justify-content: center; }
+.wd-password-reveal:focus-visible { outline: 2px solid #2563b9; outline-offset: -2px; }
+.wd-password-eye { position: relative; box-sizing: border-box; width: 14px; height: 9px; border: 1.5px solid currentColor; border-radius: 60%; }
+.wd-password-eye::after { content: ""; position: absolute; width: 4px; height: 4px; left: 3px; top: 1px; background: currentColor; border-radius: 50%; }
+.wd-check-mark { display: inline-flex; box-sizing: border-box; width: 14px; height: 14px; flex: none; align-items: center; justify-content: center; font: bold 12px/1 system-ui, sans-serif; border: 1px solid #6c7f96; border-radius: 2px; background: #fff; color: #1d5599; vertical-align: middle; }
+.wd-check-mark-image { border: 0; background-repeat: no-repeat; background-size: contain; }
+.wd-checkbox { position: absolute; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 3px; font: inherit; color: inherit; }
+.wd-checkbox input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: default; }
+.wd-checkbox input:focus-visible + .wd-check-mark { outline: 2px solid #2563b9; outline-offset: 1px; }
+.wd-checkbox input:disabled + .wd-check-mark { opacity: .55; }
+.wd-radio { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; }
+.wd-radio button { position: relative; display: flex; align-items: center; gap: 6px; flex: 1; min-height: 0; padding: 0 3px; margin: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; white-space: nowrap; }
+.wd-radio-mark { display: inline-block; box-sizing: border-box; flex: none; width: 13px; height: 13px; border: 1px solid #6c7f96; border-radius: 50%; background: white center / contain no-repeat; }
+.wd-radio button[aria-checked="true"] .wd-radio-mark { box-shadow: inset 0 0 0 3px #fff; background-color: #2563b9; }
+.wd-radio button:focus-visible { outline: 2px solid #2563b9; outline-offset: -1px; }
+.wd-radio button:disabled { opacity: .55; }
+.wd-rad-caption, .wd-rad-shape { position: absolute; box-sizing: border-box; }
+.wd-rad-caption { padding-left: 2px; }
+.wd-rad-shape { border: 1px solid #6c7f96; pointer-events: none; }
+.wd-input-suggestions { position: fixed; inset: auto; box-sizing: border-box; margin: 0; padding: 0; overflow: auto; border: 1px solid #a8b4c3; border-radius: 3px; background: white; color: #182331; font: 12px system-ui, sans-serif; box-shadow: 0 4px 12px #18233120; }
+.wd-input-suggestions [role="option"] { box-sizing: border-box; height: 22px; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
+.wd-input-suggestions [role="option"]:hover, .wd-input-suggestions [aria-selected="true"] { background: #e3edfb; }
+.wd-frame [hidden], .wd-checkbox[hidden] { display: none !important; }
+.wd-memo { resize: none; overflow: auto; }
+.wd-memo-field label { align-items: start; padding-top: 4px; box-sizing: border-box; }
+.wd-table { position: absolute; box-sizing: border-box; overflow: auto; border: 1px solid #a8b4c3; border-radius: 2px; background: white; }
+.wd-table table { border-collapse: separate; border-spacing: 0; table-layout: fixed; font: inherit; }
+.wd-table th { position: sticky; top: 0; box-sizing: border-box; height: 23px; font-weight: 500; text-align: center; background: #eef2f7; border-right: 1px solid #d6dee8; border-bottom: 1px solid #b9c5d5; }
+.wd-table th button { font: inherit; color: inherit; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; background: transparent; }
+.wd-table td { box-sizing: border-box; height: 19px; padding: 0 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-right: 1px solid #e4e9f0; border-bottom: 1px solid #edf0f4; }
+.wd-table tr[aria-selected="true"] td { background: #dceafb; }
+.wd-table:focus-visible { outline: 2px solid #2563b9; outline-offset: -2px; }
+.wd-table-grid { position: absolute; top: 23px; bottom: 0; display: flex; pointer-events: none; }
+.wd-table-grid span { box-sizing: border-box; flex: none; border-right: 1px solid #e4e9f0; }
+.wd-dialog-host { border: 0; padding: 0; background: transparent; }
+.wd-dialog-host::backdrop { background: #18233120; }
+.wd-modal { position: fixed; margin: 0; }
+.wd-modal .wd-title, .wd-workspace-window .wd-title { touch-action: none; cursor: move; }
+.wd-modal[data-wd-movable-title="false"] .wd-title { touch-action: auto; cursor: default; }
+.wd-message-text { position: absolute; display: flex; align-items: center; white-space: pre-wrap; overflow: visible; overflow-wrap: anywhere; }
+.wd-message-icon { position: absolute; border-radius: 50%; background: #2d65aa; color: white; display: flex; align-items: center; justify-content: center; font: 600 24px system-ui, sans-serif; }
+.wd-message-icon.error { background: #ba3942; }
+.wd-resource-input { position: absolute; }
+.wd-resource-edit { box-sizing: border-box; width: 100%; height: 100%; font: inherit; padding: 2px 4px; border: 1px solid #a8b4c3; border-radius: 2px; }
+.wd-resource-calculator { position: absolute; right: 2px; top: 2px; bottom: 2px; width: 22px; border: 0; padding: 0; background: #eef2f7; color: #445569; }
+.wd-resource-input [aria-invalid="true"], [data-testid="target-calculator"] [aria-invalid="true"] { outline: 2px solid #ba3942; outline-offset: -2px; }
+textarea.wd-resource-edit { resize: none; }
+.wd-resource-icon { position: absolute; }
+.wd-resource-icon > .wd-message-icon { inset: 0; width: 100%; height: 100%; }
+.wd-resource-icon > img { width: 100%; height: 100%; object-fit: contain; }
+.wd-workspace-canvas { position: relative; height: 560px; overflow: auto; isolation: isolate; background: #e9eef4; border: 1px solid #c7d1df; border-radius: 5px; }
+.wd-workspace-window { position: absolute; }
+.wd-workspace-window[hidden] { display: none; }
+.wd-workspace-window .wd-frame:focus { outline: none; }
+.wd-workspace-launcher, .wd-workspace-tasks { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0; }
+.wd-workspace-launcher > button, .wd-workspace-tasks > button { font: inherit; padding: 6px 10px; color: #182331; border: 1px solid #a8b4c3; border-radius: 3px; background: white; }
+.wd-workspace-tasks [aria-pressed="true"] { background: #dceafb; }
+.wd-workspace-edge { position: absolute; z-index: 1; padding: 0; border: 0; background: transparent; touch-action: none; }
+.wd-workspace-edge-n, .wd-workspace-edge-s { cursor: ns-resize; }
+.wd-workspace-edge-w, .wd-workspace-edge-e { cursor: ew-resize; }
+.wd-workspace-edge-nw, .wd-workspace-edge-se { cursor: nwse-resize; }
+.wd-workspace-edge-ne, .wd-workspace-edge-sw { cursor: nesw-resize; }
+.wd-workspace-grip { position: absolute; box-sizing: border-box; right: 2px; bottom: 2px; width: 14px; height: 14px; border: 0; background: repeating-linear-gradient(135deg, transparent 0 3px, #8797ac 3px 4px, transparent 4px 6px); clip-path: polygon(100% 0, 100% 100%, 0 100%); cursor: nwse-resize; touch-action: none; }
+.wd-column-resize { position: absolute; top: 0; right: -2px; bottom: 0; width: 5px; z-index: 1; cursor: col-resize; touch-action: none; user-select: none; }
+.wd-table th:last-child .wd-column-resize { right: 0; }
+.wd-column-resize:focus-visible { outline: 2px solid #2563b9; outline-offset: -2px; }
+.wd-column-caption { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.wd-table th button.wd-searchable-caption { width: calc(100% - 16px); margin-right: 16px; overflow: hidden; }
+.wd-table th button.wd-column-search { position: absolute; right: 3px; top: 0; width: 13px; height: 100%; }
+.wd-column-search span { display: block; width: 5px; height: 5px; border: 1px solid currentColor; border-radius: 50%; position: relative; }
+.wd-column-search span::after { content: ""; position: absolute; width: 5px; height: 1px; background: currentColor; left: 4px; top: 5px; transform: rotate(45deg); }
+.wd-column-search-input { box-sizing: border-box; width: calc(100% - 4px); font: inherit; }
+.wd-table-tools { position: sticky; top: 0; right: 0; float: right; height: 0; z-index: 4; }
+.wd-table-tools > button { width: 16px; height: 23px; padding: 0; font: inherit; border: 1px solid #b9c5d5; background: #eef2f7; }
+.wd-column-settings { position: absolute; right: 0; top: 23px; min-width: 160px; padding: 5px; border: 1px solid #a8b4c3; background: white; box-shadow: 0 3px 10px #18233120; }
+.wd-column-settings label { display: flex; align-items: center; white-space: nowrap; }
+.wd-table-designer::-webkit-scrollbar { width: 16px; height: 16px; }
+.wd-table-designer::-webkit-scrollbar-track { background: #eef2f7; }
+.wd-table-designer::-webkit-scrollbar-thumb { background: #b4c1d2; border: 3px solid #eef2f7; border-radius: 8px; }
+.wd-table-designer th:last-child button.wd-searchable-caption { width: calc(100% - 32px); margin-right: 32px; }
+.wd-table-designer th:last-child button.wd-column-search { right: 19px; }

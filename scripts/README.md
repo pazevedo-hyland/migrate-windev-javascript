@@ -1,5 +1,9 @@
 # Scripts
 
+## Reusable project and RAD screens
+
+`python3 scripts/create_project.py ../my-app --name my-app` creates the [runnable starter](../templates/starter/README.md) in a new directory. Optional `--layouts <directory> --language <code>` consumes extracted layout JSON. `python3 scripts/generate_screens.py --input <layout-file-or-directory> --output <app>/src/generated --language <code>` regenerates declared outputs only; edited or unexpected files cause refusal. Inputs remain untouched. Unknown metadata stays diagnostic, strings stay data, handwritten adapters remain outside generated files. This automates screen structure, not SQL, business events or acceptance. See `--help` for both commands.
+
 Python 3.10+, standard library plus `pypdf` (dossier) and `pillow` (skin images, visual scores): `python3 -m pip install pypdf pillow`. No WINDEV runtime, network or AI credentials required. Run the tests with `python3 -m unittest discover -s tests -v`.
 
 ## `inspect_windev.py` — inventory, context and parity seed

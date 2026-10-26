@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "generator": "generate_screens.py",
+  "inputs": [
+    {
+      "diagnostics": [],
+      "id": "WIN_Directory",
+      "layout": "layouts/WIN_Directory-526cd041a1.layout.json",
+      "sha256": "6e15137e7fbaa9193c15f29f4ecc550c3cb671359a95721a6e43167c87ebf1ad",
+      "source": "WIN_Directory.layout.json"
+    }
+  ],
+  "language": "en",
+  "outputs": {
+    "layouts/WIN_Directory-526cd041a1.layout.json": "f21575fb49febdace4c29a02f0631e38d404ba00d1f4aca5e6d30bf6bcf7dd61",
+    "screens.ts": "42b64118a32b6bedbb75505d968effc11be88b5902bf9c5bccb8aceba96dd5a0"
+  }
+}

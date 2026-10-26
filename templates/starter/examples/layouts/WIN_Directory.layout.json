@@ -1,0 +1,142 @@
+{
+  "window": {
+    "name": "WIN_Directory",
+    "title": "Demo directory",
+    "size": {
+      "width": 800,
+      "height": 500
+    },
+    "background_image": null,
+    "flags": {
+      "Resizable": true,
+      "Title bar": true,
+      "Minimize icon": true,
+      "Maximize icon": true,
+      "Save position": true
+    }
+  },
+  "controls": [
+    {
+      "name": "EDT_Name",
+      "path": "WIN_Directory.EDT_Name",
+      "kind": "Edit control",
+      "x": 16,
+      "y": 48,
+      "width": 500,
+      "height": 30,
+      "caption": "Name",
+      "visible": true,
+      "flags": {
+        "Visible": true,
+        "TAB Key": true
+      },
+      "caption_width": 80,
+      "input_type": "Text",
+      "input_size": 80,
+      "tab_order": 1
+    },
+    {
+      "name": "CBOX_Active",
+      "path": "WIN_Directory.CBOX_Active",
+      "kind": "Check Box",
+      "x": 530,
+      "y": 48,
+      "width": 150,
+      "height": 30,
+      "caption": "Active",
+      "visible": true,
+      "flags": {
+        "Visible": true,
+        "TAB Key": true
+      },
+      "tab_order": 2
+    },
+    {
+      "name": "TABLE_Entries",
+      "path": "WIN_Directory.TABLE_Entries",
+      "kind": "Table",
+      "x": 16,
+      "y": 95,
+      "width": 760,
+      "height": 290,
+      "caption": null,
+      "visible": true,
+      "flags": {
+        "Visible": true,
+        "TAB Key": true
+      },
+      "columns": [
+        {
+          "name": "COL_Name",
+          "path": "WIN_Directory.TABLE_Entries.COL_Name",
+          "title": "Name",
+          "width": 400,
+          "h_align": "Left",
+          "flags": {
+            "Visible": true,
+            "Adjustable width": true
+          }
+        },
+        {
+          "name": "COL_Active",
+          "path": "WIN_Directory.TABLE_Entries.COL_Active",
+          "title": "Active",
+          "width": 160,
+          "h_align": "Left",
+          "flags": {
+            "Visible": true
+          }
+        }
+      ],
+      "tab_order": 3
+    },
+    {
+      "name": "BTN_New",
+      "path": "WIN_Directory.BTN_New",
+      "kind": "Button",
+      "x": 16,
+      "y": 406,
+      "width": 110,
+      "height": 32,
+      "caption": "&New",
+      "visible": true,
+      "flags": {
+        "Visible": true,
+        "TAB Key": true
+      },
+      "tab_order": 4
+    },
+    {
+      "name": "BTN_Save",
+      "path": "WIN_Directory.BTN_Save",
+      "kind": "Button",
+      "x": 138,
+      "y": 406,
+      "width": 110,
+      "height": 32,
+      "caption": "&Save",
+      "visible": true,
+      "flags": {
+        "Visible": true,
+        "TAB Key": true
+      },
+      "tab_order": 5
+    },
+    {
+      "name": "BTN_Delete",
+      "path": "WIN_Directory.BTN_Delete",
+      "kind": "Button",
+      "x": 260,
+      "y": 406,
+      "width": 110,
+      "height": 32,
+      "caption": "&Delete",
+      "visible": true,
+      "flags": {
+        "Visible": true,
+        "TAB Key": true
+      },
+      "tab_order": 6
+    }
+  ]
+}

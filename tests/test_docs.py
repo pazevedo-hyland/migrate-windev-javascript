@@ -1,11 +1,23 @@
 from pathlib import Path
 import json
+import os
 import re
 import unittest
 
 from helpers import ROOT
 
 LINK = re.compile(r'\]\(([^)#\s]*)(#[^)]*)?\)')
+
+
+def source_files():
+    # A developer may install/build the runnable template. Dependency documentation
+    # and generated bundles are not playbook source and can contain arbitrary links.
+    ignored = {'.git', 'node_modules', 'dist', 'target', 'test-results', 'playwright-report', '__pycache__'}
+    for directory, folders, files in os.walk(ROOT):
+        folders[:] = [name for name in folders if name not in ignored and not
+                      (Path(directory) == ROOT and name in {'legacy', 'analysis-local'})]
+        for name in files:
+            yield Path(directory) / name
 
 
 def anchors(document):
@@ -23,8 +35,8 @@ def anchors(document):
 class DocumentationTests(unittest.TestCase):
     def test_relative_markdown_links_resolve(self):
         broken = []
-        for document in ROOT.rglob('*.md'):
-            if '.git' in document.parts:
+        for document in source_files():
+            if document.suffix != '.md':
                 continue
             for target, anchor in LINK.findall(document.read_text(encoding='utf-8')):
                 if re.match(r'^[a-z]+:', target):
@@ -53,7 +65,7 @@ class DocumentationTests(unittest.TestCase):
 class MergeMarkerTests(unittest.TestCase):
     def test_no_unresolved_merge_conflicts(self):
         marker = re.compile(r'^(<<<<<<< |>>>>>>> )', re.M)
-        found = [str(p.relative_to(ROOT)) for p in ROOT.rglob('*') if p.suffix in ('.md', '.py', '.ts', '.tsx', '.json', '.csv')
+        found = [str(p.relative_to(ROOT)) for p in source_files() if p.suffix in ('.md', '.py', '.ts', '.tsx', '.json', '.csv')
                  and '.git' not in p.parts and marker.search(p.read_text(encoding='utf-8', errors='replace'))]
         self.assertEqual(found, [])
 

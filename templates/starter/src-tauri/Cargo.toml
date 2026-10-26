@@ -1,0 +1,11 @@
+[package]
+name = "__APP_NAME__"
+version = "0.1.0"
+description = "WINDEV migration starter"
+edition = "2024"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.4", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.5", features = [] }

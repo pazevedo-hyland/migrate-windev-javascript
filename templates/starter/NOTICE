@@ -1,0 +1,11 @@
+This starter is part of the MIT-licensed WINDEV to TypeScript migration playbook.
+See LICENSE. It includes generic assistant-authored migration infrastructure,
+adapted without customer data, source layouts, graphics or business rules.
+
+Runtime dependencies retain their own licenses:
+React, react-dom, react-rnd, TanStack Table/Virtual, decimal.js, Paged.js: MIT.
+Playwright: Apache-2.0. Noto Sans font: SIL Open Font License 1.1.
+Vite/Vitest/TypeScript/Tauri and development dependencies retain their package
+licenses. Preserve dependency license files when distributing a built app.
+No Chromium binary or WINDEV assets are included. Distribution of a browser
+runtime and any project-owned skin/fonts must preserve their applicable notices.

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="128" height="128">
+  <!-- Original starter icon: a neutral window and forward arrow. No imported graphics. -->
+  <rect x="2" y="2" width="60" height="60" rx="13" fill="#20334c"/>
+  <rect x="12" y="14" width="40" height="36" rx="4" fill="#f6f9fc"/>
+  <path d="M16 14h32a4 4 0 0 1 4 4v5H12v-5a4 4 0 0 1 4-4z" fill="#76b9ef"/>
+  <rect x="17" y="29" width="12" height="4" rx="1" fill="#9daec1"/>
+  <rect x="17" y="38" width="12" height="4" rx="1" fill="#9daec1"/>
+  <path d="M34 34h9v-5l9 7-9 7v-5h-9z" fill="#306da7"/>
+</svg>

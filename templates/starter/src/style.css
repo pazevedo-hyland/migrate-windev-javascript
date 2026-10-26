@@ -1,0 +1,13 @@
+:root { font-family: system-ui, sans-serif; color: #172a3b; background: #e6ecf1; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, input, textarea, select { font: inherit; }
+.wd-workspace { height: 100dvh; min-height: 500px; display: flex; flex-direction: column; }
+.wd-workspace-launcher, .wd-workspace-tasks { flex: none; }
+.wd-workspace-canvas { flex: 1; min-height: 240px; height: auto; }
+.launcher { display: flex; gap: 20px; align-items: center; padding: 12px; }
+.launcher nav { display: flex; gap: 8px; flex-wrap: wrap; }
+.launcher button { padding: 6px 14px; }
+.screen-status { position: absolute; bottom: 8px; left: 14px; right: 14px; font-size: 12px; padding: 5px; background: #f0f4f7; }
+.screen-status details[open] { max-height: 180px; overflow: auto; }
+.missing-control { position: absolute; overflow: auto; border: 1px dashed #98610a; color: #754904; background: #fff7df; font-size: 12px; }

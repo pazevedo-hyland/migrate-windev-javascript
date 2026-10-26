@@ -4,6 +4,8 @@ An evidence-based, AI-driven method for rebuilding WINDEV/HFSQL business applica
 
 **This is a playbook plus a source-inspection and verification toolkit, not an automatic transpiler or a finished application.** WLanguage behavior must be understood, reimplemented and proven. No customer application or database is distributed here.
 
+The [runnable migration starter](templates/starter/README.md) adds reusable React/RAD controls, window management and HTML/PDF reporting, with a safe project/screen generator. Reuse the interaction layer; bind each application's data and business operations explicitly ([foundation step](06-start-a-migration.md#7-foundations)).
+
 ## The idea in one sentence
 
 > Two AI roles and you: a **planner/reviewer** (the brain: architecture, stage prompts, review, memory) and an **implementer** (the hands: code, tests, commits, handoff). **You validate every stage.** It is not magic: it is an engineering chain where **structure beats prompts**, and where **parity is counted, not claimed**.

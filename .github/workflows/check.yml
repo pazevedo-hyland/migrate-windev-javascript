@@ -32,3 +32,24 @@ jobs:
       - run: python -m pip install pyodbc
       - name: ODBC export against a real driver
         run: python tests\windows_e2e\odbc_e2e.py ${{ runner.temp }}\odbc
+
+  starter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+      - run: python -m pip install pypdf==6.21.2
+      - name: Generate a real consumer (including portable UI sources)
+        run: python scripts/create_project.py ../starter-consumer --name starter-consumer
+      - run: npm ci
+        working-directory: ../starter-consumer
+      - name: Provision test Chrome separately from tests
+        run: npx playwright install --with-deps chrome
+        working-directory: ../starter-consumer
+      - run: npm run verify
+        working-directory: ../starter-consumer

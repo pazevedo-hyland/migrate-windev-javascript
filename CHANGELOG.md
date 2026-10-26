@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-26 — reusable migration starter
+
+- Add a new-directory project generator and deterministic, ownership-checked RAD screen generation from extracted layouts; handwritten business bindings remain separate.
+- Vendor reusable React/window/table/dialog controls and Paged.js/Chromium reporting behind application-neutral contracts, with synthetic demos and tests. No customer evidence, skins, credentials or business rules are distributed.
+- Reuse existing packages for interaction, pagination and PDF output; generated scaffolds do not promote parity or native acceptance.
+
 ## 2026-10-26 — functional acceptance and strict parity
 
 - Define functional readiness against complete approved target scope and executed behavior assertions, independently of strict parity/source confidence and platform evidence.

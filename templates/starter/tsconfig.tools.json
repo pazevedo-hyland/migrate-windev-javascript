@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "lib": ["ES2022", "DOM"], "module": "ESNext", "moduleResolution": "bundler",
+    "skipLibCheck": true, "resolveJsonModule": true, "noEmit": true, "strict": true,
+    "noUnusedLocals": true, "noUnusedParameters": true, "types": ["node"]
+  },
+  "include": ["packages/reports/src", "packages/reports/test", "scripts", "ui-check/**/*.ts", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"]
+}
