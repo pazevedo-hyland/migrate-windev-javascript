@@ -274,13 +274,14 @@ h2{{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut
 .tiles{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:20px}}
 .tile{{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}}
 .big{{font-size:34px;font-weight:700}}.big small{{font-size:18px;color:var(--muted)}}
-.muted{{color:var(--muted);font-size:13px}}
+.muted{{color:var(--muted);font-size:13px;overflow-wrap:anywhere}}
 .bar{{display:flex;height:12px;border-radius:6px;overflow:hidden;background:{COLORS["unmapped"]};min-width:40px}}
 .bar span{{display:block;height:100%}}
 .legend{{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);margin:10px 0}}
 .legend i{{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}}
 table{{width:100%;border-collapse:collapse;table-layout:fixed}}td{{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle;overflow-wrap:anywhere}}
 td:nth-child(1){{width:27%}}td:nth-child(2){{width:8%}}td:nth-child(3){{width:11%}}td:nth-child(5){{width:16%}}td:nth-child(6){{width:12%}}td:nth-child(7){{width:14%}}.num{{text-align:right;white-space:nowrap}}.visual{{text-align:right;font-size:12px;white-space:nowrap}}
+thead .num{{white-space:normal}}
 .stage{{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--line);white-space:nowrap}}
 .stage.done{{background:#1f4d33;color:#9ff0c0}}.stage.building{{background:#4d3f17;color:#ffe08a}}
 .stage.built{{background:#594817;color:#ffe7a6}}
@@ -302,7 +303,7 @@ Every screen/report stays in scope. Missing scope or stale evidence stays pendin
 {tile("screen", "screens")}{tile("report", "reports")}
 <div class="tile"><div class="big">{built_percent}%</div><div>implementation coverage</div>
 <div class="muted">{built} of {rows} behaviors · {statuses["implemented"]} built, awaiting proof · {statuses["excluded"]} approved exclusions outside the built count</div></div>
-<div class="tile"><div class="big">{proven_percent}%</div><div>proven by verification</div>
+<div class="tile"><div class="big">{proven_percent}%</div><div>strict behavior verification</div>
 <div class="muted">{statuses["verified"]}/{rows} verified{f" · {assumed} on assumptions still to confirm" if assumed else ""}</div></div>
 <div class="tile"><div class="big">{percent}%</div><div>strict completion</div>
 <div class="muted">{done}/{rows} verified + approved exclusions ({statuses["excluded"]} excluded)</div></div>

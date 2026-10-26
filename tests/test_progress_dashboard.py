@@ -84,7 +84,7 @@ class BuiltAndProvenProgressChecks(unittest.TestCase):
         self.assertIn('<div class="hero"><div class="pct">—</div>', page)
         self.assertIn('<div class="big">50.0%</div><div>implementation coverage</div>', page)
         self.assertIn('3 of 6 behaviors · 2 built, awaiting proof · 1 approved exclusions outside the built count', page)
-        self.assertIn('<div class="big">16.7%</div><div>proven by verification</div>', page)
+        self.assertIn('<div class="big">16.7%</div><div>strict behavior verification</div>', page)
         self.assertIn('<div class="big">33.3%</div><div>strict completion</div>', page)
         self.assertIn('2/6 verified + approved exclusions (1 excluded)', page)
         self.assertIn('3/6 built', page)
