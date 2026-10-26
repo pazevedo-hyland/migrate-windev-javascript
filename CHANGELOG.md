@@ -6,6 +6,7 @@
 - Recognize source-derived checks for readable legacy rules; retain encoded properties and native behavior as explicit evidence gaps.
 - Align workflow and agent/stage instructions; passing tests and built links do not create an acceptance percentage.
 - Add the portable acceptance validator, primary functional dashboard and synthetic pending template, with tests for missing scope, stale witnesses, independent parity and platform evidence.
+- Read only authoritative aggregate/seed snapshots for progress history when present; normalize Git paths across platforms.
 
 ## 2026-10-26 — parallel implementation after a proven workflow
 

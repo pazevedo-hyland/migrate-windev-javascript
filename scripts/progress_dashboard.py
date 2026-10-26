@@ -148,11 +148,14 @@ def git(root, *args):
 
 def history(root, parity_dir, limit=200):
     """(date, strict completion %, rows) after parity commits, oldest first. Includes approved exclusions."""
-    relative = parity_dir.resolve().relative_to(Path(git(root, 'rev-parse', '--show-toplevel').strip() or root).resolve())
+    relative = parity_dir.resolve().relative_to(Path(git(root, 'rev-parse', '--show-toplevel').strip() or root).resolve()).as_posix()
     points = []
     for line in git(root, 'log', f'-{limit}', '--format=%H %cI', '--', str(relative)).splitlines()[::-1]:
         sha, date = line.split()
         names = git(root, 'ls-tree', '--name-only', sha, f'{relative}/').split()
+        # matrix_rows already prefers the aggregate. Avoid thousands of redundant Git reads.
+        if f'{relative}/parity.csv' in names:
+            names = [n for n in names if Path(n).name in {'parity.csv', 'parity-seed.csv'}]
         files = {n: git(root, 'show', f'{sha}:{n}') for n in names if n.endswith('.csv')}
         rows = matrix_rows(files)
         if rows:

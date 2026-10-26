@@ -3,9 +3,10 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from progress_dashboard import chart, matrix_rows, render, summarize
+from progress_dashboard import chart, history, matrix_rows, render, summarize
 
 
 class PlatformVisualProgressChecks(unittest.TestCase):
@@ -142,6 +143,26 @@ class BuiltAndProvenProgressChecks(unittest.TestCase):
         })
         self.assertEqual([(row['id'], row['status']) for row in rows],
                          [('current', 'implemented'), ('missing', 'unmapped')])
+
+    def test_history_reads_only_the_authoritative_aggregate_when_it_exists(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            header = 'id,element,context,event,status\n'
+            files = {'docs/parity/parity.csv': header + 'one,WIN_A,WIN_A/a,18,verified\n',
+                     'docs/parity/parity-seed.csv': header + 'two,WIN_A,WIN_A/b,18,unmapped\n',
+                     'docs/parity/WIN_A.csv': header + 'one,WIN_A,WIN_A/a,18,implemented\n'}
+            def git_result(_root, *args):
+                if args[0] == 'rev-parse':
+                    return str(root)
+                if args[0] == 'log':
+                    return 'abc 2026-10-26T10:00:00+00:00'
+                if args[0] == 'ls-tree':
+                    return '\n'.join(files)
+                return files[args[1].partition(':')[2]]
+            with patch('progress_dashboard.git', side_effect=git_result) as calls:
+                self.assertEqual(history(root, root / 'docs/parity'), [('2026-10-26', 50.0, 2)])
+            shown = [c.args[2] for c in calls.call_args_list if c.args[1] == 'show']
+            self.assertEqual(shown, ['abc:docs/parity/parity.csv', 'abc:docs/parity/parity-seed.csv'])
 
     def test_target_defaults_do_not_hide_unconfirmed_source_behavior(self):
         with tempfile.TemporaryDirectory() as temporary:
