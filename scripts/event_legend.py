@@ -33,7 +33,9 @@ def compiled_labels(data):
     for raw in UTF16.findall(data):
         match = LABEL.match(raw.decode('utf-16-le'))
         if match and re.match(r'^[A-Z][a-z]', match[1]) and len(match[1]) < 45:
-            labels[match[2]].add(match[1])
+            # Some WINDEV versions write "Initializing BTN_X" instead of "Initialization of BTN_X": same label,
+            # present on every control, so it must not pair with a real event code.
+            labels[match[2]].add('Initialization' if match[1] == 'Initializing' else match[1])
     return labels
 
 
@@ -78,6 +80,7 @@ def legend(source_dir, compile_dir):
     votes = collections.defaultdict(collections.Counter)
     references = {}  # element -> other elements its compiled code names (opened, printed, called)
     observations = []  # (raw codes, compiled labels) per control, for the elimination passes
+    initialization = collections.Counter()  # codes of controls whose only compiled label is Initialization
     procedures = collections.Counter()  # slot types of local procedures, proven by their PROCEDURE line
     windows = 0
     sources = sorted(Path(source_dir).glob('*.[wW][dD][wW]')) + sorted(Path(source_dir).glob('*.[wW][dD][eE]'))
@@ -116,7 +119,7 @@ def legend(source_dir, compile_dir):
             named.discard('Global declarations')
             # A control whose only coded event and only compiled label are its initialization names that code.
             if named == {'Initialization'} and len(codes) == 1:
-                votes[next(iter(codes))]['Initialization'] += 1
+                initialization[next(iter(codes))] += 1  # weak: counted after pairing (see below)
             observations.append((codes, named))
     # Every control is labelled "Initialization" whether or not it has code, so that label pairs only as above.
     # Then pair one-to-one, repeatedly removing the codes already named and their labels from each control:
@@ -134,6 +137,8 @@ def legend(source_dir, compile_dir):
             break
         for code, counter in found.items():
             votes[code].update(counter)
+    for code, count in initialization.items():
+        votes[code]['Initialization'] += count  # after pairing: a stray empty-label control must not hide Click
     for code, count in procedures.items():
         votes[code]['Local procedure'] += count  # after pairing, so a conflict shows instead of hiding a code
     result = {}

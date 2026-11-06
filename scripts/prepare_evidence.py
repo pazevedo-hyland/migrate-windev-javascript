@@ -49,14 +49,20 @@ def publish_images(dossier, layouts, target):
     return str(target)
 
 
+def find_compile_dir(legacy):
+    """The project's own <project>.cpl sits next to its .wdp; the analysis folder (.ana/code, .ana/LASTGEN,
+    .ana/ANA<n> history) holds other .cpl folders, so prefer one beside a .wdp, then the shallowest."""
+    cpls = [p for p in [*Path(legacy, 'code').glob('*.cpl'), *Path(legacy).rglob('*.cpl')] if p.is_dir()]
+    return next(iter(sorted(cpls, key=lambda p: (not any(p.parent.glob('*.wdp')), len(p.parts), str(p)))), None)
+
+
 def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language=None, images=True):
     legacy, analysis, docs = Path(legacy), Path(analysis), Path(docs)
     stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
     # The fixed layout first (00 §E), else anywhere under legacy/: the WINDEV project folder can be dropped in as is.
     find = lambda pattern, preferred: next(iter(sorted(preferred)), None) or next(iter(sorted(Path(legacy).rglob(pattern))), None)
     dossier_pdf = dossier_pdf or find('*[Dd]ocumentation*.pdf', Path(legacy, 'docs').glob('*[Dd]ocumentation*.pdf'))
-    compile_dir = compile_dir or next(iter(sorted(p for p in [*Path(legacy, 'code').glob('*.cpl'), *Path(legacy).rglob('*.cpl')]
-                                                   if p.is_dir())), None)
+    compile_dir = compile_dir or find_compile_dir(legacy)
     paths = {'stamp': stamp, 'legacy': str(legacy), 'inspect': str(analysis / f'inspect-{stamp}')}
     (docs / 'mapping').mkdir(parents=True, exist_ok=True)
     (docs / 'schema').mkdir(parents=True, exist_ok=True)

@@ -162,12 +162,14 @@ def checkboxes(content, carry=None):
 
 def split_header(text):
     """('3', ['WINDEV window', 'WIN_X', 'Information on controls'], body) for one page."""
-    lines = (text or '').split('\n')
+    # Some pypdf versions keep a trailing space on every line: the field patterns are anchored at the end.
+    lines = [line.rstrip() for line in (text or '').split('\n')]
     match = HEADER.match(lines[0].strip()) if lines else None
     if not match:
         return None, [], lines
-    # Breadcrumb parts are separated by a \x9b glyph (two spaces in some extractions).
-    parts = [p.strip() for p in re.split(r'\x9b|\s{2,}', match[2]) if p.strip()]
+    # Breadcrumb parts are separated by a \x9b glyph, a U+203A '›' (newer pypdf / English dossiers)
+    # or two spaces in some extractions.
+    parts = [p.strip() for p in re.split(r'[\x9b›]|\s{2,}', match[2]) if p.strip()]
     # Second line is "<date> <page><project>": drop it.
     return match[1], parts, lines[2:]
 
@@ -301,10 +303,17 @@ def parse_query(lines):
 def collect(pages):
     """pages: iterable of page texts. Returns {kind: {element: {...}}}."""
     elements = {}
+    last = []
     for text in pages:
         part, header, body = split_header(text)
         if not part or not header:
             continue
+        # Deep breadcrumbs are abbreviated: "Part 2 › ... › Files and items › T › Files and items" continues the
+        # previous page's kind and element (the analysis .wda), so restore them from the last full header.
+        if header[0] == '...' and len(last) >= 2:
+            header = last[:2] + header[1:]
+        else:
+            last = header
         # Part overview pages ("Part 1  Project") carry project-wide facts such as the first window.
         kind, element = header[0], header[1] if len(header) > 1 else '_general'
         section = header[2] if len(header) > 2 else ''
@@ -318,7 +327,9 @@ def collect(pages):
         for element, item in items.items():
             sections = item.pop('sections')  # kept only for parsing: `lines` holds the same text in page order
             lines = item['lines']
-            general = sections.get('General information', [])
+            # A section can start mid-page under the previous header: a window's general information often begins
+            # on its "Image" page.
+            general = sections.get('Image', []) + sections.get('General information', [])
             for line in general:
                 for key, field in (('Title', 'title'), ('Window type', 'window_type'), ('Query type', 'query_type'),
                                    ('Opening mode (Desktop)', 'opening_mode'), ('Close icon', 'close_icon')):
