@@ -96,7 +96,8 @@ Missing screens/reports create pending unassessed gaps. Stale run evidence becom
 ```sh
 npx vitest run --reporter=json --outputFile=vitest.json
 npx playwright test --reporter=json > playwright.json
-python3 scripts/functional_cases.py --vitest vitest.json --playwright playwright.json --commit "$(git rev-parse HEAD)"   --os "Windows 11 x64" --command "npx vitest run ..." --command "npx playwright test ..."
+python3 scripts/functional_cases.py --vitest vitest.json --playwright playwright.json --commit "$(git rev-parse HEAD)" \
+  --os "Windows 11 x64" --command "npx vitest run ..." --command "npx playwright test ..."
 python3 scripts/functional_acceptance.py --check
 ```
 
