@@ -58,6 +58,8 @@ export function WdRadio({ control: source, options, value, onChange, disabled, l
   const tabStop = selected < 0 ? 0 : selected;
   return <div role="radiogroup" aria-label={label} data-testid={control.name} data-control-path={control.path}
     hidden={(control.visible ?? control.flags?.Visible) === false} className="wd-radio" style={controlBox(control)}>
+    {/* WINDEV draws a radio group's caption above its options (designer images), the options share the rest. */}
+    {control.caption ? <span className="wd-radio-caption" aria-hidden="true">{control.caption}</span> : null}
     {options.map((option, index) => <button key={option.value} ref={node => { buttons.current[index] = node; }} type="button" role="radio"
       aria-checked={selected === index} disabled={disabled} data-radio-value={option.value}
       tabIndex={control.flags?.["TAB Key"] === false || String(control.tab_order) === "-1" || index !== tabStop ? -1 : 0}

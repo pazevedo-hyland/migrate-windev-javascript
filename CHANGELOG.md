@@ -13,6 +13,7 @@
 - Starter combo: "no selection" is re-applied after every render; with a dependency list React silently re-selected the first option on any unrelated re-render (seen when an async start-up step added one).
 - `scripts/functional_cases.py` resolves a short SHA or ref to the full SHA: the validator accepts only 40-hex commits, and a short one left every case unassessed (0 %) without an error.
 - WLanguage traps (09): `Complete` truncates (the reverse-pad idiom keeps the last characters); `int + "text"` concatenation is not proven.
+- Skin QA against the running legacy app (10): `skin_assets.py` keeps one animation frame per button state (stacked frames drew striped buttons; tests added); window-background 9-slice measured on the image; unnamed skin pieces (table titles, combos, edits, `.sty` font); menu bar above the client; starter radio groups draw their caption above the options. "No caller" did not prove a dashboard widget dead.
 
 ## 2026-10-26 — reusable workflow verification
 
