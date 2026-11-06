@@ -22,9 +22,12 @@ The report renderer runs on a Node host, outside the Tauri webview. Decide its h
 Use the Node/npm versions in `package.json` and an installed Google Chrome. The real PDF assertions also require Python with `pypdf==6.21.2` (`python3 -m pip install pypdf==6.21.2` in a virtual environment); set `PYTHON` to that environment's Python executable. There are no browser downloads during tests.
 
 ```sh
-npm run verify             # types, production build, unit tests, browser flows (installed Chrome)
+npm run verify             # types, production build, unit tests, production-build smoke, browser flows (installed Chrome)
+npm run smoke:prod         # after vite build: the built app (vite preview) renders its first window, no data: images
 npm run tauri -- dev       # optional; Rust + OS Tauri prerequisites required
 npm run tauri -- build --debug --no-bundle
 ```
+
+The dev server and the browser flows do not exercise the production build. Vite inlines files under 4 KiB as `data:` URLs only when building, and the skin resolver refuses `data:` URLs: on a real migration the packaged app rendered a blank window while every flow passed. `vite.config.ts` therefore sets `build.assetsInlineLimit: 0`, and `npm run smoke:prod` (`ui-check/prod.smoke.spec.ts`) opens the built app; extend it to the application's first real window with its skin.
 
 For actual migrations, retain the guide's evidence, mapping, framing and acceptance stages. Browser checks do not prove Windows/macOS native printing, deployment or legacy parity. Replace the synthetic smoke tests as you wire real workflows. Keep legacy sources, data and credentials out of Git.

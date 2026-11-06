@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tools.json",
     "test": "vitest run",
     "ui:check": "playwright test",
-    "verify": "npm run build && npm test && npm run ui:check",
+    "smoke:prod": "playwright test -c playwright.prod.config.ts",
+    "verify": "npm run build && npm test && npm run smoke:prod && npm run ui:check",
     "report:demo": "node --import tsx scripts/demo-report.ts",
     "tauri": "tauri"
   },

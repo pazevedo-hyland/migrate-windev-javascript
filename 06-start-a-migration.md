@@ -91,6 +91,7 @@ The starter's `verify` covers its baseline types/build/unit/browser checks. Duri
   "ui:check": "playwright test -c ui-check/playwright.config.ts"
   ```
   Add a bindings check to `verify` once ts-rs bindings are generated.
+- Production-build smoke: `templates/ui-check/prod.config.ts` and `prod.smoke.example.spec.ts` → `ui-check/`, `"smoke:prod": "playwright test -c ui-check/prod.config.ts"` in `verify` after `vite build`, and `build: { assetsInlineLimit: 0 }` in `vite.config.ts` (inlined `data:` images blanked a packaged app).
 - UI check: `templates/ui-check/ui-check.spec.ts` and `playwright.config.ts` → `ui-check/`; `ui-check.config.json` → the repository root (the spec reads it from there); each slice adds `ui-check/<slice>.flows.spec.ts`.
 - Skin kit: `templates/ui-kit/` → `src/ui/legacy/`; layouts with `scripts/screen_layout.py <WINDOW> --out src/ui/legacy/<WINDOW>.layout.json`; images with `scripts/skin_assets.py --out public/skin src/ui/legacy/*.layout.json`.
 - Browser preview: in `src/main.tsx`, when `import.meta.env.DEV` and not inside Tauri (`!("__TAURI_INTERNALS__" in window)`), install `mockIPC` from `@tauri-apps/api/mocks` with a fake backend over the golden data, behind a visible banner. `npm run dev` then serves the UI to the browser checks.

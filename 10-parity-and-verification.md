@@ -67,7 +67,7 @@ Choose scenarios for: every workflow's happy path, each boundary (zero, negative
 
 ## 5. Native and platform behavior
 
-A browser run with mocked IPC proves UI logic only. For each target OS, record a smoke test: install, first start, migration, save/reopen after restart, printing, device input, file dialogs, update from the previous version, uninstall. Automate with `tauri-driver` where supported; otherwise keep a signed checklist in `docs/runbooks/`.
+A browser run with mocked IPC proves UI logic only. The dev server is not the shipped build either: run a **production-build smoke test** (`vite build` → `vite preview`, [templates/ui-check/prod.config.ts](templates/ui-check/prod.config.ts) and [prod.smoke.example.spec.ts](templates/ui-check/prod.smoke.example.spec.ts)) in `verify`. On a real migration Vite inlined small skin PNGs as `data:` URLs in the build only (`build.assetsInlineLimit`, default 4096); the skin resolver refused them and the installed app opened blank while every flow passed — fixed with `assetsInlineLimit: 0`. For each target OS, record a smoke test: install, first start, migration, save/reopen after restart, printing, device input, file dialogs, update from the previous version, uninstall. Automate with `tauri-driver` where supported; otherwise keep a signed checklist in `docs/runbooks/`.
 
 ## 6. Data parity
 
