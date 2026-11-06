@@ -79,6 +79,23 @@ Measured on a real migration (WINDEV 28, production management): 9 families in p
 - **Worktrees lack `legacy/`** (it is ignored by Git), so `parity_check.py --check-files` cannot resolve legacy citations there. Workers run it without `--check-files`; the coordinator runs the full check after merging.
 - Give each worker its own port (and database/profile) for browser flows, and let only one run the full suite at a time.
 
+**Second sweep.** Run the same packet once more over what the first left (`implemented` and `specified`), adding to the brief:
+
+- A harness per kind of behaviour, so "hard to test" stops being a reason: procedures with a real test database; screens by
+  click-through flows; reports and labels by asserting the rendered report model (rows, groups, totals, empty-data branch),
+  not a printer; files and folders in real temporary folders (or the native command's own test); timers with fake timers or
+  the browser test clock; failure branches by fault injection (a dev-only driver, or routing a patched procedure in the flow).
+- "Questions for the owner": every row left because of an open question gets one plain-language entry in
+  `docs/mapping/_questions-<KEY>.md` (`- <rows> (<unit>): <question> — what we do now: <current choice>`), so the remaining
+  rows become one list a person who uses the old program can answer (publish it as a page with one-click answers if useful).
+- Leave-reasons counted: open question, new text, needs hardware/person, other. Requests outside the worker's columns
+  (exclusions under the scope ADR, a `decision` to set) come back as "shared changes requested".
+
+Measured (same migration): 165 more rows verified (1,460 → 1,625, strict 73.7 → 81.7 %), 19 more bugs, 163 owner
+questions. Coordinator lessons: check every "assumed" row's proposal really answers it (an answer-sheet ID reused for a
+different question had "verified" four message-box rows); a shared-control bug can surface only when a worker's change adds
+a re-render (a combo lost "no selection"), so run the full suite after merging even when every branch was green.
+
 ## Reusable instructions (pick according to accepted choices)
 
 - **WINDEV-like UI replica**: "Reproduce `docs/screens/<WINDOW>.md` and the dossier image: same fields, order, labels, tab order, masks, shortcuts and default button. Generate the layout with scripts/screen_layout.py <WINDOW> and read captions and positions from it; export the skin with scripts/skin_assets.py. Use the legacy control name as `data-testid`. Score it with scripts/visual_compare.py --record and attach the side-by-side image to the handoff. Do not redesign; propose improvements separately."

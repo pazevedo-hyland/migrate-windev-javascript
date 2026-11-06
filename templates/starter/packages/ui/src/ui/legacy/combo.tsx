@@ -11,9 +11,11 @@ export function WdCombo({ control: source, options, value, onChange, disabled, a
   const control = useAnchoredControl(source), id = useId();
   const captionWidth = control.caption_width ?? 0;
   const select = useRef<HTMLSelectElement>(null);
+  // After EVERY render: React re-selects the first option of a <select> whose value matches none on any re-render
+  // (a dialog closing, a parent state change), so a dependency list lets "no selection" flip to the first row.
   useLayoutEffect(() => {
     if (allowNoSelection && !options.some(option => option.value === value) && select.current) select.current.selectedIndex = -1;
-  }, [allowNoSelection, options, value]);
+  });
   return <div className="wd-field wd-combo-field" hidden={(control.visible ?? control.flags?.Visible) === false}
     data-control-path={control.path} style={controlBox(control)}>
     {captionWidth > 0 && <label htmlFor={id} style={{ width: captionWidth - 2 }}>{control.caption}</label>}

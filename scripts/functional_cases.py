@@ -22,6 +22,8 @@ import datetime
 import json
 import os
 from pathlib import Path
+import re
+import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -120,12 +122,23 @@ def build(root, results, run, previous=None, kinds=('screen', 'report'), run_id=
     return document
 
 
+def resolve_commit(root, commit):
+    """The validator accepts only a full 40-hex SHA: a short one makes every case silently unassessed (0 %)."""
+    if re.fullmatch(r'[0-9a-f]{40}', commit):
+        return commit
+    out = subprocess.run(['git', '-C', str(root), 'rev-parse', '--verify', commit + '^{commit}'],
+                         capture_output=True, text=True)
+    if out.returncode != 0:
+        raise SystemExit(f'--commit {commit!r} is not a commit of {root}')
+    return out.stdout.strip()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--root', type=Path, default=Path.cwd(), help='application repository (default: current folder)')
     parser.add_argument('--vitest', action='append', default=[], help='Vitest JSON report (repeatable)')
     parser.add_argument('--playwright', action='append', default=[], help='Playwright JSON report (repeatable)')
-    parser.add_argument('--commit', required=True, help='full SHA of the tested commit')
+    parser.add_argument('--commit', required=True, help='tested commit (a short SHA or ref is resolved to the full SHA)')
     parser.add_argument('--os', required=True, help='e.g. "Windows 11 x64"')
     parser.add_argument('--command', action='append', required=True, help='a command that produced the reports (repeatable)')
     parser.add_argument('--run-id', default='full-suite')
@@ -134,6 +147,7 @@ def main():
     if not args.vitest and not args.playwright:
         parser.error('give at least one --vitest or --playwright report')
     root = args.root.resolve()
+    args.commit = resolve_commit(root, args.commit)
     results = {}
     for report in args.vitest:
         results.update(vitest_results(report, root))

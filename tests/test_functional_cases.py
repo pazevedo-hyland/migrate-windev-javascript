@@ -7,7 +7,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from functional_acceptance import assess_data  # noqa: E402
-from functional_cases import build, playwright_results, vitest_results  # noqa: E402
+from functional_cases import build, playwright_results, resolve_commit, vitest_results  # noqa: E402
 
 COMMIT = 'b' * 40
 RUN = {'os': 'Windows 11 x64', 'commit': COMMIT, 'date': '2026-11-06', 'commands': ['npx vitest run', 'npx playwright test']}
@@ -23,6 +23,15 @@ ROWS = [
 
 
 class FunctionalCasesTests(unittest.TestCase):
+    def test_short_commit_resolves_to_full_sha(self):
+        repo = Path(__file__).resolve().parents[1]
+        full = resolve_commit(repo, 'HEAD')
+        self.assertRegex(full, r'^[0-9a-f]{40}$')
+        self.assertEqual(resolve_commit(repo, full[:7]), full)
+        self.assertEqual(resolve_commit(repo, full), full)
+        with self.assertRaises(SystemExit):
+            resolve_commit(repo, 'no-such-ref-xyz')
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
