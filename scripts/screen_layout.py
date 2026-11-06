@@ -34,7 +34,16 @@ def raw_value(raw, key):
 
 
 def basename(path):
-    return re.split(r'[\\/]', path)[-1] if path else None
+    # The dossier PDF wraps long names inside a word ("AquaBlue_Btn_Std.pn g"): skin file names hold no spaces.
+    return re.sub(r'\s+', '', re.split(r'[\\/]', path)[-1]) if path else None
+
+
+def geometry(item, details):
+    """Source positions first; when the text source keeps them encoded (all zero or absent), the dossier's."""
+    source = {key: item.get(key) for key in ('x', 'y', 'width', 'height')}
+    if not any(source.values()) and any(details.get(key) for key in ('x', 'y', 'width', 'height')):
+        return {key: details.get(key) for key in ('x', 'y', 'width', 'height')}
+    return source
 
 
 def table_options(raw):
@@ -178,7 +187,7 @@ def layout(unit, latest, language=None):
         background = basename(choose(details.get('background_image'), f'{path}.background_image'))
         assets.update(a for a in (image, background) if a)
         entry = {'name': item['name'], 'path': path, 'kind': details.get('kind') or item['kind'],
-                 'x': item['x'], 'y': item['y'], 'width': item.get('width'), 'height': item.get('height'),
+                 **geometry(item, details),
                  'caption': choose(details.get('caption') or details.get('title'), f'{path}.caption'),
                  'visible': (details.get('flags') or {}).get('Visible'), 'flags': details.get('flags'), 'state': details.get('state'),
                  'anchoring': details.get('anchoring'), 'tab_order': details.get('tab_order'),

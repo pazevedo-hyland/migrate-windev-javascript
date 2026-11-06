@@ -44,6 +44,12 @@ Add these fields to the core prompt for each implementation worker:
 
 The coordinator handles shared prerequisites before dependent workers consume them, then integration, combined verification and tracking. No worker edits aggregate parity or creates a permanent process runbook.
 
+Prepare for the merge before the wave starts (seen with 7 parallel families):
+- **Registration lists** (procedure/seed/screen registries) need an import and an entry per family: allow those two lines, and expect trivial union conflicts.
+- **Demo data**: tag each family's seed with its name and load seeds tolerantly (skip a duplicate business key, merge singleton tables such as a settings row) — otherwise the merged preview fails on the first unique key. Tests and flows that count rows load only their own family's seed, as they did in their worktree.
+- **Cross-family functions** a family needs from another (stock totals, label printing, file access): write the contract (signature, stub) before the wave, owned by one family.
+- **Ports and browsers**: one dev-server port per worker; slow browser-based tests time out when many workers run at once — re-run alone before calling a failure.
+
 ## Reusable instructions (pick according to accepted choices)
 
 - **WINDEV-like UI replica**: "Reproduce `docs/screens/<WINDOW>.md` and the dossier image: same fields, order, labels, tab order, masks, shortcuts and default button. Generate the layout with scripts/screen_layout.py <WINDOW> and read captions and positions from it; export the skin with scripts/skin_assets.py. Use the legacy control name as `data-testid`. Score it with scripts/visual_compare.py --record and attach the side-by-side image to the handoff. Do not redesign; propose improvements separately."
