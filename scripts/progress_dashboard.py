@@ -142,7 +142,7 @@ def open_questions(docs):
 
 
 def git(root, *args):
-    result = subprocess.run(['git', '-C', str(root), *args], capture_output=True, text=True)
+    result = subprocess.run(['git', '-C', str(root), *args], capture_output=True, text=True, encoding='utf-8', errors='replace')
     return result.stdout if result.returncode == 0 else ''
 
 
