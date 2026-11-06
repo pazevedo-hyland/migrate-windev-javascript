@@ -18,7 +18,7 @@ export function WdButton({ control: source, chrome = false, interpretAmpersand =
     data-wd-mnemonic={caption.letter ? caption.letter.toLocaleLowerCase(config.locale) : undefined}
     aria-keyshortcuts={props["aria-keyshortcuts"] ?? (caption.letter ? `Alt+${caption.letter}` : undefined)}
     hidden={props.hidden ?? ((control.visible ?? control.flags?.Visible) === false)} tabIndex={tabIndex ?? (control.flags?.["TAB Key"] === false || String(control.tab_order) === "-1" ? -1 : undefined)}
-    className={`wd-button ${chrome ? "wd-chrome-button" : ""} ${className}`}
+    className={`wd-button ${chrome ? "wd-chrome-button" : ""} ${!chrome && control.background_image ? "wd-button--skin" : ""} ${className}`}
     style={{ ...controlBox(control), ...buttonSkin(control, config.assets), ...style }}>
     {!chrome && <span>{!interpretAmpersand ? control.caption : <>{caption.before}{caption.letter && <u>{caption.letter}</u>}{caption.after}</>}</span>}
     {control.image && <span className="wd-button-icon" aria-hidden="true" />}
@@ -103,6 +103,23 @@ export function WdFrame({ layout, instance, children, width, height, onClose, on
   });
   const restore = layout.controls.find(control => control.name === "BTN_Syst_Restore");
   const titleText = title?.caption ?? layout.window.title ?? layout.window.name;
+  const defaultChrome = <div className="wd-default-chrome">{actions.filter(action => action.name === "BTN_SYST_FERMER" || layout.window.flags?.[action.name === "BTN_SYST_MINIMIZE" ? "Minimize icon" : "Maximize icon"] !== false).map(action => <button key={action.name} type="button" className="wd-chrome-button"
+    aria-label={action.label} data-testid={`${instance}__${action.name}`} onClick={action.action}>{action.symbol}</button>)}</div>;
+  // No title control and no extracted system buttons: the window has the system title bar ABOVE its client area.
+  // WINDEV control coordinates are client-relative, so drawing the title and close box inside the client area put
+  // them over the top controls (a real form: layout match with its designer image 32 % -> 79 % once moved out).
+  // The frame keeps the layout's size, which includes the bar.
+  if (!title && !extractedChrome) return <section data-testid={instance} data-layout={layout.window.name} aria-label={titleText}
+    data-wd-keyboard-scope="" tabIndex={-1} onKeyDown={event => activateMnemonic(event, config.locale)}
+    className={`wd-frame wd-frame--native${layout.window.background_image ? " wd-frame--image" : ""}`} style={{ ...skin, width: frameWidth, height: frameHeight }}>
+    <div className="wd-native-titlebar">
+      <div className="wd-title" data-testid={`${instance}__title`}>{titleText}</div>
+      {defaultChrome}
+    </div>
+    <div className="wd-client">
+      <FrameDeltaContext.Provider value={{ width: frameWidth - size.width, height: frameHeight - size.height }}>{children}</FrameDeltaContext.Provider>
+    </div>
+  </section>;
   return <section data-testid={instance} data-layout={layout.window.name} aria-label={titleText}
     data-wd-keyboard-scope="" tabIndex={-1} onKeyDown={event => activateMnemonic(event, config.locale)}
     className={`wd-frame${layout.window.background_image ? " wd-frame--image" : ""}`} style={{ ...skin, width: frameWidth, height: frameHeight }}>
@@ -117,8 +134,7 @@ export function WdFrame({ layout, instance, children, width, height, onClose, on
       </span>}
       {extractedChrome ? group ? <div data-testid={group.name} data-control-path={group.path} hidden={hidden(group)}
         style={{ position: "absolute", ...controlBox(group), left: undefined, right: size.width - group.x - (group.width ?? 0) }}>{chrome}</div> : chrome
-        : <div className="wd-default-chrome">{actions.filter(action => action.name === "BTN_SYST_FERMER" || layout.window.flags?.[action.name === "BTN_SYST_MINIMIZE" ? "Minimize icon" : "Maximize icon"] !== false).map(action => <button key={action.name} type="button" className="wd-chrome-button"
-          aria-label={action.label} data-testid={`${instance}__${action.name}`} onClick={action.action}>{action.symbol}</button>)}</div>}
+        : defaultChrome}
       <FrameDeltaContext.Provider value={{ width: frameWidth - size.width, height: frameHeight - size.height }}>{children}</FrameDeltaContext.Provider>
     </div>
   </section>;

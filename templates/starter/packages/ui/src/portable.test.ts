@@ -34,6 +34,28 @@ describe("portable UI contracts", () => {
     expect(markup).not.toContain("url(");
   });
 
+  it("draws the system title bar above the client area only when the layout has no title or system buttons", () => {
+    const frame = (source: LegacyLayout) => renderToStaticMarkup(createElement(WdFrame,
+      { layout: source, instance: "w", onClose() {}, onMinimize() {}, onToggleMaximize() {}, children: "Content" }));
+    // Control coordinates are client-relative: the bar sits outside .wd-client, which is offset below it.
+    const native = frame(layout);
+    expect(native).toContain("wd-frame--native");
+    expect(native.indexOf('data-testid="w__title"')).toBeLessThan(native.indexOf('class="wd-client"'));
+    expect(native.indexOf('data-testid="w__BTN_SYST_FERMER"')).toBeLessThan(native.indexOf('class="wd-client"'));
+    const titled = frame({ ...layout, controls: [...layout.controls,
+      { name: "RADTitle", path: "sample/RADTitle", kind: "Caption", x: 10, y: 5, width: 200, height: 22, caption: "Skinned" }] });
+    expect(titled).not.toContain("wd-frame--native");
+    expect(titled.indexOf('data-testid="RADTitle"')).toBeGreaterThan(titled.indexOf('class="wd-client"'));
+  });
+
+  it("marks buttons drawn with a skin image so a skin can set their caption colour", () => {
+    const assets = { Btn_Std: { source: "skin/btn.png" } };
+    const render = (control: LegacyControl) => renderToStaticMarkup(createElement(UiProvider,
+      { config: { namespace: "skin", assets }, children: createElement(WdButton, { control }) }));
+    expect(render({ ...base, name: "BTN_Skinned", kind: "Button", caption: "OK", background_image: "Btn_Std" })).toContain("wd-button--skin");
+    expect(render({ ...base, name: "BTN_Plain", kind: "Button", caption: "OK" })).not.toContain("wd-button--skin");
+  });
+
   it("keeps simultaneous provider labels and locales independent", () => {
     const button = { ...base, name: "BTN_Action", kind: "Button", caption: "&I" };
     const render = (locale: string, close: string) => renderToStaticMarkup(createElement(UiProvider,
