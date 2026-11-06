@@ -8,6 +8,8 @@ Found running the kickoff prompt end to end on a second real project (WINDEV 28,
 - prepare_evidence: the project's `.cpl` beside the `.wdp` wins over `.ana/ANA<n>` history.
 - screen_layout: dossier geometry when the text source keeps positions encoded; skin names without PDF wrap spaces.
 - parity_check: element names differing only by case (class `etiquetas`, table `Etiquetas`) stay distinct.
+- scripts/py.mjs runs `py -3` on Windows; progress_dashboard decodes git output as UTF-8.
+- templates/prompt-stage.md: merge preparation for parallel waves (registries, family-tagged tolerant demo seeds, cross-family contracts, ports).
 - Docs: HFSQL DSN keys set in the registry, driver crash / encrypted `.fic` / server-mode fallbacks; leave backups and analysis history out of `legacy/`; run scripts with `py -3` on Windows.
 
 ## 2026-10-26 — reusable workflow verification
