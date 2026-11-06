@@ -91,6 +91,17 @@ Start from [the pending example](../templates/functional-acceptance.template.jso
 
 Missing screens/reports create pending unassessed gaps. Stale run evidence becomes pending without changing the ledger or strict parity CSV. Cited tests and `CODE_PATHS` are compared against the tested ancestor commit, including untracked inputs. Adapt those paths to the actual project's application, assets, configuration, golden/runtime fixtures and native probes; ordinary report/status documentation can change without invalidating proof. `--require-complete` fails until every required functional case passes; platform capabilities retain their own OS-specific status and never change this denominator.
 
+## `functional_cases.py` — acceptance cases from one executed run
+
+```sh
+npx vitest run --reporter=json --outputFile=vitest.json
+npx playwright test --reporter=json > playwright.json
+python3 scripts/functional_cases.py --vitest vitest.json --playwright playwright.json --commit "$(git rev-parse HEAD)"   --os "Windows 11 x64" --command "npx vitest run ..." --command "npx playwright test ..."
+python3 scripts/functional_acceptance.py --check
+```
+
+Writes `docs/functional-acceptance.json` with one case per screen/report (`FC-<unit>`) whose witnesses are the `file::title` tests cited by the unit's `verified` parity rows, and one run (OS, commit, commands, the checks that passed). A case is `verified` only when every cited test is in the reports and passed (last retry counts); a failing or absent cited test, or a unit with no cited test, stays `pending` with the reason. Other cases (IDs not starting `FC-`), `platform` entries and the runs they cite are kept. Produce the reports from one clean commit. It derives cases from parity citations; it does not decide the approved scope — review the generated requirements, and keep strict parity, source questions and platform evidence separate.
+
 ## `screen_layout.py`, `skin_assets.py`, `visual_compare.py` — a screen that looks like the legacy one
 
 ```sh
