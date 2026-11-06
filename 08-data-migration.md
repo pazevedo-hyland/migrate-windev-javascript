@@ -106,6 +106,8 @@ Reconcile counts, keys, quantities, balances, labor durations and report totals 
 
 Validate on a **real subset** (volume, types, encoding) before generalizing.
 
+Duplicate values in a column the target makes unique are common (a legacy numbering race, two inserts seconds apart). Renumbering is acceptable **only for an explicit allow-list of unique id columns that no other table references**: later rows (source order) get `MAX + 1`, `+ 2`…, every row is kept and each change (table, column, old, new, source row) is listed in the import report. Any other refused row is quarantined and blocks activation; never renumber a referenced key. Record the allow-list in the import ADR as an assumption for the owner to confirm.
+
 ## Cutover
 
 Rehearse on a copy. Schedule a write freeze, take a verified final backup/export, import, reconcile and run acceptance tests (golden scenarios). Define rollback triggers and who can authorize reopening writes. Once the new system receives writes, switching back requires a reconciliation strategy: restoring the old executable alone cannot restore data parity.
