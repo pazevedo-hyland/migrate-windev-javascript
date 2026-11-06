@@ -63,6 +63,8 @@ It pairs each XDD type code with the type name the dossier prints for the same i
 
 Read `.fic`/`.ndx`/`.mmo` only through supported HFSQL/WINDEV export tooling. Export explicit columns to CSV/JSON with a **manifest**: source version, export time, encoding (often Windows-1252), delimiter, decimal format, timezone/date rules and table counts. Preserve memo/blob data separately with checksums. Binary query definitions need SQL and parameter exports.
 
+For HFSQL Classic files the toolkit's route is ODBC on a copy: `scripts/windows/export_odbc.py` (pyodbc). When it crashes while connecting (exit code 139 / access violation — seen with the HFSQL 28 driver, whose Unicode ODBC entry points fail), use the ANSI exporter `scripts/windows/hfsql-export.ps1` (32-bit Windows PowerShell; hash-checked copy, temporary DSN always deleted, row counts checked per table) and convert its JSONL with `hfsql_jsonl.py` into the same `data.sqlite` + `manifest.json`. Measured on a real application: 30 tables, 24,915 rows, every count agreeing ([Windows export](scripts/windows/README.md#when-export_odbcpy-crashes-the-ansi-exporter-hfsql-28)).
+
 ## Profile the data before deciding the schema
 
 The analysis says what the data should be; only the data says what it is. On a copy — `data.sqlite` from `scripts/windows/export_odbc.py` (lossless: NULLs, bytes, counts checked), its CSV folder, or another SQLite staging file:

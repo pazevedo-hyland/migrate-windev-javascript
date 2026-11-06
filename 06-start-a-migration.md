@@ -50,7 +50,7 @@ Coverage per element with the list of gaps, the platform functions the code depe
 
 ## 4c. Export the data
 
-Export every table to CSV through the HFSQL ODBC driver ([data export](scripts/windows/README.md)), from a copy of the data or a backup of the HFSQL server database.
+Export every table to CSV through the HFSQL ODBC driver ([data export](scripts/windows/README.md)), from a copy of the data or a backup of the HFSQL server database. If `export_odbc.py` crashes while connecting (exit code 139, HFSQL 28), use the [ANSI exporter](scripts/windows/README.md#when-export_odbcpy-crashes-the-ansi-exporter-hfsql-28) instead.
 
 ## 5. Map the legacy application (before coding)
 

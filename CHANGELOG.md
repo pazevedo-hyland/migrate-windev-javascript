@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-06 — lessons from a second migration (production management, WINDEV 28 / HFSQL Classic)
+
+- HFSQL ANSI ODBC export: `scripts/windows/hfsql-export.ps1` + `HfSqlOdbcAnsi.cs` read HFSQL Classic files through the driver's ANSI entry points in 32-bit Windows PowerShell (hash-checked copy, temporary per-user DSN always deleted, rows = `COUNT(*)` before and after per table) when `export_odbc.py` crashes on HFSQL 28 (exit 139 / access violation); `hfsql_jsonl.py` converts its JSONL into `export_odbc.py`'s `data.sqlite` + CSV + `manifest.json` through the same `export()` (now with an optional `info`). Real run: 30 tables / 24,915 rows, counts agree. Method first used in the gestao-oficinas migration.
+
 ## 2026-10-26 — reusable workflow verification
 
 - Extract configurable Playwright CRUD/reopen, cancel, invalid-save, search/selection and confirmation assertions with independent persistence snapshots and explicit business expectations.
