@@ -63,6 +63,8 @@ It pairs each XDD type code with the type name the dossier prints for the same i
 
 Read `.fic`/`.ndx`/`.mmo` only through supported HFSQL/WINDEV export tooling. Export explicit columns to CSV/JSON with a **manifest**: source version, export time, encoding (often Windows-1252), delimiter, decimal format, timezone/date rules and table counts. Preserve memo/blob data separately with checksums. Binary query definitions need SQL and parameter exports.
 
+For HFSQL Classic files the toolkit's route is ODBC on a copy: `scripts/windows/export_odbc.py` (pyodbc). When it crashes while connecting (exit code 139 / access violation — seen with the HFSQL 28 driver, whose Unicode ODBC entry points fail), use the ANSI exporter `scripts/windows/hfsql-export.ps1` (32-bit Windows PowerShell; hash-checked copy, temporary DSN always deleted, row counts checked per table) and convert its JSONL with `hfsql_jsonl.py` into the same `data.sqlite` + `manifest.json`. Measured on a real application: 30 tables, 24,915 rows, every count agreeing ([Windows export](scripts/windows/README.md#when-export_odbcpy-crashes-the-ansi-exporter-hfsql-28)).
+
 ## Profile the data before deciding the schema
 
 The analysis says what the data should be; only the data says what it is. On a copy — `data.sqlite` from `scripts/windows/export_odbc.py` (lossless: NULLs, bytes, counts checked), its CSV folder, or another SQLite staging file:
@@ -103,6 +105,8 @@ Implement a **dry run** and a repeatable import with explicit mappings and trans
 Reconcile counts, keys, quantities, balances, labor durations and report totals with `scripts/compare_exports.py` (legacy export vs target export, declared normalizations only — see [templates/compare.example.json](templates/compare.example.json)). Store a machine-readable reconciliation report plus approved exceptions. Test backup restoration with the selected database's supported tooling; copying an active SQLite file without handling its journal/WAL is insufficient.
 
 Validate on a **real subset** (volume, types, encoding) before generalizing.
+
+Duplicate values in a column the target makes unique are common (a legacy numbering race, two inserts seconds apart). Renumbering is acceptable **only for an explicit allow-list of unique id columns that no other table references**: later rows (source order) get `MAX + 1`, `+ 2`…, every row is kept and each change (table, column, old, new, source row) is listed in the import report. Any other refused row is quarantined and blocks activation; never renumber a referenced key. Record the allow-list in the import ADR as an assumption for the owner to confirm.
 
 ## Cutover
 

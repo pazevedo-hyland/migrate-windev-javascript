@@ -67,12 +67,13 @@ export function WdTable<T>({ control: sourceControl, rows, rowId, cell, selected
   const headerHeight = showHeaders ? measuredHeaderHeight : 0;
   useLayoutEffect(() => {
     const element = header.current;
-    if (!virtualized || !showHeaders || !element) return;
-    const update = () => setMeasuredHeaderHeight(element.getBoundingClientRect().height);
+    // Measured for the virtual list's padding and for the row-line background, which starts below the titles.
+    if (!showHeaders || !element) return;
+    const update = () => { const height = element.getBoundingClientRect().height; if (height > 0) setMeasuredHeaderHeight(height); };
     update();
     const observer = new ResizeObserver(update); observer.observe(element);
     return () => observer.disconnect();
-  }, [virtualized, showHeaders]);
+  }, [showHeaders]);
   const itemKey = useCallback((index: number) => displayed[index].id, [displayed]);
   // Hidden hosts report zero offsets without changing their retained native scroll position.
   const observeOffset = useCallback<typeof observeElementOffset>((instance, notify) => observeElementOffset(instance, (offset, scrolling) => {
@@ -120,7 +121,7 @@ export function WdTable<T>({ control: sourceControl, rows, rowId, cell, selected
       if (showHeaders || !configureColumns || options?.column_context_menu !== "Yes" || !onHiddenColumnsChange) return;
       event.preventDefault(); setConfigurationOpen(true);
     }}
-    hidden={(control.visible ?? control.flags?.Visible) === false} style={{ ...controlBox(control), ...(effectiveRowHeight ? { backgroundImage: `repeating-linear-gradient(to bottom, transparent 0 ${effectiveRowHeight - 1}px, #e0e2e4 ${effectiveRowHeight - 1}px ${effectiveRowHeight}px)` } : {}), overflowY: scrollbarMode(options?.vertical_scrollbar), overflowX: scrollbarMode(options?.horizontal_scrollbar), touchAction: options?.touch_scrolling === "No" ? "none" : undefined }} tabIndex={String(control.tab_order) === "-1" ? -1 : 0}
+    hidden={(control.visible ?? control.flags?.Visible) === false} style={{ ...controlBox(control), ...(effectiveRowHeight ? { backgroundImage: `repeating-linear-gradient(to bottom, transparent 0 ${effectiveRowHeight - 1}px, #e0e2e4 ${effectiveRowHeight - 1}px ${effectiveRowHeight}px)`, backgroundPosition: `0 ${headerHeight}px`, backgroundAttachment: "local" } : {}), overflowY: scrollbarMode(options?.vertical_scrollbar), overflowX: scrollbarMode(options?.horizontal_scrollbar), touchAction: options?.touch_scrolling === "No" ? "none" : undefined }} tabIndex={String(control.tab_order) === "-1" ? -1 : 0}
     onKeyDown={event => {
       if (event.target !== event.currentTarget) return;
       const index = displayed.findIndex(row => row.id === selectedId);
@@ -144,7 +145,7 @@ export function WdTable<T>({ control: sourceControl, rows, rowId, cell, selected
         {onResetColumns && <button type="button" onClick={() => { onResetColumns(); setConfigurationOpen(false); container.current?.focus(); }}>{config.labels.resetColumns}</button>}
       </div>}
     </div>}
-    <div className="wd-table-grid" aria-hidden="true" style={{ width: table.getTotalSize(), top: showHeaders ? undefined : 0 }}>
+    <div className="wd-table-grid" aria-hidden="true" style={{ width: table.getTotalSize(), top: headerHeight }}>
       {table.getVisibleLeafColumns().map(column => <span key={column.id} style={{ width: column.getSize() }} />)}
     </div>
     <table aria-label={control.caption ?? control.name} aria-rowcount={virtualized ? displayed.length + (showHeaders ? 1 : 0) : undefined} style={{ width: table.getTotalSize() }}>

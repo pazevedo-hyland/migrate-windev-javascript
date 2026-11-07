@@ -13,6 +13,9 @@ import json
 from pathlib import Path
 
 
+ANIMATION_STEPS = 6  # WINDEV default "Nb. animation steps" for skinned buttons
+
+
 def states_by_asset(layouts):
     states = {}
     for layout in layouts:
@@ -28,6 +31,20 @@ def magenta_to_transparent(image):
     """WINDEV skins mark transparent pixels with pure magenta (255, 0, 255)."""
     image.putdata([(r, g, b, 0) if (r, g, b) == (255, 0, 255) else (r, g, b, a) for r, g, b, a in image.getdata()])
     return image
+
+
+def animation_frames(column, steps=ANIMATION_STEPS, tolerance=12):
+    """Skinned buttons ("Nb. animation steps 6" in the dossier) stack the transition frames of each state vertically:
+    a 400x144 strip is 5 states x 6 frames of 80x24. Using the whole column draws six stacked buttons (stripes).
+    The frames of the normal state are near-identical; an icon's slices are not. Returns the frame count to split by."""
+    height = column.height
+    if height % steps or height // steps < 8:
+        return 1
+    frame = height // steps
+    first = column.crop((0, 0, column.width, frame)).convert('RGBA').getdata()
+    second = column.crop((0, frame, column.width, 2 * frame)).convert('RGBA').getdata()
+    diff = sum(abs(a - b) for p, q in zip(first, second) for a, b in zip(p, q)) / (len(first) * 4)
+    return steps if diff <= tolerance else 1
 
 
 def export(layouts, project, out):
@@ -48,8 +65,9 @@ def export(layouts, project, out):
         count = states.get(asset, 1)
         if count > 1 and image.width % count == 0:
             width = image.width // count
+            height = image.height // animation_frames(image.crop((0, 0, width, image.height)))
             for state in range(count):
-                image.crop((state * width, 0, (state + 1) * width, image.height)).save(out / f'{stem}.{state}.png')
+                image.crop((state * width, 0, (state + 1) * width, height)).save(out / f'{stem}.{state}.png')
                 written.append(f'{stem}.{state}.png')
     return {'written': written, 'missing': missing}
 

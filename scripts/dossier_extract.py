@@ -53,6 +53,9 @@ SEGMENT = re.compile(r'([\d.]+) ([\d.]+) m ([\d.]+) ([\d.]+) l S')
 # A4 landscape): three label columns, each with its checkbox cell at the right end of the column.
 GRID_OFFSETS = (0.0, 252.36, 504.72)
 GRID_CELL = (226.0, 251.8)
+# Other dossier layouts (WINDEV 28 with an embedded subset font, A4 portrait): (offsets, cell). The layout whose
+# columns hold the most labels on the page wins.
+GRID_LAYOUTS = ((GRID_OFFSETS, GRID_CELL), ((0.0, 170.08, 340.16), (140.0, 168.0)))
 
 
 def ticks(content):
@@ -60,6 +63,50 @@ def ticks(content):
     segments = [tuple(map(float, m)) for m in SEGMENT.findall(content)]
     return [(a, (b + i) / 2) for (a, b, c, e), (f, g, h, i) in zip(segments, segments[1:])
             if abs(c - f) < 0.1 and abs(e - g) < 0.1 and 1 < c - a < 5 and 1 < b - e < 5 and 3 < h - f < 9 and 3 < i - g < 9]
+
+
+def page_content(page):
+    """The page's drawing in the plain form `checkboxes` reads: one `BT x y Td (text)' ET` per text run and
+    one `x1 y1 m x2 y2 l S` per stroked segment, in page points. Some WINDEV dossiers write exactly that;
+    others (WINDEV 28 with an embedded subset font) scale the page (`0.12 0 0 0.12 0 0 cm`), draw text as
+    TJ arrays in a re-encoded font and stroke each half of a check mark separately. For those, rebuild the
+    plain form from pypdf's decoded text and the transformed path operators."""
+    contents = page.get_contents()
+    raw = contents.get_data().decode('latin1') if contents is not None else ''
+    if not raw or TEXT_RUN.search(raw):
+        return raw
+    from pypdf.generic import ContentStream
+    lines = []
+
+    def text(value, cm, tm, *_):
+        value = value.strip()
+        if value:
+            x = tm[4] * cm[0] + tm[5] * cm[2] + cm[4]
+            y = tm[4] * cm[1] + tm[5] * cm[3] + cm[5]
+            escaped = value.replace('\\', '\\\\').replace('(', '\\(').replace(')', '\\)')
+            lines.append(f"BT {x:.2f} {y:.2f} Td ({escaped})' ET")
+    page.extract_text(visitor_text=text)
+    stack, current = [[1.0, 0.0, 0.0, 1.0, 0.0, 0.0]], None
+    multiply = lambda a, b: [a[0] * b[0] + a[1] * b[2], a[0] * b[1] + a[1] * b[3], a[2] * b[0] + a[3] * b[2],
+                             a[2] * b[1] + a[3] * b[3], a[4] * b[0] + a[5] * b[2] + b[4], a[4] * b[1] + a[5] * b[3] + b[5]]
+    point = lambda m, x, y: (x * m[0] + y * m[2] + m[4], x * m[1] + y * m[3] + m[5])
+    for operands, operator in ContentStream(contents, page.pdf).operations:
+        operator = operator.decode('latin1') if isinstance(operator, bytes) else operator
+        if operator == 'q':
+            stack.append(stack[-1][:])
+        elif operator == 'Q' and len(stack) > 1:
+            stack.pop()
+        elif operator == 'cm':
+            stack[-1] = multiply([float(v) for v in operands], stack[-1])
+        elif operator == 'm':
+            current = point(stack[-1], float(operands[0]), float(operands[1]))
+        elif operator == 'l' and current is not None:
+            end = point(stack[-1], float(operands[0]), float(operands[1]))
+            # Coordinates are always positive on the page: the pattern SEGMENT reads unsigned numbers.
+            if min(current + end) >= 0:
+                lines.append(f'{current[0]:.2f} {current[1]:.2f} m {end[0]:.2f} {end[1]:.2f} l S')
+            current = end
+    return '\n'.join(lines)
 
 
 # Labels as printed by an English-language WINDEV. A dossier printed by another UI language uses other
@@ -96,7 +143,10 @@ def checkboxes(content, carry=None):
     words = [x for x, _, t in runs if re.match(r'\w\w', t)]  # code is drawn token by token: skip " ", "(", "+"
     left = min(words or [x for x, _, _ in runs])
     margin = max(x for x in words or [left] if x < left + 10)
-    grid = [margin + offset for offset in GRID_OFFSETS]
+    starts = [x for x, _, _ in runs]
+    offsets, grid_cell = max(GRID_LAYOUTS, key=lambda layout: sum(
+        1 for x in starts for offset in layout[0][1:] if abs(x - margin - offset) < 0.5))
+    grid = [margin + offset for offset in offsets]
     kinds = {**dict.fromkeys(CONTROL_TABLE, 'control'), **dict.fromkeys(KEY_TABLE, 'key'), **dict.fromkeys(COLUMN_TABLE, 'column')}
     anchors = sorted({(y, kinds[t]) for x, y, t in runs
                       if t in kinds and not any(abs(ly - y) < 2 and numeric(lt) for lx, ly, lt in runs)}, reverse=True)
@@ -113,12 +163,12 @@ def checkboxes(content, carry=None):
         if ':' in label or label.startswith('Part ') or re.search(r'\d+/\d+/\d+', label):
             continue  # headings ("Number of elements in window: 18"), breadcrumbs, dates
         # A checkbox property has nothing else on its row within its column (no value text).
-        if any(x < lx < x + GRID_CELL[1] and abs(ly - y) < 3 for lx, ly, _ in runs):
+        if any(x < lx < x + grid_cell[1] and abs(ly - y) < 3 for lx, ly, _ in runs):
             continue
-        cell = (x + GRID_CELL[0], x + GRID_CELL[1])
+        cell = (x + grid_cell[0], x + grid_cell[1])
         properties[label] = any(cell[0] <= tx <= cell[1] and -4 <= ty - y <= 10 for tx, ty in marks)
     # A page with no check mark in any grid cell has no checkbox grid (image pages, section openers).
-    if not any(any(x + GRID_CELL[0] <= tx <= x + GRID_CELL[1] for x in grid) for tx, _ in marks):
+    if not any(any(x + grid_cell[0] <= tx <= x + grid_cell[1] for x in grid) for tx, _ in marks):
         properties = {}
     rows = {}
     for floor, header_y, kind, carried in tables:
@@ -129,9 +179,13 @@ def checkboxes(content, carry=None):
             continue  # the header word sits in the label column: a property, not a table
         if carry is not None:
             carry.update(headers=headers, kind=kind)
-        # Word values are centred under their header: a column spans midpoint to midpoint.
-        xs = [x for x, _ in headers]
-        columns = [(x, (xs[i - 1] + x) / 2 if i else x - 20, (x + xs[i + 1]) / 2 if i + 1 < len(xs) else x + 40, t)
+        # Word values are centred under their header: a column spans midpoint to midpoint. Rotated headers
+        # (narrow boolean columns) print their text right of the cell centre; the check marks show by how much,
+        # so the spans move by the median offset from a mark to its nearest header.
+        offsets = sorted(min((tx - hx for hx, _ in headers), key=abs) for tx, ty in marks if floor < ty < header_y)
+        shift = offsets[len(offsets) // 2] if offsets else 0.0
+        xs = [x + shift for x, _ in headers]
+        columns = [(x, (xs[i - 1] + xs[i]) / 2 if i else xs[i] - 20, (xs[i] + xs[i + 1]) / 2 if i + 1 < len(xs) else xs[i] + 40, t)
                    for i, (x, t) in enumerate(headers)]
         candidates = []
         for x, y, name in runs:
@@ -151,8 +205,9 @@ def checkboxes(content, carry=None):
         text_columns = TEXT_COLUMNS | {t for _, left, right, t in columns for y, _ in candidates
                                        if any(left <= lx < right and abs(ly - y) < 2 and not numeric(lt) for lx, ly, lt in runs)}
         for y, name in candidates:
-            # A check mark is drawn just right of its column header's x, centred on its row (lower when the row wraps).
-            values = {t: any(-3 <= tx - hx <= 8 and -4 <= ty - y <= 7 for tx, ty in marks)
+            # A check mark is drawn near its column header's x (just right of it, or up to 8 points left when the
+            # header text is centred in a narrow cell), centred on its row (lower when the row wraps).
+            values = {t: any(-8 <= tx - hx <= 8 and -4 <= ty - y <= 7 for tx, ty in marks)
                       for hx, _, right, t in columns if t not in text_columns and not COUNT_COLUMN.match(t)
                       and (kind != 'key' or right > anchor_x)}  # analysis: only the key columns
             if values:
@@ -162,12 +217,14 @@ def checkboxes(content, carry=None):
 
 def split_header(text):
     """('3', ['WINDEV window', 'WIN_X', 'Information on controls'], body) for one page."""
-    lines = (text or '').split('\n')
+    # Some pypdf versions keep a trailing space on every line: the field patterns are anchored at the end.
+    lines = [line.rstrip() for line in (text or '').split('\n')]
     match = HEADER.match(lines[0].strip()) if lines else None
     if not match:
         return None, [], lines
-    # Breadcrumb parts are separated by a \x9b glyph (two spaces in some extractions).
-    parts = [p.strip() for p in re.split(r'\x9b|\s{2,}', match[2]) if p.strip()]
+    # Breadcrumb parts are separated by a \x9b glyph, a U+203A '›' (newer pypdf / English dossiers)
+    # or two spaces in some extractions.
+    parts = [p.strip() for p in re.split(r'[\x9b›]|\s{2,}', match[2]) if p.strip()]
     # Second line is "<date> <page><project>": drop it.
     return match[1], parts, lines[2:]
 
@@ -176,6 +233,16 @@ def strip_language(value):
     """'PT: Cancelar' -> {'PT': 'Cancelar'}; plain values stay strings."""
     match = re.match(r'^([A-Z]{2}): (.*)$', value)
     return {match[1]: match[2]} if match else value
+
+
+def full_name(name, names):
+    """The control a table row names. Overview tables cut long names to their first characters
+    ("edt_quantidade_proce" for edt_quantidade_processo): a cut name that starts exactly one detailed name is
+    that control."""
+    if name in names or len(name) < 12:
+        return name
+    matches = [other for other in names if other.startswith(name)]
+    return matches[0] if len(matches) == 1 else name
 
 
 def parse_details(lines):
@@ -266,8 +333,9 @@ def parse_rows(lines, report=False):
         match = WINDOW_ROW.match(line)
         if match:
             rest = (match[7] or '').split()
+            # The sixth number is the plane (0 = shown on every plane).
             row = {'x': int(match[2]), 'y': int(match[3]), 'width': int(match[4]), 'height': int(match[5]),
-                   'row': ' '.join(rest)}
+                   'plane': int(match[6]), 'row': ' '.join(rest)}
             state = next((t for t in rest if t in STATES), None)
             if state:
                 row['state'] = 'Read-only' if state.startswith('Read-on') else state
@@ -301,10 +369,17 @@ def parse_query(lines):
 def collect(pages):
     """pages: iterable of page texts. Returns {kind: {element: {...}}}."""
     elements = {}
+    last = []
     for text in pages:
         part, header, body = split_header(text)
         if not part or not header:
             continue
+        # Deep breadcrumbs are abbreviated: "Part 2 › ... › Files and items › T › Files and items" continues the
+        # previous page's kind and element (the analysis .wda), so restore them from the last full header.
+        if header[0] == '...' and len(last) >= 2:
+            header = last[:2] + header[1:]
+        else:
+            last = header
         # Part overview pages ("Part 1  Project") carry project-wide facts such as the first window.
         kind, element = header[0], header[1] if len(header) > 1 else '_general'
         section = header[2] if len(header) > 2 else ''
@@ -318,7 +393,9 @@ def collect(pages):
         for element, item in items.items():
             sections = item.pop('sections')  # kept only for parsing: `lines` holds the same text in page order
             lines = item['lines']
-            general = sections.get('General information', [])
+            # A section can start mid-page under the previous header: a window's general information often begins
+            # on its "Image" page.
+            general = sections.get('Image', []) + sections.get('General information', [])
             for line in general:
                 for key, field in (('Title', 'title'), ('Window type', 'window_type'), ('Query type', 'query_type'),
                                    ('Opening mode (Desktop)', 'opening_mode'), ('Close icon', 'close_icon')):
@@ -338,8 +415,9 @@ def collect(pages):
             # control's "Item" line must follow its own row. Stop where the code listing starts.
             control_lines = lines[:lines.index('Code')] if 'Code' in lines else lines
             controls = parse_details(control_lines)
+            detailed = set(controls)
             for name, row in parse_rows(control_lines, report=(kind == 'Report')).items():
-                target = controls.setdefault(name, {'kind': row.get('kind'), 'raw': []})
+                target = controls.setdefault(full_name(name, detailed), {'kind': row.get('kind'), 'raw': []})
                 for key, value in row.items():
                     target.setdefault(key, value)
             if controls:
@@ -384,11 +462,10 @@ def extract(pdf, out, images=True):
             continue
         if len(header) > 2 and 'code' in header[-1].lower():
             continue  # code listings ("Code", "Control code") hold no checkboxes
-        contents = page.get_contents()
         # A table may continue on the next page of the same element (analysis: of the same file), even when
         # that page starts a new section heading.
         carry = carries.setdefault(tuple(header[:4] if header[0] == 'Analysis' else header[:2]), {})
-        properties, controls = checkboxes(contents.get_data().decode('latin1') if contents is not None else '', carry)
+        properties, controls = checkboxes(page_content(page), carry)
         item = elements[header[0]][header[1]]
         if properties and header[0] == 'WINDEV window':  # reports and queries have no property grid
             item.setdefault('flags', {}).update(properties)
@@ -397,8 +474,9 @@ def extract(pdf, out, images=True):
             if len(header) > 3:
                 item.setdefault('item_flags', {}).setdefault(header[3], {}).update(controls)
             continue
+        known = set(item.get('controls', {}))
         for name, values in controls.items():
-            target = item.setdefault('controls', {}).setdefault(name, {'kind': None, 'raw': []})
+            target = item.setdefault('controls', {}).setdefault(full_name(name, known), {'kind': None, 'raw': []})
             target.setdefault('flags', {}).update(values)
     out.mkdir(parents=True, exist_ok=True)
     if images:

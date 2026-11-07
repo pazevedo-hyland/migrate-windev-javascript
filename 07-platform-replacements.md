@@ -51,6 +51,7 @@ Three PC SOFT needs land here: the **OAuth server**, **authentication**, and —
 **Direction.**
 
 - **Authentication**: an OIDC provider such as [Keycloak](https://www.keycloak.org/) (open source, CNCF; OIDC/OAuth 2.0/SAML, SSO, directory federation such as Microsoft Entra ID, MFA, passkeys), or your organization's existing provider. Desktop apps use the **system browser with PKCE** (RFC 8252, "OAuth for native apps") and a loopback or deep-link redirect ([deep-link plugin](https://v2.tauri.app/plugin/deep-linking/)); never an embedded login form. Store refresh tokens in the OS keychain (e.g. the `keyring` crate), never in plain files.
+- **A server that trusts the session the client sends** (a port of the legacy login, before real authentication) must listen on `127.0.0.1` only; reaching it from other PCs requires authenticated sessions first.
 - **Local-only apps without a server** can keep local accounts: hash passwords with Argon2id (`argon2` crate). Do not import unknown legacy password formats; plan a reset or a supported rehash path.
 - **Groupware-style rights — the pattern to build**:
   1. a **control catalog** with a stable key `Window.Control` (e.g. `WIN_Order.BTN_Delete` — the legacy names, already used as `data-testid`), generated statically from the mapping, or registered at first display of each screen as WINDEV does;

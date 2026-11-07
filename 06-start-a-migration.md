@@ -24,6 +24,8 @@ python3 scripts/prepare_evidence.py
 
 It finds the `*Documentation*.pdf` and the `<project>.cpl` folder anywhere under `legacy/` itself (`--dossier-pdf`, `--compile-dir` to override) and says what is missing. Pass `--language <code>` (WINDEV's language code of the app's texts, e.g. `pt-PT`, `fr-FR`) when the app is multilingual; otherwise each text's first language is used. Re-run it whenever `legacy/` changes: seed IDs do not change, so mapping rows stay attached. **Updating the tools** from a newer playbook (copy `scripts/`, `skills/`, `templates/ui-kit/`): re-run `prepare_evidence.py`, then `npm run verify` and `parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv --check-files` before committing; fix what they report (renamed seed rows, stricter evidence forms — the playbook's CHANGELOG lists format changes) in the same commit. The steps below explain each part and its options; run one alone only to debug it.
 
+**Check the dossier coverage before building any screen.** `analysis-local/latest.json` → `coverage` counts windows and controls whose check marks were read. `controls_with_flags 0/N` is an extraction bug for that PDF layout, not missing evidence: without it, every control's plane, Visible tick, column sort/search ticks and the window's Title bar tick are unknown, and multi-plane windows get hand-made layouts that look nothing like the running app. Fix `dossier_extract.py` (its page-layout constants and `page_content`) and re-run before stage 1.
+
 ```sh
 python3 scripts/inspect_windev.py legacy --out analysis-local/inspect-$(date +%Y%m%d)
 ```
@@ -50,7 +52,7 @@ Coverage per element with the list of gaps, the platform functions the code depe
 
 ## 4c. Export the data
 
-Export every table to CSV through the HFSQL ODBC driver ([data export](scripts/windows/README.md)), from a copy of the data or a backup of the HFSQL server database.
+Export every table to CSV through the HFSQL ODBC driver ([data export](scripts/windows/README.md)), from a copy of the data or a backup of the HFSQL server database. If `export_odbc.py` crashes while connecting (exit code 139, HFSQL 28), use the [ANSI exporter](scripts/windows/README.md#when-export_odbcpy-crashes-the-ansi-exporter-hfsql-28) instead.
 
 ## 5. Map the legacy application (before coding)
 
@@ -91,7 +93,8 @@ The starter's `verify` covers its baseline types/build/unit/browser checks. Duri
   "ui:check": "playwright test -c ui-check/playwright.config.ts"
   ```
   Add a bindings check to `verify` once ts-rs bindings are generated.
-- UI check: `templates/ui-check/ui-check.spec.ts` and `playwright.config.ts` → `ui-check/`; `ui-check.config.json` → the repository root (the spec reads it from there); each slice adds `ui-check/<slice>.flows.spec.ts`.
+- Production-build smoke: `templates/ui-check/prod.config.ts` and `prod.smoke.example.spec.ts` → `ui-check/`, `"smoke:prod": "playwright test -c ui-check/prod.config.ts"` in `verify` after `vite build`, and `build: { assetsInlineLimit: 0 }` in `vite.config.ts` (inlined `data:` images blanked a packaged app).
+- UI check: `templates/ui-check/ui-check.spec.ts`, `playwright.config.ts` and `warmup.ts` (its `globalSetup`) → `ui-check/`, plus `hooks.example.ts` as `ui-check/hooks.ts` when windows open after a login or from a launcher; `ui-check.config.json` → the repository root (the spec reads it from there); each slice adds `ui-check/<slice>.flows.spec.ts`.
 - Skin kit: `templates/ui-kit/` → `src/ui/legacy/`; layouts with `scripts/screen_layout.py <WINDOW> --out src/ui/legacy/<WINDOW>.layout.json`; images with `scripts/skin_assets.py --out public/skin src/ui/legacy/*.layout.json`.
 - Browser preview: in `src/main.tsx`, when `import.meta.env.DEV` and not inside Tauri (`!("__TAURI_INTERNALS__" in window)`), install `mockIPC` from `@tauri-apps/api/mocks` with a fake backend over the golden data, behind a visible banner. `npm run dev` then serves the UI to the browser checks.
 - CI: run `npm run verify` on the target OSes once the repository has a remote.

@@ -3,18 +3,46 @@ import type { LegacyControl, LegacyLayout } from "@windev-migration/ui";
 import { preparePreviewLayout } from "./preview";
 
 function control(name: string, overrides: Partial<LegacyControl> = {}): LegacyControl {
-  return { name, path: `SAMPLE/${name}`, kind: "Button", x: 10, y: 40, width: 90, height: 28,
-    flags: { Visible: true, "TAB Key": true }, anchoring: "Right", ...overrides };
+  return {
+    name,
+    path: `SAMPLE/${name}`,
+    kind: "Button",
+    x: 10,
+    y: 40,
+    width: 90,
+    height: 28,
+    flags: { Visible: true, "TAB Key": true },
+    anchoring: "Right",
+    ...overrides,
+  };
 }
 function sample(controls: LegacyControl[]): LegacyLayout & { diagnostics: string[]; unknown: string[] } {
-  return { window: { name: "SAMPLE", title: "Synthetic", size: { width: 420, height: 300 }, background_image: "source-frame.png", flags: { Resizable: true } },
-    controls, diagnostics: ["existing extraction diagnostic"], unknown: ["retained source question"] };
+  return {
+    window: {
+      name: "SAMPLE",
+      title: "Synthetic",
+      size: { width: 420, height: 300 },
+      background_image: "source-frame.png",
+      flags: { Resizable: true },
+    },
+    controls,
+    diagnostics: ["existing extraction diagnostic"],
+    unknown: ["retained source question"],
+  };
 }
 
 describe("neutral preview projection", () => {
   it("deep-clones without modifying source geometry, flags, identities or diagnostics", () => {
-    const source = sample([control("BTN_Action", { image: "source-icon.png", columns: [{ name: "COL_Value", path: "SAMPLE/TABLE/COL_Value", title: "Value", width: 80, h_align: "Left", flags: { Visible: true } }] })]);
-    const original = structuredClone(source), preview = preparePreviewLayout(source, {});
+    const source = sample([
+      control("BTN_Action", {
+        image: "source-icon.png",
+        columns: [
+          { name: "COL_Value", path: "SAMPLE/TABLE/COL_Value", title: "Value", width: 80, h_align: "Left", flags: { Visible: true } },
+        ],
+      }),
+    ]);
+    const original = structuredClone(source),
+      preview = preparePreviewLayout(source, {});
     expect(source).toEqual(original);
     expect(preview).not.toBe(source);
     expect(preview.controls[0]).not.toBe(source.controls[0]);
@@ -67,7 +95,7 @@ describe("neutral preview projection", () => {
       control("BTN_SystemLikeName", { width: null }),
     ]);
     const preview = preparePreviewLayout(source, {});
-    expect(preview.controls.map(item => item.name)).toEqual(["BTN_SYST_MINIMIZE", "BTN_SystemLikeName"]);
+    expect(preview.controls.map((item) => item.name)).toEqual(["BTN_SYST_MINIMIZE", "BTN_SystemLikeName"]);
     expect(preview.controls[0]).toEqual(source.controls[5]);
     for (const name of ["RADTitle", "SCSystemButtons", "BTN_SYST_FERMER", "BTN_Syst_Maximize", "BTN_Syst_Restore", "BTN_UMC"])
       expect(preview.diagnostics).toContain(`SAMPLE/${name}: source chrome ${name} has incomplete or invalid geometry; neutral preview`);
@@ -79,6 +107,6 @@ describe("neutral preview projection", () => {
     const preview = preparePreviewLayout(sample([unknown, incomplete]), {});
     expect(preview.controls[0]).toEqual(unknown);
     expect(preview.controls[1]).toEqual(incomplete);
-    expect(preview.diagnostics.some(text => text.includes("CUSTOM_Widget"))).toBe(false);
+    expect(preview.diagnostics.some((text) => text.includes("CUSTOM_Widget"))).toBe(false);
   });
 });

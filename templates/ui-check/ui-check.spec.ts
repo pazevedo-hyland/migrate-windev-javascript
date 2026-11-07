@@ -2,14 +2,19 @@
 // screen is scored against the legacy image (scripts/visual_compare.py, recorded in docs/evidence/visual/ for
 // the progress page; a score below the floor or a drop below the last score fails; so does a failed image request). Side-by-side report in ui-report/. Configure every
 // window the app can open — modal forms included — in ui-check.config.json. Copy templates/ui-check/ into the app.
-import { expect, test } from "@playwright/test";
+// How a window is reached is configurable: a start `url` per window, clicks (`open`), or an `openWindow` hook module
+// for apps that log in or open windows from a launcher; `windowSelector` finds the window when it is not a data-testid.
+import { expect, test, type Page } from "@playwright/test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 type WindowConfig = {
-  /** data-testids to click, in order, from the start page (usually the legacy route). */
-  open: string[];
+  /** data-testids to click, in order, after the start page (or the openWindow hook); default none. */
+  open?: string[];
+  /** Start page for this window, e.g. "/?window=WIN_Form_Clients"; default "/". Ignored when an openWindow hook is set. */
+  url?: string;
   /** Legacy controls deliberately absent, each with the reason (ADR, deferred slice, skin chrome…). */
   ignore: Record<string, string>;
 };
@@ -29,8 +34,15 @@ type Config = {
   visualTolerance?: number;
   /** Scores every window must reach, also on its first record; default { pixel: 90, edge: 60 }. */
   visualFloor?: { pixel: number; edge: number };
+  /** CSS selector of the open window, "<W>" standing for its name, e.g. 'section[data-layout="<W>"]'; the last match
+   *  is used (the most recently opened window). Default: the element whose data-testid is the window name (first match). */
+  windowSelector?: string;
+  /** Module (repository-relative) exporting `openWindow(page, window, settings)`: logs in and/or opens the window
+   *  instead of going to `url`. Example: ui-check/hooks.ts. */
+  hooks?: string;
   windows: Record<string, WindowConfig & { captionIgnore?: Record<string, string> }>;
 };
+type Hooks = { openWindow?: (page: Page, window: string, settings: WindowConfig) => Promise<void> };
 
 const root = process.cwd();
 const config: Config = JSON.parse(readFileSync(join(root, "ui-check.config.json"), "utf-8"));
@@ -110,9 +122,12 @@ for (const [window, settings] of Object.entries(config.windows)) {
     const failed: string[] = [];
     page.on("requestfailed", (request) => failed.push(request.url()));
     page.on("response", (response) => { if (response.status() >= 400) failed.push(`${response.status()} ${response.url()}`); });
-    await page.goto("/");
-    for (const id of settings.open) await page.getByTestId(id).first().click();
-    const view = page.getByTestId(window).first();
+    const hooks: Hooks = config.hooks ? await import(pathToFileURL(resolve(root, config.hooks)).href) : {};
+    if (hooks.openWindow) await hooks.openWindow(page, window, settings);
+    else await page.goto(settings.url ?? "/");
+    for (const id of settings.open ?? []) await page.getByTestId(id).first().click();
+    const view = config.windowSelector ? page.locator(config.windowSelector.replaceAll("<W>", window)).last()
+      : page.getByTestId(window).first();
     await expect(view).toBeVisible();
     const expected = legacyControls(window).filter((name) => !(name in settings.ignore));
     const missing: string[] = [];

@@ -20,7 +20,8 @@ Agents fail silently where WLanguage and TypeScript **look** alike but behave di
 | `~=`, `~~`, `[=`, `[~` | **Flexible** equality (case, spaces, accents, punctuation ignored to different degrees), "starts with" | Implement as named functions with tests per operator, using `normalize('NFD')` for accents |
 | `Upper`, `Lower`, `NoAccent` | Locale and accent handling | `toLocaleUpperCase('fr-FR')`, explicit accent stripping |
 | `ExtractString(s, n, sep)` | 1-based occurrence; special return when out of range — check | Helper with tests |
-| `Complete`, `Left`/`Right` padding | Pad or truncate to a length | Helper; check behavior with shorter strings |
+| `Complete`, `Left`/`Right` padding | Pad or truncate to a length | Helper; check behavior with shorter AND longer strings: `Complete` truncates. The left-pad idiom `StringReverse(Complete(StringReverse(x), 2, "0"))` keeps the LAST two characters, so 123 ms prints "23" (port as is unless an ADR fixes it) |
+| `n + "text"` with an integer first | Concatenation, like `"text" + n`? | Not proven: the first operand's type may make `+` numeric (`16 + "." + "251124v2"`). Treat as an open question (read the running app's screen), not as concatenation |
 | String ↔ number | **Implicit conversion** in assignments and some operations (`"12" + 1`?) — check each case | Explicit `parse`/`format`; never rely on JS coercion |
 | `NumToString(x, "08.2f")`, display masks | Format masks and locale (decimal comma, thousands separator) | A tested `format()` per mask used; `Intl.NumberFormat` with explicit locale |
 | ANSI vs Unicode projects, `Buffer` | Older projects store ANSI (Windows-1252) strings; byte length ≠ character length | Decode at import; buffers stay `Uint8Array` |
