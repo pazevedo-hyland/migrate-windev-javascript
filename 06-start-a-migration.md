@@ -62,6 +62,8 @@ The first prompt to the implementer is the **mapping** ([templates/mapping-promp
 - **other agents review** each note against the sources and the dossier images;
 - consolidated outputs: `docs/legacy-inventory.md`, navigation map, `docs/screens/<WINDOW>.md`, and `docs/parity/parity.csv` imported from the seed plus manual rows (menus, shortcuts, rights, reports, jobs, integrations).
 
+When several agents map or implement units in parallel, each writes `docs/parity/<UNIT>.csv`, and the coordinator runs `python3 scripts/merge_parity.py docs/parity` before the gate.
+
 Gate: `python3 scripts/parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv --check-files` passes. This is the analysis brief.
 
 ## 6. Frame with the planner

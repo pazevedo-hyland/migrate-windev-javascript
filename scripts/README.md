@@ -103,6 +103,14 @@ python3 scripts/functional_acceptance.py --check
 
 Writes `docs/functional-acceptance.json` with one case per screen/report (`FC-<unit>`) whose witnesses are the `file::title` tests cited by the unit's `verified` parity rows, and one run (OS, commit, commands, the checks that passed). A case is `verified` only when every cited test is in the reports and passed (last retry counts); a failing or absent cited test, or a unit with no cited test, stays `pending` with the reason. Other cases (IDs not starting `FC-`), `platform` entries and the runs they cite are kept. Produce the reports from one clean commit. It derives cases from parity citations; it does not decide the approved scope — review the generated requirements, and keep strict parity, source questions and platform evidence separate.
 
+## `merge_parity.py` — one parity file per unit, one aggregate
+
+```sh
+python3 scripts/merge_parity.py docs/parity [--exclude WIN_Old=docs/decisions/002-scope.md ...] [--check]
+```
+
+Rebuilds `docs/parity/parity.csv` from the per-unit CSVs beside it (`<UNIT>.csv`, same columns), so parallel workers each write their own unit's file and nobody overwrites the aggregate. Unit rows replace aggregate rows with the same id; rows that only live in `parity.csv` are kept; an id in two unit files or an unknown column is an error and nothing is written. `--exclude` re-applies accepted exclusions after the merge. Order: seed first, then the other ids sorted. `--check` writes nothing and exits 1 when the aggregate is stale. Run `parity_check.py` after it.
+
 ## `screen_layout.py`, `skin_assets.py`, `visual_compare.py` — a screen that looks like the legacy one
 
 ```sh
@@ -112,7 +120,7 @@ python3 scripts/visual_compare.py docs/evidence/images/WIN_Table_Clientes.jpg ui
   --out docs/evidence/visual/WIN_Table_Clientes.compare.png --record docs/evidence/visual/WIN_Table_Clientes.json
 ```
 
-Layout JSON from the evidence (positions, captions, icons and states, backgrounds, caption widths, columns); skin images as one PNG per state with magenta made transparent; a visual score (pixel similarity, edge overlap) plus a side-by-side image for the human. The last two need Pillow.
+Layout JSON from the evidence (positions, captions, icons and states, backgrounds, caption widths, columns); skin images as one PNG per state with magenta made transparent; a visual score (pixel similarity, edge overlap) plus a side-by-side image for the human. The last two need Pillow. It also reads the dossier's raw control tables: geometry of controls whose names the tables cut, table column widths and the kind of generically named controls (`geometry_source`, `width_source`, `source_kind`). It joins words the PDF wrapped when the dossier or source code attests the joined word (listed in `diagnostics`), and renames kinds to the RAD kit's spelling. What the tables do not state stays missing and is listed in `unknown`, never invented.
 
 ## `dossier_extract.py` — WINDEV's project documentation as data
 
