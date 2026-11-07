@@ -81,8 +81,13 @@ def anchor(raw):
     rates = next((ANCHOR_RATES.search(line) for line in raw if ANCHOR_RATES.search(line)), None)
     if kind is None and rates is None:
         return {}
+    inferred = False
+    if kind is None and 'Anchor' in raw and rates and int(rates[1]) < 1000 and int(rates[3]) < 1000:
+        # The dossier prints a bare "Anchor" (its type drawn, not written) for fields that share the window's extra width
+        # with a neighbour: reduced right and width rates only act together ("Right and width"). Inferred, not printed.
+        kind, inferred = 'Right and width', True
     # Field names of the UI kit's LegacyControl (packages/ui layout.ts); rates there are percentages.
-    result = {'anchoring': kind}
+    result = {'anchoring': kind, 'anchoring_inferred': inferred or None}
     if rates:
         result['anchorRates'] = {'right': int(rates[1]) / 10, 'bottom': int(rates[2]) / 10,
                                  'width': int(rates[3]) / 10, 'height': int(rates[4]) / 10}

@@ -14,6 +14,10 @@ class ScreenLayoutFieldTests(unittest.TestCase):
         self.assertEqual(layout.anchor(raw), {'anchoring': 'Right and bottom',
                                               'anchorRates': {'right': 50.0, 'bottom': 25.0, 'width': 100.0, 'height': 100.0}})
         self.assertEqual(layout.anchor(['Opacity 100']), {})  # not stated: unknown, not "none"
+        # A bare "Anchor" with reduced right and width rates: the type was drawn, not printed; inferred.
+        shared = layout.anchor(['Anchor to content <None>', 'Anchor',
+                                'Anchor rate to right 500 Anchor rate bottom 1000 Anc. rate width 500 Anchor rate height 1000'])
+        self.assertEqual((shared['anchoring'], shared['anchoring_inferred'], shared['anchorRates']['right']), ('Right and width', True, 50.0))
 
     def test_image_names_keep_real_spaces_and_lose_pdf_wraps(self):
         layout.PROJECT_FILES.clear()
