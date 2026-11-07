@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference -- CSS module declarations for consumers of the package source
 /// <reference path="./style.d.ts" />
 export * from "./config";
 export * from "./assets";

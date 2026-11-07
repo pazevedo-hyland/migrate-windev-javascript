@@ -5,5 +5,7 @@ export async function writeClipboardText(text: string, clipboard?: Pick<Clipboar
     if (!target) return false;
     await target.writeText(text);
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }

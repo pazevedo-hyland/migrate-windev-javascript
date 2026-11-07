@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("synthetic directory uses real RAD controls, table selection and awaited confirmation", async ({ page }) => {
   const errors: string[] = [];
-  page.on("pageerror", error => errors.push(error.message));
+  page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await page.getByRole("button", { name: "Demo directory", exact: true }).click();
   await expect(page.getByTestId("TABLE_Entries")).toBeVisible();
@@ -30,11 +30,13 @@ test("synthetic directory uses real RAD controls, table selection and awaited co
 test("workspace reuses one window and keeps controls inside its frame", async ({ page }) => {
   await page.goto("/");
   const launch = page.getByRole("button", { name: "Demo directory", exact: true });
-  await launch.click(); await launch.click();
+  await launch.click();
+  await launch.click();
   await expect(page.locator(".wd-workspace-window")).toHaveCount(1);
   const frame = await page.locator(".wd-frame").boundingBox();
   const table = await page.getByTestId("TABLE_Entries").boundingBox();
-  expect(frame).not.toBeNull(); expect(table).not.toBeNull();
+  expect(frame).not.toBeNull();
+  expect(table).not.toBeNull();
   expect(table!.x).toBeGreaterThanOrEqual(frame!.x);
   expect(table!.y).toBeGreaterThanOrEqual(frame!.y);
   expect(table!.x + table!.width).toBeLessThanOrEqual(frame!.x + frame!.width);
@@ -45,7 +47,7 @@ test("workspace reuses one window and keeps controls inside its frame", async ({
 
 test("unconfigured source skins, prototype-like names and missing geometry remain usable scaffolds", async ({ page }) => {
   const errors: string[] = [];
-  page.on("pageerror", error => errors.push(error.message));
+  page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/ui-check/extraction.html");
   await page.getByRole("button", { name: "Unknown source assets", exact: true }).click();
   await page.getByTestId("Draft").fill("Draft survives React updates");

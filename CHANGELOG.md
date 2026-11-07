@@ -18,6 +18,7 @@
 - `screen_layout.py`: `plane` and dossier anchors (`anchoring`, `anchorRates` in percent, the UI kit's names); image names keep real spaces when the project folder has such a file ("SIXTIES TV0101.png" was turned into a missing "SIXTIESTV0101.png").
 - Starter UI kit: table row lines start below the measured title row (they were offset by the title height in every table: "distorted lines"); a window whose dossier has no Title bar tick draws none; a button that is only a picture draws its state image at its own size, centred (WINDEV), not squeezed to 16 px; `LegacyControl.plane`.
 - Lesson: a screen that renders all controls of a multi-plane window with hand-made boxes looks nothing like the original; check `coverage` in the dossier extraction before building screens, and treat `0/N` flags as an extraction bug to fix, not as missing evidence.
+- Engineering baseline in the starter: ESLint + Prettier (`lint`, `format`, `format:check`, in `verify`), `.github/workflows/ci.yml` (Windows app checks, Rust), real-server flow examples (`templates/ui-check/server-*.example.ts`: built server per Playwright worker, PostgreSQL per worker on CI); chapter 10 lists the test layers and the preview-flow memory limit (2 workers on 16 GB; 3 killed the dev server). Measured on the second migration: 129 lint findings → 0 errors, 210 flows 55 → 19 min.
 
 ## 2026-10-26 — reusable workflow verification
 

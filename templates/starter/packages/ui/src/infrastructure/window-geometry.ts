@@ -5,8 +5,14 @@ type GeometryStorage = Pick<Storage, "getItem" | "setItem">;
 function valid(value: unknown): value is WindowGeometry {
   if (!value || typeof value !== "object") return false;
   const data = value as Record<string, unknown>;
-  return ["x", "y", "width", "height"].every(key => typeof data[key] === "number" && Number.isFinite(data[key])) &&
-    Number(data.x) >= 0 && Number(data.y) >= 0 && Number(data.width) > 0 && Number(data.height) > 0 && typeof data.maximized === "boolean";
+  return (
+    ["x", "y", "width", "height"].every((key) => typeof data[key] === "number" && Number.isFinite(data[key])) &&
+    Number(data.x) >= 0 &&
+    Number(data.y) >= 0 &&
+    Number(data.width) > 0 &&
+    Number(data.height) > 0 &&
+    typeof data.maximized === "boolean"
+  );
 }
 
 function bounds(value: WindowGeometry): WindowGeometry {
@@ -22,14 +28,18 @@ export function createWindowGeometryStore(storage?: GeometryStorage, namespace =
         const value: unknown = JSON.parse((storage ?? window.localStorage).getItem(prefix + encodeURIComponent(name)) ?? "null");
         if (!valid(value) || (value as WindowGeometry & { version?: unknown }).version !== 1) return null;
         return bounds(value);
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     },
     save(name, geometry) {
       if (!valid(geometry)) return false;
       try {
         (storage ?? window.localStorage).setItem(prefix + encodeURIComponent(name), JSON.stringify({ version: 1, ...bounds(geometry) }));
         return true;
-      } catch { return false; }
+      } catch {
+        return false;
+      }
     },
   };
 }

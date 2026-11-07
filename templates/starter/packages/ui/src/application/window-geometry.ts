@@ -1,4 +1,10 @@
-export interface WindowGeometry { x: number; y: number; width: number; height: number; maximized: boolean }
+export interface WindowGeometry {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  maximized: boolean;
+}
 
 export interface WindowGeometryStore {
   load(name: string): WindowGeometry | null;
