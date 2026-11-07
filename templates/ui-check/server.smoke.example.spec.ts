@@ -1,4 +1,5 @@
-// Example from the Gestão de Produção migration: replace the windows, codes and procedure names with your app's.
+// Example from one migration (Portuguese windows and procedures): replace the windows, codes and procedure names with
+// your app's. Needs the server add-on (templates/server) and server-fixtures.example.ts.
 import { expect, login, open, test } from "./server-fixtures.example";
 
 /**

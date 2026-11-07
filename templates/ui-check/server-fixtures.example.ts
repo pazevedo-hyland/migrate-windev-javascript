@@ -7,20 +7,23 @@ import { fileURLToPath } from "node:url";
 import pg from "pg";
 
 /**
- * Real-server flows (example from a server topology: Node procedure server + PostgreSQL/PGlite, ADR "topology").
- * Each Playwright worker starts the built server (`dist-server/main.js`, the same code the installer
- * embeds) with its own fresh database and the demo seed, and the app talks to it over HTTP (`?server=`), as installed.
- * Database: a real PostgreSQL when GP_TEST_DATABASE_URL is set (one database per worker, dropped afterwards; CI),
- * else an embedded PGlite folder in a temporary directory (local runs). Tests of one worker share its database: they
- * create their own records (unique codes) and never assume counts another test could change.
+ * Real-server flows for the optional server add-on (templates/server: Node procedure server + PostgreSQL/PGlite).
+ * Each Playwright worker starts the built server (`dist-server/main.js`, `npm run server:build`: the same code an
+ * installer embeds) with its own fresh database and the demo seed, and the app talks to it over HTTP (`?server=`), as
+ * installed. Database: a real PostgreSQL when APP_TEST_DATABASE_URL is set (an admin connection string from the CI
+ * environment, never Git; one database per worker, dropped afterwards), else an embedded PGlite folder in a temporary
+ * directory (local runs). Tests of one worker share its database: they create their own records (unique codes) and
+ * never assume counts another test could change.
  */
 export interface Backend {
   url: string;
-  /** Read or write the server's database directly (independent of the UI), as the administrator on post 1. */
+  /** Read or write the server's database directly (independent of the UI), with TEST_SESSION. */
   rpc<T = unknown>(name: string, input?: unknown): Promise<T>;
 }
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
+/** The session the independent reader calls procedures with: replace with your app's Session fields (an administrator). */
+const TEST_SESSION = { user: "1" };
 
 async function freshDatabase(adminUrl: string, name: string): Promise<{ url: string; drop: () => Promise<void> }> {
   const admin = new pg.Client({ connectionString: adminUrl });
@@ -68,20 +71,26 @@ function waitForReady(child: ChildProcessWithoutNullStreams): Promise<void> {
 }
 
 export const test = base.extend<object, { backend: Backend }>({
-  // eslint-disable-next-line no-empty-pattern -- Playwright fixtures take their dependencies as a destructured object
   backend: [
+    // eslint-disable-next-line no-empty-pattern -- Playwright fixtures take their dependencies as a destructured object
     async ({}, use, workerInfo) => {
       const port = 4950 + workerInfo.parallelIndex;
-      const env: NodeJS.ProcessEnv = { ...process.env, PORT: String(port), GP_HOST: "127.0.0.1", GP_STDIO_CONTROL: "1", GP_DEV_SEED: "1" };
+      const env: NodeJS.ProcessEnv = {
+        ...process.env,
+        PORT: String(port),
+        APP_HOST: "127.0.0.1",
+        APP_STDIO_CONTROL: "1",
+        APP_DEV_SEED: "1",
+      };
       let cleanup = async () => {};
-      if (process.env.GP_TEST_DATABASE_URL) {
-        const db = await freshDatabase(process.env.GP_TEST_DATABASE_URL, `gp_test_w${workerInfo.parallelIndex}`);
+      if (process.env.APP_TEST_DATABASE_URL) {
+        const db = await freshDatabase(process.env.APP_TEST_DATABASE_URL, `app_test_w${workerInfo.parallelIndex}`);
         env.DATABASE_URL = db.url;
-        delete env.GP_DATA_DIR;
+        delete env.APP_DATA_DIR;
         cleanup = db.drop;
       } else {
-        const dir = mkdtempSync(join(tmpdir(), "gp-server-test-"));
-        env.GP_DATA_DIR = join(dir, "data");
+        const dir = mkdtempSync(join(tmpdir(), "app-server-test-"));
+        env.APP_DATA_DIR = join(dir, "data");
         delete env.DATABASE_URL;
         cleanup = async () => rmSync(dir, { recursive: true, force: true });
       }
@@ -92,7 +101,7 @@ export const test = base.extend<object, { backend: Backend }>({
         const response = await fetch(`${url}/rpc`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name, input, session: { utilizador: "1", posto: "1" } }),
+          body: JSON.stringify({ name, input, session: TEST_SESSION }),
         });
         const result = (await response.json()) as { ok: boolean; value?: T; error?: string };
         if (!result.ok) throw new Error(`${name}: ${result.error}`);
@@ -100,7 +109,7 @@ export const test = base.extend<object, { backend: Backend }>({
       };
       await use({ url, rpc });
       const exited = new Promise((done) => child.once("exit", done));
-      child.stdin.end(); // GP_STDIO_CONTROL: end of stdin closes the database and exits
+      child.stdin.end(); // APP_STDIO_CONTROL: end of stdin closes the database and exits
       await Promise.race([exited, new Promise((done) => setTimeout(done, 10_000))]);
       if (child.exitCode === null) child.kill();
       await cleanup();
@@ -111,12 +120,16 @@ export const test = base.extend<object, { backend: Backend }>({
 
 export { expect };
 
-/** Open the app against this worker's server: `?server=` is how an installed station is pointed at its server. */
+/**
+ * Open the app against this worker's server: `?server=` is how an installed station is pointed at its server.
+ * `janela` (window) and `posto` (workstation) are one migration's start-up options: use your app's.
+ */
 export async function open(page: Page, backend: Backend, janela: string, posto = "1") {
   await page.goto(`/?server=${encodeURIComponent(backend.url)}&janela=${janela}&posto=${posto}`);
   await expect(page.getByTestId("preview-banner")).toHaveCount(0); // not the in-browser demo
 }
 
+/** Example login of one migration (its login window and demo-seed password): replace with your app's. */
 export async function login(page: Page, backend: Backend) {
   await open(page, backend, "WIN_Login");
   await page.getByTestId("edt_senha").fill("admin");
