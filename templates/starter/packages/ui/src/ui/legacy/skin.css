@@ -5,6 +5,7 @@
 .wd-client { position: absolute; inset: 0; }
 /* Windows without a title control: system title bar above the client area (control coordinates are client-relative). */
 .wd-frame--native { --wd-native-title: 31px; }
+.wd-frame--native.wd-frame--untitled { --wd-native-title: 0px; }
 .wd-frame--native > .wd-client { top: var(--wd-native-title); }
 .wd-native-titlebar { position: absolute; left: 0; right: 0; top: 0; height: var(--wd-native-title); background: #fff; border-bottom: 1px solid #e3e3e3; box-sizing: border-box; }
 .wd-native-titlebar .wd-title { left: 10px; top: 4px; right: 150px; font-weight: 400; color: #1b1b1b; }
@@ -25,6 +26,8 @@
 .wd-button:focus-visible { outline: 2px solid #2563b9; outline-offset: -2px; border-image-source: var(--wd-background-3, none); }
 .wd-button:disabled { opacity: .55; border-image-source: var(--wd-background-4, none); }
 .wd-button-icon { display: block; flex: none; width: 16px; height: 16px; background: var(--wd-icon-0, none) center / contain no-repeat; }
+/* A button that is only a picture: WINDEV draws the state image at its own size, centred. */
+.wd-button--picture .wd-button-icon { position: absolute; inset: 0; width: auto; height: auto; background-size: auto; }
 .wd-button:hover .wd-button-icon { background-image: var(--wd-icon-1, none); }
 .wd-button:active .wd-button-icon { background-image: var(--wd-icon-2, none); }
 .wd-button:focus-visible .wd-button-icon { background-image: var(--wd-icon-3, none); }

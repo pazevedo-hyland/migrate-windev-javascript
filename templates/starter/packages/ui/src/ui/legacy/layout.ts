@@ -17,6 +17,8 @@ export interface LegacyControl {
   return_format?: string; calendar_button?: string; calculator_button?: string; blocking_validation?: string;
   h_align?: string; v_align?: string;
   flags?: Partial<Record<string, boolean>>;
+  /** WINDEV plane (0 = every plane); a window shows one plane at a time. */
+  plane?: number;
   anchoring?: string;
   anchorRates?: { right?: number; bottom?: number; width?: number; height?: number };
   columns?: LegacyColumn[];

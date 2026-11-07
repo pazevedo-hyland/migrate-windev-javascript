@@ -33,8 +33,25 @@ def raw_value(raw, key):
     return None
 
 
+# Image files of the WINDEV project whose names hold spaces, keyed by the name without them; set by `layout`.
+PROJECT_FILES = {}
+
+
 def basename(path):
-    return re.split(r'[\\/]', path)[-1] if path else None
+    # The dossier PDF wraps long names inside a word ("AquaBlue_Btn_Std.pn g"), so spaces are dropped, unless the
+    # project folder holds a file whose real name has them ("SIXTIES TV0101.png").
+    if not path:
+        return None
+    joined = re.sub(r'\s+', '', re.split(r'[\\/]', path)[-1])
+    return PROJECT_FILES.get(joined.lower(), joined)
+
+
+def geometry(item, details):
+    """Source positions first; when the text source keeps them encoded (all zero or absent), the dossier's."""
+    source = {key: item.get(key) for key in ('x', 'y', 'width', 'height')}
+    if not any(source.values()) and any(details.get(key) for key in ('x', 'y', 'width', 'height')):
+        return {key: details.get(key) for key in ('x', 'y', 'width', 'height')}
+    return source
 
 
 def table_options(raw):
@@ -49,6 +66,27 @@ def table_options(raw):
         'column_selection': 'Select. columns', 'cell_selection': 'Select. cells',
     }
     return {key: value for key, name in names.items() if (value := raw_value(raw, name)) is not None}
+
+
+ANCHOR_RATES = re.compile(r'Anchor rate to right (\d+) Anchor rate bottom (\d+) Anc\. rate width (\d+) Anchor rate height (\d+)')
+
+
+def anchor(raw):
+    """WINDEV anchoring: which edges follow the window when it grows, and by how much (rates in thousandths).
+
+    "Anchor Right and bottom" + "Anchor rate to right 500 …" moves the control right by half the window's growth.
+    Absent lines stay unknown (the control keeps its designer position)."""
+    kind = next((line[len('Anchor '):].strip() for line in raw
+                 if line.startswith('Anchor ') and not line.startswith(('Anchor rate', 'Anchor to content'))), None)
+    rates = next((ANCHOR_RATES.search(line) for line in raw if ANCHOR_RATES.search(line)), None)
+    if kind is None and rates is None:
+        return {}
+    # Field names of the UI kit's LegacyControl (packages/ui layout.ts); rates there are percentages.
+    result = {'anchoring': kind}
+    if rates:
+        result['anchorRates'] = {'right': int(rates[1]) / 10, 'bottom': int(rates[2]) / 10,
+                                 'width': int(rates[3]) / 10, 'height': int(rates[4]) / 10}
+    return {key: value for key, value in result.items() if value is not None}
 
 
 def caption_summary_alignment(details):
@@ -139,6 +177,9 @@ def source_context(source, latest):
 
 def layout(unit, latest, language=None):
     inspect, dossier = Path(latest['inspect']), latest.get('dossier')
+    if not PROJECT_FILES and latest.get('legacy') and Path(latest['legacy']).is_dir():
+        PROJECT_FILES.update({re.sub(r'\s+', '', file.name).lower(): file.name for file in Path(latest['legacy']).rglob('*')
+                              if ' ' in file.name and file.suffix.lower() in ('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico')})
     matches = [s for s in (load(p) for p in sorted((inspect / 'code').rglob('*.json')))
                if s.get('name', '').lower() == unit.lower()]
     if not matches:
@@ -178,10 +219,11 @@ def layout(unit, latest, language=None):
         background = basename(choose(details.get('background_image'), f'{path}.background_image'))
         assets.update(a for a in (image, background) if a)
         entry = {'name': item['name'], 'path': path, 'kind': details.get('kind') or item['kind'],
-                 'x': item['x'], 'y': item['y'], 'width': item.get('width'), 'height': item.get('height'),
+                 **geometry(item, details),
                  'caption': choose(details.get('caption') or details.get('title'), f'{path}.caption'),
                  'visible': (details.get('flags') or {}).get('Visible'), 'flags': details.get('flags'), 'state': details.get('state'),
-                 'anchoring': details.get('anchoring'), 'tab_order': details.get('tab_order'),
+                 'plane': details.get('plane'), 'tab_order': details.get('tab_order'),
+                 'anchoring': details.get('anchoring'), **anchor(raw),
                  'button_type': details.get('button_type'),
                  'h_align': details.get('h_align') or raw_value(raw, 'Horz. alignment') or caption_alignment.get('h_align'),
                  'input_mask': choose(details.get('input_mask'), f'{path}.input_mask'),

@@ -18,7 +18,7 @@ export function WdButton({ control: source, chrome = false, interpretAmpersand =
     data-wd-mnemonic={caption.letter ? caption.letter.toLocaleLowerCase(config.locale) : undefined}
     aria-keyshortcuts={props["aria-keyshortcuts"] ?? (caption.letter ? `Alt+${caption.letter}` : undefined)}
     hidden={props.hidden ?? ((control.visible ?? control.flags?.Visible) === false)} tabIndex={tabIndex ?? (control.flags?.["TAB Key"] === false || String(control.tab_order) === "-1" ? -1 : undefined)}
-    className={`wd-button ${chrome ? "wd-chrome-button" : ""} ${!chrome && control.background_image ? "wd-button--skin" : ""} ${className}`}
+    className={`wd-button ${chrome ? "wd-chrome-button" : ""} ${!chrome && control.background_image ? "wd-button--skin" : ""} ${!chrome && control.image && !control.caption ? "wd-button--picture" : ""} ${className}`}
     style={{ ...controlBox(control), ...buttonSkin(control, config.assets), ...style }}>
     {!chrome && <span>{!interpretAmpersand ? control.caption : <>{caption.before}{caption.letter && <u>{caption.letter}</u>}{caption.after}</>}</span>}
     {control.image && <span className="wd-button-icon" aria-hidden="true" />}
@@ -105,6 +105,8 @@ export function WdFrame({ layout, instance, children, width, height, onClose, on
   });
   const restore = layout.controls.find(control => control.name === "BTN_Syst_Restore");
   const titleText = title?.caption ?? layout.window.title ?? layout.window.name;
+  // Window description without "Title bar" (dossier tick absent): no bar, the client area starts at the top.
+  const untitled = layout.window.flags?.["Title bar"] === false;
   const defaultChrome = <div className="wd-default-chrome">{actions.filter(action => action.name === "BTN_SYST_FERMER" || layout.window.flags?.[action.name === "BTN_SYST_MINIMIZE" ? "Minimize icon" : "Maximize icon"] !== false).map(action => <button key={action.name} type="button" className="wd-chrome-button"
     aria-label={action.label} data-testid={`${instance}__${action.name}`} onClick={action.action}>{action.symbol}</button>)}</div>;
   // No title control and no extracted system buttons: the window has the system title bar ABOVE its client area.
@@ -113,11 +115,11 @@ export function WdFrame({ layout, instance, children, width, height, onClose, on
   // The frame keeps the layout's size, which includes the bar.
   if (!title && !extractedChrome) return <section data-testid={instance} data-layout={layout.window.name} aria-label={titleText}
     data-wd-keyboard-scope="" tabIndex={-1} onKeyDown={event => activateMnemonic(event, config.locale)}
-    className={`wd-frame wd-frame--native${layout.window.background_image ? " wd-frame--image" : ""}`} style={{ ...skin, width: frameWidth, height: frameHeight }}>
-    <div className="wd-native-titlebar">
+    className={`wd-frame wd-frame--native${untitled ? " wd-frame--untitled" : ""}${layout.window.background_image ? " wd-frame--image" : ""}`} style={{ ...skin, width: frameWidth, height: frameHeight }}>
+    {!untitled && <div className="wd-native-titlebar">
       <div className="wd-title" data-testid={`${instance}__title`}>{titleText}</div>
       {defaultChrome}
-    </div>
+    </div>}
     <div className="wd-client">
       <FrameDeltaContext.Provider value={{ width: frameWidth - size.width, height: frameHeight - size.height }}>{children}</FrameDeltaContext.Provider>
     </div>

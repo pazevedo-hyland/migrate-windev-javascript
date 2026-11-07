@@ -174,3 +174,86 @@ class DossierExtractTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+def scaled_pdf_page(drawing):
+    """A one-page PDF drawn like WINDEV 28 dossiers with an embedded subset font: the page is scaled by 0.12, text is
+    a TJ array, and each half of a check mark is its own stroked path."""
+    import io
+    from pypdf import PdfReader, PdfWriter
+    from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=595, height=842)
+    font = DictionaryObject({NameObject('/Type'): NameObject('/Font'), NameObject('/Subtype'): NameObject('/Type1'),
+                             NameObject('/BaseFont'): NameObject('/Helvetica')})
+    page[NameObject('/Resources')] = DictionaryObject({NameObject('/Font'): DictionaryObject({NameObject('/F1'): writer._add_object(font)})})
+    stream = DecodedStreamObject()
+    stream.set_data(('q 0.12 0 0 0.12 0 0 cm\n' + drawing + 'Q\n').encode('latin-1'))
+    page[NameObject('/Contents')] = writer._add_object(stream)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    return PdfReader(io.BytesIO(buffer.getvalue())).pages[0]
+
+
+def scaled_text(x, y, text):
+    # Page points → the 0.12-scaled user space: a text matrix at (x, y) inside an 8.333 cm, like the dossier.
+    return f'q 8.33333 0 0 8.33333 0 0 cm BT /F1 8 Tf 1 0 0 1 {x} {y} Tm [({text})] TJ ET Q\n'
+
+
+def scaled_tick(x, y):
+    s = 1 / 0.12
+    return (f'{x * s:.1f} {y * s:.1f} m {(x + 2.8) * s:.1f} {(y - 2.8) * s:.1f} l S\n'
+            f'{(x + 2.8) * s:.1f} {(y - 2.8) * s:.1f} m {(x + 8.4) * s:.1f} {(y + 2.9) * s:.1f} l S\n')
+
+
+class ScaledDossierTests(unittest.TestCase):
+    def test_scaled_pages_with_split_check_marks_give_control_flags_and_planes(self):
+        page_ = scaled_pdf_page(
+            scaled_text(42.5, 812, 'Part 3 > WINDEV window > WIN_FO > Information on controls') +
+            scaled_text(199.9, 754, 'X position') + scaled_text(241.8, 754, 'Y position') + scaled_text(283.6, 754, 'Width') +
+            scaled_text(325.4, 754, 'Height') + scaled_text(367.2, 754, 'Plane') + scaled_text(400.7, 754, 'Visible') +
+            scaled_text(442.4, 754, 'Initial status') + scaled_text(484.2, 754, 'TAB Key') +
+            scaled_text(46.7, 741, 'BTN_confirmar_colab') + scaled_text(203.6, 741, '822') + scaled_text(249.5, 741, '54') +
+            scaled_text(287.3, 741, '160') + scaled_text(333.1, 741, '60') + scaled_text(378.8, 741, '1') +
+            scaled_text(430.8, 741, 'Active') + scaled_tick(393.6, 743.6) +
+            scaled_text(46.7, 728.7, 'BTN_processos_abertos') + scaled_text(203.6, 728.7, '1006') + scaled_text(245.5, 728.7, '126') +
+            scaled_text(287.3, 728.7, '160') + scaled_text(333.1, 728.7, '60') + scaled_text(378.8, 728.7, '1') +
+            scaled_text(430.8, 728.7, 'Active') + scaled_tick(477.1, 731.4))
+        content = module.page_content(page_)
+        self.assertIn("Td (Visible)' ET", content)  # rebuilt in page points
+        _, controls = module.checkboxes(content)
+        self.assertEqual(controls['BTN_confirmar_colab'], {'Visible': True, 'TAB Key': False})
+        self.assertEqual(controls['BTN_processos_abertos'], {'Visible': False, 'TAB Key': True})
+
+    def test_narrow_window_property_grid(self):
+        tick = lambda x, y: f'{x} {y} m {x + 2.84} {y - 2.83} l S\n{x + 2.84} {y - 2.83} m {x + 8.5} {y + 2.84} l S\n'
+        content = ("BT 42.48 812.00 Td (Part 3 > WINDEV window > WIN_FO > Image)' ET\n"
+                   "BT 46.72 104.80 Td (Visible)' ET\nBT 216.80 104.80 Td (Title bar)' ET\nBT 386.88 104.80 Td (System menu)' ET\n"
+                   "BT 46.72 77.10 Td (Status Bar)' ET\nBT 216.80 77.10 Td (Clip background)' ET\nBT 386.88 77.10 Td (9-slice scaling)' ET\n"
+                   + tick(199.7, 109.4) + tick(539.8, 81.7))
+        properties, _ = module.checkboxes(content)
+        self.assertEqual(properties, {'Visible': True, 'Title bar': False, 'System menu': False,
+                                      'Status Bar': False, 'Clip background': False, '9-slice scaling': True})
+
+    def test_rotated_column_headers_shift_the_column_spans(self):
+        tick = lambda x, y: f'{x} {y} m {x + 2.84} {y - 2.83} l S\n{x + 2.84} {y - 2.83} m {x + 8.5} {y + 2.84} l S\n'
+        # Narrow boolean columns print their header text right of the cell: the word "Read-onl" of "Initial status"
+        # sits nearer to the "Visible" header than to its own, until the spans move by the marks' offset.
+        content = ("BT 46.72 410.0 Td (Table column)' ET\nBT 183.0 410.0 Td (Width)' ET\nBT 207.0 410.0 Td (Visible)' ET\n"
+                   "BT 236.0 410.0 Td (Initial status)' ET\nBT 318.0 410.0 Td (Sortable column)' ET\n"
+                   "BT 46.72 378.3 Td (COL_documento)' ET\nBT 180.0 378.3 Td (120)' ET\nBT 219.0 378.3 Td (Read-onl)' ET\n"
+                   "BT 46.72 364.0 Td (COL_numero)' ET\nBT 180.0 364.0 Td (90)' ET\nBT 219.0 364.0 Td (Read-onl)' ET\n"
+                   + tick(199.0, 367.2) + tick(310.5, 367.2))
+        rows = module.checkboxes(content)[1]
+        self.assertEqual(rows['COL_documento'], {'Visible': False, 'Sortable column': False})
+        self.assertEqual(rows['COL_numero'], {'Visible': True, 'Sortable column': True})
+
+    def test_cut_row_names_join_their_control_and_rows_keep_the_plane(self):
+        window = module.collect([page('WINDEV window', 'WIN_FO', 'Information on controls', body=(
+            'Edit control\nX position\nY position\nWidth\nHeight\nPlane\n'
+            'edt_quantidade_proce 18 306 710 60 5 Active Numeric\n'
+            'Edit control : edt_quantidade_processo\nCaption PT: Quantidade:\nTab order 3\n'))])['WINDEV window']['WIN_FO']['controls']
+        self.assertNotIn('edt_quantidade_proce', window)
+        self.assertEqual((window['edt_quantidade_processo']['x'], window['edt_quantidade_processo']['plane']), (18, 5))
+        self.assertEqual(module.full_name('edt_quantidade_proce', {'edt_quantidade_processo', 'edt_quantidade_processo_old'}),
+                         'edt_quantidade_proce')  # ambiguous: left alone
