@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   controlBox,
   controlOf,
@@ -8,7 +8,7 @@ import {
   type LegacyLayout,
   type WdRadBinding,
 } from "@windev-migration/ui";
-import type { ScreenAdapter, ScreenDefinition, ScreenModel } from "./contracts";
+import type { ScreenAdapter, ScreenDefinition, ScreenModel, WindowContext } from "./contracts";
 
 const chrome = new Set([
   "RADTitle",
@@ -60,8 +60,12 @@ function useScaffold(layout: LegacyLayout): ScreenModel {
   return { bindings, status: "Screen scaffold: drafts only. Connect queries, option values and actions in src/adapters.ts." };
 }
 
+/** Containers without behaviour of their own (their children are bound): never "needs a binding". */
+export const CONTAINER_KINDS: ReadonlySet<string> = new Set(["Supercontrol", "Group"]);
+
 function MissingControl({ control }: { control: LegacyControl }) {
   if ((control.visible ?? control.flags?.Visible) === false) return null;
+  if (CONTAINER_KINDS.has(control.kind)) return null;
   const geometry =
     control.width != null && control.height != null
       ? controlBox(control)
@@ -78,10 +82,66 @@ function MissingControl({ control }: { control: LegacyControl }) {
   );
 }
 
-function BoundScreen({ definition, useAdapter }: { definition: ScreenDefinition; useAdapter: ScreenAdapter }) {
-  const model = useAdapter(definition.layout);
+function withFlags(layout: LegacyLayout, flags?: ScreenModel["flags"]): LegacyLayout {
+  if (!flags) return layout;
+  return {
+    ...layout,
+    controls: layout.controls.map((control) => {
+      const extra = flags[control.path] ?? flags[control.name];
+      // A runtime `..Visible` (flags.Visible) overrides the designer's initial visibility (layout `visible`).
+      return extra
+        ? { ...control, ...(extra.Visible === undefined ? {} : { visible: extra.Visible }), flags: { ...control.flags, ...extra } }
+        : control;
+    }),
+  };
+}
+
+/** Controls below the window's menu bar (`ScreenModel.menuBarHeight`): every content control's y moves down. */
+export function belowMenuBar(layout: LegacyLayout, height?: number): LegacyLayout {
+  if (!height) return layout;
+  return {
+    ...layout,
+    controls: layout.controls.map((control) =>
+      chrome.has(control.name) || !Number.isFinite(control.y) ? control : { ...control, y: control.y + height },
+    ),
+  };
+}
+
+/** What the window host reads from the adapter's model: the Closing event and the runtime title. */
+export interface ScreenHooks {
+  closing?: ScreenModel["onClosing"];
+  setTitle?: (title: string | undefined) => void;
+}
+
+const SHOW_DIAGNOSTICS = typeof location !== "undefined" && new URLSearchParams(location.search).get("diag") === "1";
+
+function BoundScreen({
+  definition,
+  useAdapter,
+  window,
+  hooks,
+}: {
+  definition: ScreenDefinition;
+  useAdapter: ScreenAdapter;
+  window: WindowContext;
+  hooks?: ScreenHooks;
+}) {
+  const model = useAdapter(definition.layout, window);
+  // The latest render's handler, so it sees the adapter's current state (e.g. "modified").
+  useLayoutEffect(() => {
+    if (hooks) hooks.closing = model.onClosing;
+  });
+  const setTitle = hooks?.setTitle;
+  useEffect(() => {
+    setTitle?.(model.title);
+  }, [setTitle, model.title]);
+  const flagKey = JSON.stringify(model.flags ?? null);
+  const shifted = useMemo(() => belowMenuBar(definition.layout, model.menuBarHeight), [definition.layout, model.menuBarHeight]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const layout = useMemo(() => withFlags(shifted, model.flags), [shifted, flagKey]);
   const evidence = definition.layout as LegacyLayout & { diagnostics?: string[]; unknown?: string[] };
-  const diagnostics = [...(evidence.diagnostics ?? []), ...(evidence.unknown ?? [])];
+  // Extraction notes for developers only (`?diag=1`): they are not part of the legacy window.
+  const diagnostics = SHOW_DIAGNOSTICS ? [...(evidence.diagnostics ?? []), ...(evidence.unknown ?? [])] : [];
   const bound = new Set(model.bindings.map((binding) => controlOf(definition.layout, binding.name).path));
   for (const table of model.tables ?? []) {
     const control = controlOf(definition.layout, table.name);
@@ -89,14 +149,22 @@ function BoundScreen({ definition, useAdapter }: { definition: ScreenDefinition;
     if (bound.has(control.path)) throw new Error(`RAD control bound twice: ${control.path}`);
     bound.add(control.path);
   }
+  // Static texts and captions without behaviour need no adapter code: draw them as captions.
+  const statics: WdRadBinding[] = contentControls(layout)
+    .filter(
+      (control) => control.kind === "Caption" && !bound.has(control.path) && !model.handled?.has(control.path) && control.width != null,
+    )
+    .map((control) => ({ name: control.path, kind: "caption" }));
+  for (const item of statics) bound.add(item.name);
   return (
     <>
-      <WdRadControls layout={definition.layout} bindings={model.bindings} />
+      <WdRadControls layout={layout} bindings={[...model.bindings, ...statics]} />
       {model.tables?.map(({ name, ...props }) => (
-        <WdTable key={name} control={controlOf(definition.layout, name)} {...props} />
+        <WdTable key={name} control={controlOf(shifted, name)} {...props} />
       ))}
-      {contentControls(definition.layout)
-        .filter((control) => !bound.has(control.path))
+      {model.extra}
+      {contentControls(shifted)
+        .filter((control) => !bound.has(control.path) && !model.handled?.has(control.path))
         .map((control) => (
           <MissingControl key={control.path} control={control} />
         ))}
@@ -119,6 +187,25 @@ function BoundScreen({ definition, useAdapter }: { definition: ScreenDefinition;
   );
 }
 
-export function Screen({ definition, adapter }: { definition: ScreenDefinition; adapter?: ScreenAdapter }) {
-  return <BoundScreen definition={definition} useAdapter={adapter ?? useScaffold} />;
+const detached: WindowContext = {
+  name: "",
+  params: [],
+  close: () => {},
+  open: async () => undefined,
+  minimize: () => {},
+  maximize: () => {},
+};
+
+export function Screen({
+  definition,
+  adapter,
+  window = detached,
+  hooks,
+}: {
+  definition: ScreenDefinition;
+  adapter?: ScreenAdapter;
+  window?: WindowContext;
+  hooks?: ScreenHooks;
+}) {
+  return <BoundScreen definition={definition} useAdapter={adapter ?? useScaffold} window={window} hooks={hooks} />;
 }

@@ -111,5 +111,5 @@ Agents fail silently where WLanguage and TypeScript **look** alike but behave di
 ## How to use this chapter
 
 1. During mapping, flag each construct found in a block in the note (`HFSQL current record`, `modal Open`, `by-reference parameter`…).
-2. Write shared helpers (`middle`, `position`, `round`, `formatMask`, `plainDate`) **once**, in `src/domain/wl/`, each with golden tests from the legacy app.
+2. Write shared helpers (`middle`, `position`, `round`, `formatMask`, `plainDate`) **once**, in `src/domain/wl/`, each with golden tests from the legacy app. The starter ships a first set there (strings, dates and durations in ms, exact decimals, file paths), from the second migration: extend it, and confirm each function you use against the legacy app.
 3. The review skill checks every translated block against this list.

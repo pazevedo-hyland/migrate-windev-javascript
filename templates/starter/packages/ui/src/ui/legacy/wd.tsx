@@ -81,9 +81,13 @@ export function WdRadio({ control: source, options, value, onChange, disabled, l
 }
 
 /** Render extracted geometry when present; absent chrome uses neutral target defaults. */
-export function WdFrame({ layout, instance, children, width, height, onClose, onMinimize, onToggleMaximize }: {
+export function WdFrame({ layout, instance, children, width, height, title: titleOverride, onClose, onMinimize, onToggleMaximize, onKeyDown }: {
   layout: LegacyLayout; instance: string; children: ReactNode; width?: number; height?: number;
+  /** ..Title at runtime (undefined: the layout's title). */
+  title?: string;
   onClose: () => void; onMinimize: () => void; onToggleMaximize: () => void;
+  /** Keys the window's controls did not stop (e.g. Esc = the window's Abort button). */
+  onKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
 }) {
   const config = useUiConfig(), size = layout.window.size;
   if (!size) throw new Error(`Frame geometry unresolved: ${layout.window.name}`);
@@ -104,7 +108,7 @@ export function WdFrame({ layout, instance, children, width, height, onClose, on
       style={group ? { left: control.x - group.x, top: control.y - group.y } : { left: undefined, right: size.width - control.x - (control.width ?? 0) }} />;
   });
   const restore = layout.controls.find(control => control.name === "BTN_Syst_Restore");
-  const titleText = title?.caption ?? layout.window.title ?? layout.window.name;
+  const titleText = titleOverride ?? title?.caption ?? layout.window.title ?? layout.window.name;
   // Window description without "Title bar" (dossier tick absent): no bar, the client area starts at the top.
   const untitled = layout.window.flags?.["Title bar"] === false;
   const defaultChrome = <div className="wd-default-chrome">{actions.filter(action => action.name === "BTN_SYST_FERMER" || layout.window.flags?.[action.name === "BTN_SYST_MINIMIZE" ? "Minimize icon" : "Maximize icon"] !== false).map(action => <button key={action.name} type="button" className="wd-chrome-button"
@@ -114,7 +118,7 @@ export function WdFrame({ layout, instance, children, width, height, onClose, on
   // them over the top controls (a real form: layout match with its designer image 32 % -> 79 % once moved out).
   // The frame keeps the layout's size, which includes the bar.
   if (!title && !extractedChrome) return <section data-testid={instance} data-layout={layout.window.name} aria-label={titleText}
-    data-wd-keyboard-scope="" tabIndex={-1} onKeyDown={event => activateMnemonic(event, config.locale)}
+    data-wd-keyboard-scope="" tabIndex={-1} onKeyDown={event => { activateMnemonic(event, config.locale); onKeyDown?.(event); }}
     className={`wd-frame wd-frame--native${untitled ? " wd-frame--untitled" : ""}${layout.window.background_image ? " wd-frame--image" : ""}`} style={{ ...skin, width: frameWidth, height: frameHeight }}>
     {!untitled && <div className="wd-native-titlebar">
       <div className="wd-title" data-testid={`${instance}__title`}>{titleText}</div>
@@ -125,7 +129,7 @@ export function WdFrame({ layout, instance, children, width, height, onClose, on
     </div>
   </section>;
   return <section data-testid={instance} data-layout={layout.window.name} aria-label={titleText}
-    data-wd-keyboard-scope="" tabIndex={-1} onKeyDown={event => activateMnemonic(event, config.locale)}
+    data-wd-keyboard-scope="" tabIndex={-1} onKeyDown={event => { activateMnemonic(event, config.locale); onKeyDown?.(event); }}
     className={`wd-frame${layout.window.background_image ? " wd-frame--image" : ""}`} style={{ ...skin, width: frameWidth, height: frameHeight }}>
     <div className="wd-client">
       <div className="wd-title" data-testid={title?.name ?? `${instance}__title`} data-control-path={title?.path} hidden={title ? hidden(title) : false}

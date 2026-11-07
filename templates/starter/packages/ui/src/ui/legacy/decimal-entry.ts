@@ -1,5 +1,10 @@
 import { integerMaskOf, type IntegerEdit, type IntegerMask } from "./numeric-entry";
 
+/** Decimal separator shown in decimal edits: WINDEV takes it from the Windows regional settings. Default ",". */
+let decimalSep = ",";
+export function setDecimalSeparator(value: "," | ".") { decimalSep = value; }
+export function decimalSeparator() { return decimalSep; }
+
 export interface DecimalMask {
   readonly source: string;
   readonly integer: IntegerMask;
@@ -34,12 +39,12 @@ export function decimalMaskDisplay(mask: DecimalMask, canonical: string | null):
   if (canonical === null) return "";
   const parts = canonical.match(/^([+-]?)([0-9]+)(?:\.([0-9]+))?(?![\s\S])/);
   if (!parts) return canonical;
-  return `${parts[1]}${groupedInteger(mask, parts[2])},${(parts[3] ?? "").padEnd(mask.fractionCapacity, "0")}`;
+  return `${parts[1]}${groupedInteger(mask, parts[2])}${decimalSep}${(parts[3] ?? "").padEnd(mask.fractionCapacity, "0")}`;
 }
 
 function draftParts(mask: DecimalMask, value: string) {
   if (!mask.groupSize && value.includes(" ")) return null;
-  const parts = value.match(/^([+-]?)([0-9 ]*)(,([0-9]*))?(?![\s\S])/);
+  const parts = value.match(/^([+-]?)([0-9 ]*)([,.]([0-9]*))?(?![\s\S])/); // either key types the separator
   if (!parts || (!mask.signed && parts[1])) return null;
   return { sign: parts[1], integer: parts[2].replaceAll(" ", ""), comma: parts[3] !== undefined, fraction: parts[4] ?? "" };
 }
@@ -64,7 +69,7 @@ export function decimalMaskEdit(mask: DecimalMask, previous: string, candidate: 
 
     if (!prior || parts.integer.length + parts.fraction.length >= prior.integer.length + prior.fraction.length) return null;
   }
-  const value = `${parts.sign}${groupedInteger(mask, parts.integer)}${parts.comma ? `,${parts.fraction}` : ""}`;
+  const value = `${parts.sign}${groupedInteger(mask, parts.integer)}${parts.comma ? `${decimalSep}${parts.fraction}` : ""}`;
   return { value, start: caretPosition(value, characterOffset(candidate, start)), end: caretPosition(value, characterOffset(candidate, end)) };
 }
 

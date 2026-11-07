@@ -15,6 +15,8 @@ import {
   integerMaskEdit,
   integerMaskOf,
   decimalMaskDisplay,
+  decimalMaskEdit,
+  setDecimalSeparator,
   decimalMaskOf,
   dateEntryInitial,
   dateEntryChange,
@@ -106,6 +108,22 @@ describe("portable UI contracts", () => {
       "wd-button--skin",
     );
     expect(render({ ...base, name: "BTN_Plain", kind: "Button", caption: "OK" })).not.toContain("wd-button--skin");
+  });
+
+  it("shows the runtime title (..Title) instead of the layout's", () => {
+    const markup = renderToStaticMarkup(
+      createElement(WdFrame, {
+        layout,
+        instance: "w",
+        title: "Runtime title",
+        onClose() {},
+        onMinimize() {},
+        onToggleMaximize() {},
+        children: "x",
+      }),
+    );
+    expect(markup).toContain('aria-label="Runtime title"');
+    expect(markup).toContain(">Runtime title<");
   });
 
   it("keeps simultaneous provider labels and locales independent", () => {
@@ -200,6 +218,14 @@ describe("portable UI contracts", () => {
     expect(integerMaskEdit(wide, "", "9007199254740993123")?.value).toBe("9007199254740993123");
     const decimal = decimalMaskOf("+999 999,99")!;
     expect(decimalMaskDisplay(decimal, "1234.56789")).toBe("1 234,56789");
+    // WINDEV takes the separator from the Windows regional settings; either key types it.
+    setDecimalSeparator(".");
+    try {
+      expect(decimalMaskDisplay(decimal, "1234.5")).toBe("1 234.50");
+      expect(decimalMaskEdit(decimal, "12", "12,")?.value).toBe("12.");
+    } finally {
+      setDecimalSeparator(",");
+    }
   });
 
   it("preserves NULL/opaque dates and hidden datetime precision until deliberate valid edits", () => {
