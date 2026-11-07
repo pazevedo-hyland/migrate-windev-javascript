@@ -2,13 +2,14 @@
 
 Agents fail silently where WLanguage and TypeScript **look** alike but behave differently. Copy this chapter into the application as `docs/wlanguage-traps.md`, keep it referenced from `AGENTS.md`, and **add every new trap found** during the migration.
 
-> **Verify against your version.** Semantics vary across WINDEV versions and project settings (Unicode or ANSI, null handling, French or English keywords). Each item says what to check; confirm it in the [WLanguage documentation](https://doc.windev.com/) and, when it matters, with a golden case recorded in the legacy app. Never "fix" a legacy behavior silently: preserve it or record an ADR.
+> **Verify against your version.** Semantics vary across WINDEV versions and project settings (Unicode or ANSI, null handling, French or English keywords). Each item says what to check; confirm it in the [WLanguage documentation](https://doc.windev.com/) and, when it matters, with a golden case recorded in the legacy app. Never "fix" a legacy behavior silently: preserve it or record an ADR. The `EOT`, unassigned-date, `DateTimeDifference`, `END:` and `EndProgram` items were observed on WINDEV 2025 by the [BLV-TECH WLanguage skill](https://blv-tech.com/skill-claude/windev-wlangage/).
 
 ## Reading the code
 
 - **Keywords may be French**: `SI … ALORS … SINON … FIN`, `POUR … ALLANT DE … A`, `TANTQUE`, `PROCÉDURE`, `RENVOYER`, `HLitRecherchePremier`. The same project can be shown in English (`IF … THEN`, `HReadSeekFirst`). Map names through the official function list; do not guess from the spelling.
 - **Comments** start with `//`; `/* */` blocks exist. Strings use `"…"`; `""` inside is an escaped quote.
 - **Event code is spread** over the window (global declarations, end of initialization, closing), each control (initialization, entry, whenever modified, exit, click…), the project (initialization, closing) and procedure sets. The inspector records the path and raw event code; map the order of execution explicitly (see [Events](#events-and-ui)).
+- **Event codes are numbers, not names.** Before labelling a code from context, look it up in a published table, such as the event lists in the free [BLV-TECH WLanguage skill](https://blv-tech.com/skill-claude/windev-wlangage/) (`wdg/wdw_lire.py`, `wdg/wde_lire.py`, recorded on WINDEV 2025), and confirm it against the compile folder. A real project labelled scheduler codes 130–139 and dashboard-widget codes 194–198 as "local procedure" or "end of initialization"; 198 is the widget refresh, which runs again on every dashboard refresh. Numbers are sometimes given in hexadecimal: 0x20 is 32, not 20.
 
 ## Strings
 
@@ -19,7 +20,7 @@ Agents fail silently where WLanguage and TypeScript **look** alike but behave di
 | `=` on strings | Exact comparison; trailing spaces and case handling depend on operator and settings — check | Write tests from real examples |
 | `~=`, `~~`, `[=`, `[~` | **Flexible** equality (case, spaces, accents, punctuation ignored to different degrees), "starts with" | Implement as named functions with tests per operator, using `normalize('NFD')` for accents |
 | `Upper`, `Lower`, `NoAccent` | Locale and accent handling | `toLocaleUpperCase('fr-FR')`, explicit accent stripping |
-| `ExtractString(s, n, sep)` | 1-based occurrence; special return when out of range — check | Helper with tests |
+| `ExtractString(s, n, sep)` | 1-based occurrence; returns `EOT` (character 4), not `""`, when the occurrence does not exist | Helper returning a distinct "missing" value; port `IF x = EOT` loops as "stop at the end" |
 | `Complete`, `Left`/`Right` padding | Pad or truncate to a length | Helper; check behavior with shorter AND longer strings: `Complete` truncates. The left-pad idiom `StringReverse(Complete(StringReverse(x), 2, "0"))` keeps the LAST two characters, so 123 ms prints "23" (port as is unless an ADR fixes it) |
 | `n + "text"` with an integer first | Concatenation, like `"text" + n`? | Not proven: the first operand's type may make `+` numeric (`16 + "." + "251124v2"`). Treat as an open question (read the running app's screen), not as concatenation |
 | String ↔ number | **Implicit conversion** in assignments and some operations (`"12" + 1`?) — check each case | Explicit `parse`/`format`; never rely on JS coercion |
@@ -46,6 +47,8 @@ Agents fail silently where WLanguage and TypeScript **look** alike but behave di
 | `Date` as string `"YYYYMMDD"`, `Time` `"HHMMSSCC"` (hundredths), `DateTime` | Dates are often stored and compared **as strings**; empty date `""` or `"00000000"` | A `PlainDate` type (Temporal polyfill or date-fns with plain dates); explicit empty value |
 | `DateSys()`, `TimeSys()`, `Today` | Local time of the workstation | Inject a clock; never `new Date()` inside domain code |
 | `new Date("2026-01-02")` in JS | Parsed as **UTC** — shifts the day in negative offsets | Never parse ISO dates with `Date` in domain code |
+| `Date`, `Time`, `DateTime` variable declared without a value | Holds **the current date/time**, not an empty value (also after `VariableReset`): a "latest date" initialised this way is never exceeded | Use the injected clock where legacy relies on it; never port it as `null` or `""` without checking how the variable is used |
+| `DateTimeDifference` | Returns a **string** (`+DDDDDDDHHMMSSCC`), not a `Duration` | Parse it explicitly, or compute the difference in milliseconds |
 | Date arithmetic (`+ 1`, `DateDifference`) | Day-based arithmetic, inclusive/exclusive bounds | Tested helpers; check month ends and leap years |
 | `Duration` | Units (ms, s, min, hundredths) | Store integer units, name them (`durationMinutes`) |
 
@@ -58,6 +61,7 @@ Agents fail silently where WLanguage and TypeScript **look** alike but behave di
 | `FOR EACH x OF array`, `FOR EACH File` | Iterates and positions the **current record** (see HFSQL) | Explicit query + loop over rows |
 | `SWITCH … CASE 1, 2`, `CASE 3 TO 5`, `CASE > 10`, `OTHER CASE` | Ranges and comparisons in cases | `if/else` chains; no fall-through |
 | `RESULT`, `RETURN` | Return value vs leaving a procedure | Map each exit path |
+| `END:` label (*FIN :*), also `EXIT:`, `CONTINUE:` | Not a `GOTO` target: `END:` runs on **every** exit, `RETURN` included (the return value is computed first). Code after it is not dead | `try { … } finally { … }` |
 | Procedure parameters | **Passed by reference by default** in WLanguage (unless `LOCAL` or an expression is passed) — a callee can modify the caller's variable | Return new values explicitly; search callers for parameters modified in callees |
 | Optional parameters, `MyParameters` | Defaults and "not given" vs empty | Explicit `undefined` handling |
 
@@ -84,6 +88,7 @@ Agents fail silently where WLanguage and TypeScript **look** alike but behave di
 | WLanguage | Trap | Target rule |
 |---|---|---|
 | Event order: window global declarations (with parameters) → controls initialization → window end of initialization | Initialization order affects values | Map into an explicit `load()` sequence per screen; test it |
+| `EndProgram()` | Does **not** run the windows' closing events. Window event 234 runs at opening, not at closing | Keep closing-time code out of the quit path unless legacy runs it; check each `EndProgram` caller |
 | `Open(WIN_X, params)` returning a value, `Close(WIN_X, value)` | **Blocks** until the window closes | `await openDialog(...)` and keep the following code after it |
 | `Info`, `Error`, `YesNo`, `OKCancel`, `Dialog` | Modal and **blocking**; code continues after the answer | Awaited dialog service; keep exact texts and button order |
 | `Dialog` resources (`dialogs` in the inspector output) | `cancel_button` names the button triggered by Esc/close — by position or by value is not documented in the source; when button 1 has value 1 ("Sim" / "&Delete"), Esc may **confirm** a delete | Treat as unresolved until observed in the running app; never default Esc to the destructive answer silently |
