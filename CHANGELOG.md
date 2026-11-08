@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-08 — HFSQL Classic data without the analysis
+
+### Added
+- 08 "No analysis (.wdd)?": find the `.wdd` first (ODBC needs it), otherwise export with WDMap, read memos from the `.mmo` files, profile the copy; WINDEV Express licence caveat.
+- `scripts/windows/wdmap_export.ps1`: WDMap on a hidden desktop driven by posted window messages (no real keystrokes), parallel workers, never overwrites, one log line per table. Validated manually on a real 689-table database: 265 exported, 424 empty detected, about 7 s per table.
+- `scripts/wdmap_xml_to_sqlite.py`: WDMap XML (Windows-1252 behind an ISO-8859-1 header, control characters) and memos into one SQLite copy, values as TEXT, `__tables` with row counts checked against the export log; `data_profile.py` runs on it as is.
+- `scripts/hfsql_mmo.py`: reads `.mmo` memo files (text and binary memos, record number, original file names), extracts binary memos with an index. 233 real memo files read with no error.
+- `docs/hfsql-classic-format.md`: the `.mmo` layout and the plain parts of the `.fic`; the table description stays scrambled and deliberately undecoded.
+- Synthetic tests for both Python scripts; ODBC troubleshooting note on `pyodbc` access violations (.NET `System.Data.Odbc` worked).
+
 ## 2026-10-26 — reusable workflow verification
 
 - Extract configurable Playwright CRUD/reopen, cancel, invalid-save, search/selection and confirmation assertions with independent persistence snapshots and explicit business expectations.

@@ -61,11 +61,24 @@ python3 scripts/schema_draft.py <inspect dir> --dossier <dossier dir> --out docs
 
 It pairs each XDD type code with the type name the dossier prints for the same item (a legend backed by WINDEV, as for events), takes structure, key type, size, default and null support from the XDD (complete, unlike PDF parsing), and writes a draft SQLite DDL (`.sql`, loadable as is) plus the **decisions** it cannot make for you: unsigned 64-bit integers, binary reals that may be money, exact decimals, WINDEV date/time text formats, memos, password items. A code the dossier never names stays `unresolved`. The draft is input for the database ADR; it declares no foreign keys unless the analysis has links — when it has none, relations live in code (`HReadSeek` on shared items) and the mapping notes must name them. Review key options (case/accent), relationships and null behavior before writing migrations.
 
-Read `.fic`/`.ndx`/`.mmo` only through supported HFSQL/WINDEV export tooling. Export explicit columns to CSV/JSON with a **manifest**: source version, export time, encoding (often Windows-1252), delimiter, decimal format, timezone/date rules and table counts. Preserve memo/blob data separately with checksums. Binary query definitions need SQL and parameter exports.
+Read `.fic`/`.ndx`/`.mmo` through supported HFSQL/WINDEV export tooling (the one exception, memo files, is [below](#no-analysis-wdd-recover-the-data-anyway)). Export explicit columns to CSV/JSON with a **manifest**: source version, export time, encoding (often Windows-1252), delimiter, decimal format, timezone/date rules and table counts. Preserve memo/blob data separately with checksums. Binary query definitions need SQL and parameter exports.
+
+## No analysis (.wdd)? Recover the data anyway
+
+The HFSQL ODBC driver needs the analysis: without `Analyse=` it answers `[01S00] Unable to connect: insufficient connection string`, and none of its other keywords (`RepFic`, `Password`, `LISTANA`…) opens a `.fic` alone. Applications whose developers are gone often ship only the data files. In this order:
+
+1. **Find the `.wdd` first** — next to the application's `.exe`, in an `<App>.ana\` folder, on old development PCs, in source control or backups. With it, the ODBC export ([scripts/windows](scripts/windows/README.md)) is the lossless path, with row counts checked.
+2. **Otherwise export with WDMap.** Each `.fic` carries its own description, and PC SOFT's WDMap (shipped with WINDEV) opens a `.fic` directly and exports it to XML with the real column names. [`wdmap_export.ps1`](scripts/windows/README.md#wdmap-export-without-the-analysis) runs it on a hidden desktop, table after table, without touching the user's screen; [`wdmap_xml_to_sqlite.py`](scripts/README.md#wdmap_xml_to_sqlitepy--wdmap-xml-exports-to-one-sqlite-copy) loads the XML into one SQLite copy, every value as TEXT, with a manifest of rows and export status per table.
+3. **Memos come from the `.mmo` files.** WDMap's XML holds text memos but **no binary memos** (images, PDFs, attachments). [`hfsql_mmo.py`](scripts/README.md#hfsql_mmopy--memo-files-read-directly) reads the memo files directly; their layout is plain and documented in [the HFSQL Classic format notes](docs/hfsql-classic-format.md). A binary memo is linked to its row by the pointer the `.fic` record holds, never by export position: WDMap's row order is not the physical order.
+4. Profile the SQLite copy ([below](#profile-the-data-before-deciding-the-schema)) and write the schema from the data, the dossier and the code: without the analysis there are no declared types, sizes or keys to check against.
+
+> **Licensing.** WDMap also ships with the free WINDEV Express and runs without activation, but the Express licence forbids commercial use. A migration done for a client or a business is commercial: use a licensed WINDEV, or check your licence before relying on Express.
+
+On a real WINDEV 28 database with no analysis (689 tables): 265 tables exported, 424 correctly reported empty, about 7 s per table with 4 workers in parallel; 233 memo files read with no error (about 514,000 text and 19,000 binary memos: PNG, JPEG, BMP, GIF, PDF and others). The table description inside the `.fic` is scrambled and was deliberately **not** decoded: WDMap provides names and types.
 
 ## Profile the data before deciding the schema
 
-The analysis says what the data should be; only the data says what it is. On a copy — `data.sqlite` from `scripts/windows/export_odbc.py` (lossless: NULLs, bytes, counts checked), its CSV folder, or another SQLite staging file:
+The analysis says what the data should be; only the data says what it is. On a copy — `data.sqlite` from `scripts/windows/export_odbc.py` (lossless: NULLs, bytes, counts checked), its CSV folder, `data.sqlite` from `scripts/wdmap_xml_to_sqlite.py` (no analysis: pass a schema file holding `{"tables": []}` and name links with `--ref`), or another SQLite staging file:
 
 ```sh
 python3 scripts/data_profile.py legacy/data/data.sqlite --ref ordem.matricula=Viaturas.matricula   # → docs/data/profile.md

@@ -75,7 +75,8 @@ At the end of the roadmap: `parity_check.py --require-complete` passes, golden s
 | [08 — Data migration](08-data-migration.md) | HFSQL feature map, SQLite/PostgreSQL, transformation, reconciliation, cutover |
 | [09 — WLanguage traps](09-wlanguage-traps.md) | Semantics that silently break translations |
 | [10 — Parity and verification](10-parity-and-verification.md) | Closed-world matrix, golden scenarios, UI/report/native checks, gates |
-| [Scripts](scripts/README.md) | Inspector, parity gate, export comparator |
+| [Scripts](scripts/README.md) | Inspector, parity gate, data export and profile, export comparator |
+| [HFSQL Classic format notes](docs/hfsql-classic-format.md) | Memo file layout and the plain parts of `.fic` files, for data without its analysis |
 | [Upstream audit](docs/upstream-audit.md) | Where every upstream section lives now, and what was replaced |
 
 **Templates** ([templates/](templates/)): `AGENTS.template.md`, `CLAUDE.template.md`, local instruction files, `kickoff-prompt.md` (autonomous run), `PromptInit.md`, `mapping-prompt.md`, `prompt-stage.md`, ADR, handoff, roadmap, parity matrix, window spec, golden scenario, compare config, agent-neutral skills (`review`, `map-element`, `review-mapping`), shared guard with a Git pre-commit hook, and a Claude Code adapter (settings).
