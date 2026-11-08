@@ -74,7 +74,7 @@ The HFSQL ODBC driver needs the analysis: without `Analyse=` it answers `[01S00]
 
 > **Licensing.** WDMap also ships with the free WINDEV Express and runs without activation, but the Express licence forbids commercial use. A migration done for a client or a business is commercial: use a licensed WINDEV, or check your licence before relying on Express.
 
-On a real WINDEV 28 database with no analysis (689 tables): 265 tables exported, 424 correctly reported empty, about 7 s per table with 4 workers in parallel; 233 memo files read with no error (about 514,000 text and 19,000 binary memos: PNG, JPEG, BMP, GIF, PDF and others). The table description inside the `.fic` is scrambled and was deliberately **not** decoded: WDMap provides names and types.
+On a real WINDEV 28 database with no analysis (689 tables): 257 tables with rows exported (about 910,700 rows), 431 empty tables reported as such (confirmed empty against the `.fic` record area) and 1 table exported by hand earlier, about 7 s per table with 4 workers in parallel; 233 memo files read with no error (about 514,000 text and 19,000 binary memos: PNG, JPEG, BMP, GIF, PDF and others). The table description inside the `.fic` is scrambled and was deliberately **not** decoded: WDMap provides names and types.
 
 ## Profile the data before deciding the schema
 

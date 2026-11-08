@@ -39,6 +39,7 @@ import hfsql_mmo  # noqa: E402
 
 ITEM = re.compile(r'<([A-Za-z_][\w.-]*)(?:>(.*?)</\1>|\s*/>)', re.S)
 CHUNK = 4 << 20
+RESULTS = ('OK', 'EMPTY_OR_NO_EXPORT')
 
 
 def _latin1(error):
@@ -75,12 +76,14 @@ def rows_of(path, table):
 
 
 def export_log(directory):
-    """{table: (status, rows)} from wdmap_export.ps1 logs; a later skip never hides an earlier result."""
+    """{table: (status, rows)} from wdmap_export.ps1 logs. Runs append to the logs; a result (OK or empty) wins
+    over a failure in any log or order (retries), and a later skip never hides it."""
     found = {}
     for log in sorted(directory.glob('_log_worker*.tsv')):
         for line in log.read_text(encoding='utf-8-sig', errors='replace').splitlines():
-            parts = line.split('\t')
-            if len(parts) < 4 or (parts[2] == 'SKIPPED_EXISTS' and parts[0] in found):
+            parts = line.split('	')
+            if len(parts) < 4 or (parts[0] in found and (parts[2] == 'SKIPPED_EXISTS' or (
+                    found[parts[0]][0] in RESULTS and parts[2] not in RESULTS))):
                 continue
             found[parts[0]] = (parts[2], int(parts[3]) if parts[3].isdigit() else None)
     return found

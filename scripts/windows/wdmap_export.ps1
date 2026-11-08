@@ -13,6 +13,8 @@
     interrupted run can be resumed; if WDMap still asks to confirm an overwrite, the table fails.
   - One line per table in <OutDir>\_log_worker<N>.tsv: name, .fic bytes, status, rows, seconds.
     Status OK, SKIPPED_EXISTS, EMPTY_OR_NO_EXPORT (WDMap greys Export out on empty tables) or an error.
+  - Failed tables have no XML: run the same command again to retry them. The first table of each worker
+    can fail once with NO_MENU (startup timing on a fresh hidden desktop).
   - Work on a COPY of the data folder.
 
   See scripts/windows/README.md (WDMap export without the analysis) for how it works and its limits.

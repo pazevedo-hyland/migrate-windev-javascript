@@ -48,7 +48,9 @@ class WdmapXmlToSqliteTests(unittest.TestCase):
         (self.xml / '_log_worker0.tsv').write_text(
             'Customers\t4096\tOK\t3\t7\nEmpty\t1024\tEMPTY_OR_NO_EXPORT\t0\t5\nNote\t2048\tOK\t1\t6\nDONE\n',
             encoding='utf-8-sig')
-        (self.xml / '_log_worker1.tsv').write_text('Customers\t4096\tSKIPPED_EXISTS\t3\t0\n', encoding='utf-8')
+        # A later run (other worker count): a skip, and a stale failure from an earlier run, never hide a result.
+        (self.xml / '_log_worker1.tsv').write_text('Customers\t4096\tSKIPPED_EXISTS\t3\t0\nNote\t2048\tNO_MENU\t0\t9\n',
+                                                   encoding='utf-8')
         for name in ('Customers', 'Empty', 'Note'):
             (self.data / f'{name}.fic').write_bytes(b'PCS\x00' + b'\x00' * 60)
         (self.data / 'Customers.mmo').write_bytes(memo_file()[0])
@@ -87,6 +89,7 @@ class WdmapXmlToSqliteTests(unittest.TestCase):
 
     def test_row_count_disagreeing_with_the_log_is_reported(self):
         (self.xml / '_log_worker0.tsv').write_text('Customers\t4096\tOK\t4\t7\n', encoding='utf-8')
+        (self.xml / '_log_worker1.tsv').unlink()
         self.assertEqual(builder.build(self.xml, self.out, verbose=False)['mismatched_rows'], ['Customers'])
 
     def test_refuses_existing_output(self):
