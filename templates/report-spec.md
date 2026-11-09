@@ -12,7 +12,7 @@ Destination: <preview (`iPreview`), printer, PDF, file>. Parameters: <…>.
 
 ## Data source
 
-Type: <embedded query / query QRY_x / file / programmed>. SQL: <from the dossier, or "encoded" + what it must return>. Sort: <…>. Filters and parameters: <…>.
+Type: <embedded query / query QRY_x / file / programmed>. SQL: <from `queries.json` of the decoder (embedded queries included) or the dossier; "not stored as text" + the items it selects when the query was built without SQL>. Sort: <…>. Filters and parameters: <…>.
 
 ## Bands
 
@@ -31,7 +31,7 @@ Type: <embedded query / query QRY_x / file / programmed>. SQL: <from the dossier
 | Control | Band | Type | Text / bound item | Text source | x, width (mm) | Alignment | Mask / format | Borders | Overflow |
 |---|---|---|---|---|---|---|---|---|---|
 
-Text source: `dossier` (parsed field), `image` (read from the dossier image: say so) or `code`. Geometry comes from the source layout (`layout` in the inspector output) or the dossier, in millimetres. Adjacent cells often share a border line (one cell's x + width = the next x): draw it once.
+Text source: `decoded` (the control's `content`: caption, mask or preset; `linked_item`: the query item it prints), `dossier` (parsed field), `image` (read from the dossier image: say so) or `code`. Geometry comes from the source layout (`layout` in the inspector output) or the dossier, in millimetres. Adjacent cells often share a border line (one cell's x + width = the next x): draw it once.
 
 ## Calculations and presets
 

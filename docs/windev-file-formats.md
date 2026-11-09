@@ -80,6 +80,7 @@ Found in chunk `0` by its signature: a version, four integers, eight zero bytes 
 | linked item | string | the data binding, `Table.Item` |
 | tab stop, tab order | u32, and i32 16 bytes later | order is zero-based; −1 = none. The dossier prints −1 when the stop is off |
 | group | string | |
+| order | u16 right after the group | 1..n among the controls of the same parent (per pane inside a tab): the designer's order. Numbering checked on 148 sibling groups; its use as drawing order is inferred |
 | anchor rates | 4 × u32, 12 bytes later | right, width, bottom, height, in thousandths |
 | button type | byte 50 before the end of the chunk | 0 normal, 1 validate, 3 abort (2 and 4 not observed) |
 | button caption, background image, number of background states, image | a record 107 or 111 bytes after the anchor rates | string, string, u32, string. Kept only when these are exactly the first strings found there |
@@ -100,6 +101,8 @@ A property changed in WINDEV on a copy of one window, saved in text format and d
 ### Fonts, options, embedded queries
 
 - **Fonts**: a font is a Windows `LOGFONT` (height, width, escapement, orientation, weight, italic, underline, strike-out, character set, four precision bytes) whose face name is a framed string. A negative height is pixels at 96 dpi (−11 = 8.25 pt). The four bytes after the face are read as the text colour (red, green, blue, 0). Each element lists its `fonts` in file order: a button has four (one per state), an edit its caption font and its input font. Which font belongs to which part is by order, not named.
+- **Menus**: a window's menu options, in file order with their captions and the options above them, form the tree (`menu` in the evidence folder); each option's code is a normal code block of the inspector.
+- **Report controls**: besides geometry, `linked_item` is the query item a control prints (`<report>$Query.item`, from chunk `1`) and `content` its own text, mask or preset (`[PAGENUM]/[NBPAGES]`).
 - **Options**: each choice of a radio button or check box and each menu option is an element of its own (owner `options`) whose first string is its caption.
 - **Embedded queries**: a window's or report's own query (`<name>$Query`, owner `elements`) holds a whole PCS container in chunk `4`; its SQL is read like a `.WDR` file's and added to `queries.json`.
 

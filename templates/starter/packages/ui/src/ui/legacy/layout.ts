@@ -8,6 +8,13 @@ export interface LegacyColumn {
   metadata_unresolved?: boolean;
 }
 
+/** A font as the legacy source stores it (a Windows LOGFONT): negative height = pixels. */
+export interface LegacyFont {
+  face: string; height: number; weight: number; points?: number;
+  italic?: boolean; underline?: boolean; strikeout?: boolean;
+  /** Text colour `#rrggbb`, when the source holds an explicit one. */
+  colour?: string;
+}
 export interface LegacyControl {
   name: string; path: string; kind: string; x: number; y: number;
   width?: number | null; height?: number | null; caption?: string | null;
@@ -23,6 +30,10 @@ export interface LegacyControl {
   anchorRates?: { right?: number; bottom?: number; width?: number; height?: number };
   columns?: LegacyColumn[];
   table_options?: Record<string, string>;
+  /** The control's own font from the source; absent = the skin's default. */
+  font?: LegacyFont;
+  /** Every font of the control in source order (one per button state, caption then input area…). */
+  fonts?: LegacyFont[];
 }
 export interface LegacyLayout {
   window: { name: string; title: string | null; size: { width: number; height: number } | null; background_image?: string | null; flags?: Record<string, boolean> };
@@ -37,9 +48,23 @@ export function controlOf(layout: LegacyLayout, key: string): LegacyControl {
   return matches[0];
 }
 
+/** CSS for a source font: face, pixel size, weight, style and colour. Nothing when the layout has none. */
+export function fontStyle(font: LegacyFont | undefined): CSSProperties {
+  if (!font) return {};
+  const decoration = [font.underline && "underline", font.strikeout && "line-through"].filter(Boolean).join(" ");
+  return {
+    fontFamily: `"${font.face}", sans-serif`,
+    ...(font.height < 0 ? { fontSize: -font.height } : {}),
+    fontWeight: font.weight,
+    ...(font.italic ? { fontStyle: "italic" } : {}),
+    ...(decoration ? { textDecoration: decoration } : {}),
+    ...(font.colour ? { color: font.colour } : {}),
+  };
+}
+
 export function controlBox(control: LegacyControl): CSSProperties {
   if (control.width == null || control.height == null) throw new Error(`Control geometry unresolved: ${control.path}`);
-  return { left: control.x, top: control.y, width: control.width, height: control.height };
+  return { left: control.x, top: control.y, width: control.width, height: control.height, ...fontStyle(control.font) };
 }
 
 export function skinSourceImage(name: string, assets: SkinAssets = noSkinAssets): string {

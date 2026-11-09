@@ -64,6 +64,16 @@ python3 scripts/windev_fieldmap.py audit legacy/<project folder> [--map fieldmap
 
 `learn` finds, for each property the dossier prints, the byte position that explains it in every control of a kind, and tests it on windows left out of the learning: `strong` entries predicted them all (at least 8) and are the only position that fits; `weak` ones are kept apart and not applied. A dossier of some windows is enough; the result completes `--base` (default `scripts/windev_fieldmap.json`, learned on the real project: an edit's input type, calendar button and return format, a table's row height and options, column options). `--shareable` keeps strong entries only, so the file holds no word of the application. `windev_decode.py` applies a map (`--fieldmap`) as `properties` on each element and writes the same audit as `audit.json`: per element, the bytes that differ from the usual value of its kind and that nothing explains. `prepare_evidence.py` learns when a dossier exists and passes the map on. On the real project: 14 strong and 79 weak properties; 262 of 1,148 window controls without any unexplained difference, a median of 3 for the others. Method and limits: [docs/extraction-strategy.md](../docs/extraction-strategy.md).
 
+## `audit_decisions.py` — every unexplained difference gets an answer
+
+```sh
+python3 scripts/audit_decisions.py --init                                  # one row per control with differences
+python3 scripts/audit_decisions.py --unit WIN_Order                       # what is undecided for a unit
+python3 scripts/audit_decisions.py --require-complete [--unit WIN_Order]  # exit 1 while a row has no decision
+```
+
+Keeps `docs/evidence/audit-decisions.csv` (`unit, control, differences, decision`) against the decoder's `audit.json` (path from `analysis-local/latest.json`, or `--audit`). Rows are only added, never rewritten; a decided row whose differences changed since (sources or field map changed) is reported `stale` and counts as undecided. Use it as the gate before a screen is called done.
+
 ## `parity_check.py` — the parity gate
 
 ```sh

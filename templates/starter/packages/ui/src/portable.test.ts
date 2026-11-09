@@ -6,7 +6,9 @@ import {
   WdButton,
   WdFrame,
   MessageController,
+  controlBox,
   controlOf,
+  fontStyle,
   createAssetResolver,
   createTableLayoutStore,
   createWindowGeometryStore,
@@ -58,6 +60,25 @@ describe("portable UI contracts", () => {
     expect(controlOf(repeated, duplicate.path)).toBe(duplicate);
     expect(() => controlOf(repeated, base.name)).toThrow(/unambiguous/);
     expect(() => controlOf(layout, "missing")).toThrow();
+  });
+
+  it("applies the font read from the legacy source, and nothing when the layout has none", () => {
+    expect(controlBox(base)).toEqual({ left: 10, top: 40, width: 100, height: 28 });
+    const font = { face: "Trebuchet MS", height: -11, weight: 700, italic: true, underline: true, colour: "#0f3d5f" };
+    expect(controlBox({ ...base, font })).toEqual({
+      left: 10,
+      top: 40,
+      width: 100,
+      height: 28,
+      fontFamily: '"Trebuchet MS", sans-serif',
+      fontSize: 11,
+      fontWeight: 700,
+      fontStyle: "italic",
+      textDecoration: "underline",
+      color: "#0f3d5f",
+    });
+    // A positive LOGFONT height is not a pixel size and a font without an explicit colour keeps the skin's.
+    expect(fontStyle({ face: "Arial", height: 12, weight: 400 })).toEqual({ fontFamily: '"Arial", sans-serif', fontWeight: 400 });
   });
 
   it("renders neutral window chrome without source layouts, skins or native APIs", () => {

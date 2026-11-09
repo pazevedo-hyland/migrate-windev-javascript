@@ -446,6 +446,10 @@ def layout(unit, latest, language=None):
         entry['caption_width'] = caption_width(entry, raw)
         raws[path] = raw
         entry['displayed_item'] = details.get('displayed_item')
+        if details.get('fonts'):
+            # Read from the source: the first font is the control's own (a button repeats it per state); the others
+            # are kept in order, their role (caption, input area, states) is not named.
+            entry['font'], entry['fonts'] = details['fonts'][0], details['fonts']
         if item['kind'] == 'column':
             columns.append({'name': item['name'], 'path': path, 'parent': parent,
                                      # The source's own width first (read in file order, so right for columns

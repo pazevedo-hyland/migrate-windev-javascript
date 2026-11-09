@@ -14,6 +14,7 @@ Input: one unit name. Paths below are defaults; a stage prompt may give others. 
 3. `docs/wlanguage-traps.md`, `docs/mapping/event-codes.md` (generated, verified), `docs/evidence/encoded-actions.md` (answers, or proposals until answered), the images `docs/evidence/images/<unit>.*`.
 
 Dossier fields: a field missing from the extract is "not extracted", never false (the extract's `index.json` → `coverage` says what was recognised). `tab_order` counts within each container. Open the extract's raw `lines` only for what parsed fields lack.
+Decoded fields: since `windev_decode.py`, the pack's `dossier` entry holds values read from the source itself over the PDF's (each control lists them in `decoded`): position, size, plane, order among siblings, caption, tooltip, Visible, state, tab stop and order, anchors, linked item, group, button type and images, `fonts`; a window's `menu` tree; a report control's `linked_item` and `content`; the unit's `embedded_query_sql`. Cite them `decoded: <unit>/<control>/<field>`; a `learned:` value comes from a strong field-map entry. Prefer the decoded caption to the PDF's (accents and trailing spaces are exact). **`unexplained_differences`** lists, per control, what differs from the usual values of its kind and that nothing names yet: each one is either explained in the note (what it is, how you know: the thumbnail, the dossier, a neighbour control) or carried as a `U-` item — never ignored. A value `unknown:<bytes>` is a question, not a default.
 
 ## Scope
 
@@ -37,15 +38,15 @@ Controls go only in the screen spec.
 
 ## Write the spec
 
-- **Window** → `docs/screens/<unit>.md` from `templates/window-spec.md`. Captions, masks, tab order, flags and button types come from the dossier; without one, write `unresolved (encoded)` per column instead of guessing.
+- **Window** → `docs/screens/<unit>.md` from `templates/window-spec.md`. Captions, geometry, planes, tab order, Visible, states, button types, images and fonts come from the decoded source (the dossier adds masks, alignment and the other flags); what neither gives is `unresolved (encoded)` per column, not guessing.
 - **Report** → `docs/reports/<unit>.md` from `templates/report-spec.md`: bands and geometry (inspector `layout`, millimetres), bound items, calculations, presets, page fit. Captions are often only in the image: say so. No caller in the pack is a finding: confirm with `grep -rnil "<unit>" legacy/` (a hit outside the report and the `.wdp` project file is a missed caller; a hit in a compiled file of the `<project>.cpl` folder names the window whose predefined action likely prints it — the evidence report already lists those).
 
 ## Write the parity rows
 
 Columns of `templates/parity.template.csv`. During stage 0 (parallel mapping) in `docs/parity/<unit>.csv`, merged into `docs/parity/parity.csv` at its end; once `parity.csv` exists, directly in it. `element` is the unit's name, also on `RULE-*` rows (put the rule's title in `legacy_behavior`).
 
-- `evidence`: `;`-separated, each `legacy/<path>:<line>` (seed evidence is relative to `legacy/`: prefix it), `dossier: <unit>/<field>` (e.g. `dossier: WIN_X/controls.BTN_Ok.flags`), `runtime: A-xxxxxx` (answered), `proposed: A-xxxxxx` or `proposed: Q-nn` (assumed until answered), or a committed file. Never a path inside `analysis-local/`.
-- `confidence`: `verified` (read in code, schema, dossier or an answer), `inferred` (reasoning written in `legacy_behavior`), `assumed` (a `proposed:` answer or an ADR decided by default), `unresolved`. A row mixing them is split.
+- `evidence`: `;`-separated, each `legacy/<path>:<line>` (seed evidence is relative to `legacy/`: prefix it), `decoded: <unit>/<control>/<field>` (read from the source), `learned: <unit>/<control>/<property>` (strong field-map entry), `dossier: <unit>/<field>` (e.g. `dossier: WIN_X/controls.BTN_Ok.flags`), `runtime: A-xxxxxx` (answered), `proposed: A-xxxxxx` or `proposed: Q-nn` (assumed until answered), or a committed file. Never a path inside `analysis-local/`.
+- `confidence`: `verified` (read in code, schema, decoded source, dossier or an answer; a `learned:` value alone is `inferred`), `inferred` (reasoning written in `legacy_behavior`), `assumed` (a `proposed:` answer or an ADR decided by default), `unresolved`. A row mixing them is split.
 - `status`: `specified` with `target_behavior` = `Preserve legacy behavior` when understood; `unmapped` when a `U-` item blocks it, citing the item in `legacy_behavior`. A clear block with an unresolved outcome stays `specified`, the outcome in its own `RULE-*` row, `unmapped`.
 - New rows: `RULE-<ABBR>-NNN`. A new event-code meaning goes in the mapping note, with its evidence.
 

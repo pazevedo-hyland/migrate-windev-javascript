@@ -74,6 +74,11 @@ def sample_of(unit, suffix, slot, chunk, fields, encoding='cp1252'):
                 anchors['after'] = moved(fields['_end'])
     parsed = set()
     spans = decoder.fonts(chunk['data'], encoding)[1] + (list(fields.get('_spans') or []) if chunk['id'] == 0 else [])
+    if chunk['id'] == 15 and 'x_mm' in fields:
+        try:        # a report band or control: its name, 8 bytes, then the four doubles of its geometry
+            spans.append((decoder.framed_string(chunk['data'], 0, encoding)[1] + 8, 32))
+        except (ValueError, IndexError, struct.error):
+            pass
     for offset, width in spans:
         parsed.update(range(moved(offset), moved(offset) + width))
     return {'parsed': parsed, 'unit': unit, 'name': slot['name'], 'owner': slot['owner'], 'line': slot['line'],
@@ -351,8 +356,11 @@ def cross_validate(samples, truth, folds=4):
                     value = read(entry, sample)
                     if entry['kind'] == 'string' and not value and not known[prop]:
                         continue
+                    if isinstance(value, str) and value.startswith('unknown:'):
+                        continue    # a value this round never saw: it abstains (as when applied), it is not wrong
                     scores[sample['variant'], prop][0] += 1
-                    scores[sample['variant'], prop][1] += same(known[prop], value)
+                    scores[sample['variant'], prop][1] += same(known[prop], value) or (
+                        entry['kind'] == 'string' and value == '' and str(known[prop]).strip() == '0')
     return scores
 
 
@@ -369,7 +377,7 @@ def learn_validated(samples, truth, folds=4, needed=8):
                 # Held-out windows share the project's habits: two values that always go together still fit. So a
                 # position must also be the only one that fits, and a yes/no property needs several of each.
                 solid = entry['kind'] == 'string' or (not entry['alternatives']
-                                                      and (entry['distinct'] >= 3 or entry['minority'] >= 3))
+                                                      and entry['minority'] >= 3)
                 entry['confidence'] = 'strong' if predictions >= needed and correct == predictions and solid else 'weak'
     return fieldmap
 

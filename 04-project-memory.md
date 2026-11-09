@@ -16,6 +16,7 @@ The principle: **separate** the central memory, detailed documentation, decision
 │   ├── navigation.md          ← generated: who opens or prints what, from code
 │   ├── evidence/
 │   │   ├── encoded-actions.md ← proposed answers, confirmed by someone with WINDEV or the running app (never regenerated)
+│   │   ├── audit-decisions.csv ← one row per control with unexplained differences: what each is, what was done
 │   │   └── images/            ← generated: dossier image and layout drawing per window/report (committed)
 │   ├── schema/schema-draft.*  ← generated: draft SQLite schema + decisions for the database ADR
 │   ├── mapping/               ← one note per legacy unit; event-codes.md (generated) + event-codes-inferred.md

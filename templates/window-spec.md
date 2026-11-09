@@ -15,14 +15,14 @@ What the window needs and leaves behind, including what WINDEV passes implicitly
 
 ## Layout
 
-From the inspector `layout` (pixels, absolute in the window) and the dossier (anchoring, images, skin). Fonts and colors come from the skin template: name it, and read them from the dossier image.
+From the inspector `layout` (pixels, absolute in the window, decoded from the source) and the evidence folder (planes, order among siblings, anchoring, images, skin). Fonts and text colours come from each control's decoded `fonts` (face, pixel height, weight, colour); what a control does not state comes from the skin template: name it.
 
 | Legacy name | x | y | width | height | Anchoring (how it moves or grows on resize) | Image / skin |
 |---|---|---|---|---|---|---|
 
 Style values: base font and size, colors (names resolved to RGB), and every icon or button visible in the dossier image — each named here or listed as a `U-` item.
 
-| Element | Font / size | Color (RGB) | Source (dossier field / image) |
+| Element | Font / size | Color (RGB) | Source (`decoded: …/fonts`, dossier field or image) |
 |---|---|---|---|
 
 ## Controls (in tab order)
@@ -74,6 +74,7 @@ Table sort and per-column search, saved column configuration, Enter handling, dr
 ## Acceptance checks
 
 - Keyboard-only walkthrough: <sequence of keys and expected focus/results>.
-- Visual comparison with the dossier image approved by: <human, date>.
+- Unexplained differences of this window's controls (`scripts/audit_decisions.py --unit <WIN_Name>`): each decided — what it is and what was done — or listed above as a `U-` item.
+- Visual comparison with the dossier image (or, without a dossier, the decoded thumbnail and the layout drawing) approved by: <human, date>.
 
 Every open point is a `U-<UNIT>-nn` item in the mapping note — never a bare "check" or "untested".

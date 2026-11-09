@@ -30,6 +30,7 @@ UTF16 = re.compile(rb'(?:[\x20-\x7e\xa0-\xff]\x00){4,}')
 # Common control block: version tag, x, y, width, height, 8 zero bytes, maximum width and height.
 COMMON = re.compile(rb'(?s)(.{4})(.{16})\x00{8}\xff\xff\xff[\x07\x7f\xff]\xff\xff\xff[\x07\x7f\xff]')
 IMAGE_FILE = re.compile(rb'\.(png|gif|jpe?g|bmp|ico|svg|tiff?|emf|wmf)$', re.I)
+LINKED_ITEM = re.compile(r'[\w$]+\.[A-Za-z_]\w*')
 FILE_PATH = re.compile(rb'^\.{0,2}\\|\.(png|gif|jpe?g|bmp|ico|svg|wdw|wde)$', re.I)
 SKIP = {'.git', 'node_modules', 'backup', 'history', 'target', 'dist'}
 TEXT_EXTENSIONS = {'.wdw', '.wde', '.wdg', '.wdc', '.wdp', '.wdr', '.wdi', '.wdt', '.wdm'}
@@ -308,6 +309,8 @@ def control_fields(data, encoding='cp1252'):
         fields['tab_order'] = struct.unpack_from('<i', data, offset + 16)[0] + 1   # kept when the stop is off; 0 = none
         spans += [(offset, 4), (offset + 16, 4)]
         fields['group'], offset = read(offset + 20)
+        fields['order'] = struct.unpack_from('<H', data, offset)[0]   # 1..n among the controls of the same parent
+        spans.append((offset, 2))
         right, wide, bottom, high = struct.unpack_from('<4I', data, offset + 12)
         fields['anchor_rates'] = {'right': right, 'bottom': bottom, 'width': wide, 'height': high}
         spans.append((offset + 12, 16))
@@ -411,6 +414,18 @@ def describe(owner, kind, chunks, encoding='cp1252', keep_end=False):
         fields = {'caption': text(first, encoding)} if first is not None and FRAMED.search(by_id[0]).start() <= 8 else None
     elif owner in ('controls', 'blocks') and 15 in by_id:
         fields = report_fields(by_id[15], encoding)
+        if fields is not None and owner == 'controls':
+            # What a report control prints: the item it is linked to (`Query.item`, chunk 1), else its own text,
+            # mask or preset (`[PAGENUM]/[NBPAGES]`) - the last string that is neither its name nor a font face.
+            faces = {font['face'] for font in fonts(by_id[15], encoding)[0]}
+            texts = [text(m[2], encoding) for m in FRAMED.finditer(by_id[15]) if m[2]][1:]
+            linked = next((t for t in (text(m[2], encoding) for m in FRAMED.finditer(by_id.get(1, b'')) if m[2])
+                           if LINKED_ITEM.fullmatch(t)), None)
+            if linked:
+                fields['linked_item'] = linked
+            content = [t for t in texts if t not in faces and (not linked or t != linked.rsplit('.', 1)[-1])]
+            if content:
+                fields['content'] = content[-1]
     elif owner == 'window' and 0 in by_id:
         fields = window_fields(by_id[0])
         if fields is not None:
@@ -721,12 +736,14 @@ def merge_control(entry, element, language):
             entry[key] = value
             written.append(key)
 
+    if element.get('fonts') and not entry.get('fonts'):
+        put('fonts', element['fonts'])
     if element['owner'] == 'columns':
         entry.setdefault('kind', 'Table column')
         put('width', fields.get('width'))
     elif 'x_mm' in fields:
-        for key in ('x_mm', 'y_mm', 'width_mm', 'height_mm'):
-            if entry.get(key) is None:
+        for key in ('x_mm', 'y_mm', 'width_mm', 'height_mm', 'linked_item', 'content'):
+            if entry.get(key) is None and fields.get(key) is not None:
                 put(key, fields[key])
         return written
     else:
@@ -757,6 +774,7 @@ def merge_control(entry, element, language):
             if fields.get('initial_value') and not entry.get('initial_value'):
                 put('initial_value', fields['initial_value'])
             put('plane', fields['plane'])
+            put('order', fields['order'])
             if element.get('pane'):
                 put('pane', element['pane'])
             if 'TAB Key' not in (entry.get('flags') or {}):
@@ -813,6 +831,14 @@ def write_evidence(sources, queries, target, dossier=None):
         counts['new_elements'] += not path.exists()
         language = item['language'] or 'default'
         known = {name.lower(): name for name in element.setdefault('controls', {})}
+        # The menu as a tree in file order: each option with its caption and the options above it.
+        menu = [{'name': decoded['name'], 'caption': decoded['fields']['caption'],
+                 'under': [parent for parent in decoded['parents'][2:]]}
+                for decoded in item['elements']
+                if decoded['owner'] == 'options' and decoded['name'] and decoded.get('fields')
+                and len(decoded['parents']) >= 2 and decoded['parents'][1].upper().startswith('MENU')]
+        if menu:
+            element['menu'] = menu
         for decoded in item['elements']:
             fields = decoded.get('fields')
             if not fields or not decoded['name']:
