@@ -34,7 +34,7 @@ These are the recommended defaults the planner brings to framing; every choice i
 Accounts, Git host (it replaces the WINDEV source manager), an isolated machine for the coding agent, a legacy Windows environment with WINDEV, and a nightly test machine if possible → [00](00-prerequisites.md), [02](02-infrastructure.md).
 
 ### Step 1 — Prepare the sources *(`legacy/`)*
-Switch the WINDEV project to **text format**, print its **project documentation to PDF** (the "dossier"), and put the project folder with its data files in `legacy/` as is → [00 §E](00-prerequisites.md#e-collect-the-legacy-material). Report samples and recorded scenarios come later, when a slice needs them. Tip: WINDEV 2026's AI Companion `/init_projet` writes a project-context file — add it to `legacy/docs/`.
+Switch the WINDEV project to **text format**, print its **project documentation to PDF** (the "dossier") if it can be printed — the sources are [decoded without it](docs/windev-file-formats.md) — and put the project folder with its data files in `legacy/` as is → [00 §E](00-prerequisites.md#e-collect-the-legacy-material). Report samples and recorded scenarios come later, when a slice needs them. Tip: WINDEV 2026's AI Companion `/init_projet` writes a project-context file — add it to `legacy/docs/`.
 
 ### Step 2 — Inspect and map *(before any code)*
 With WINDEV's documentation PDF (`<project>_Documentation.pdf`, the "dossier") anywhere under `legacy/` — usually already in the project folder — run the whole evidence pipeline:
@@ -76,6 +76,7 @@ At the end of the roadmap: `parity_check.py --require-complete` passes, golden s
 | [09 — WLanguage traps](09-wlanguage-traps.md) | Semantics that silently break translations |
 | [10 — Parity and verification](10-parity-and-verification.md) | Closed-world matrix, golden scenarios, UI/report/native checks, gates |
 | [Scripts](scripts/README.md) | Inspector, parity gate, export comparator |
+| [What is inside the project files](docs/windev-file-formats.md) | `internal_properties`, binary queries and the other project files decoded: what each holds and how far the tools read it |
 | [Upstream audit](docs/upstream-audit.md) | Where every upstream section lives now, and what was replaced |
 
 **Templates** ([templates/](templates/)): `AGENTS.template.md`, `CLAUDE.template.md`, local instruction files, `kickoff-prompt.md` (autonomous run), `PromptInit.md`, `mapping-prompt.md`, `prompt-stage.md`, ADR, handoff, roadmap, parity matrix, window spec, golden scenario, compare config, agent-neutral skills (`review`, `map-element`, `review-mapping`), shared guard with a Git pre-commit hook, and a Claude Code adapter (settings).

@@ -4,6 +4,7 @@
   inspect_windev.py   legacy/              -> analysis-local/inspect-<stamp>/   (code, layout, encoded slots, XDD, seed)
                                            -> docs/parity/parity-seed.csv      (committed copy, for the parity gate)
   dossier_extract.py  legacy/**/*Documentation*.pdf -> analysis-local/dossier-<stamp>/ (when a dossier exists)
+  windev_decode.py    legacy/              -> analysis-local/decoded-<stamp>/   (internal_properties, query SQL, thumbnails)
   event_legend.py     legacy/**/<project>.cpl        -> docs/mapping/event-codes.md     (when the compile folder exists)
   evidence_report.py                       -> docs/evidence-report.md, docs/navigation.md
   schema_draft.py                          -> docs/schema/schema-draft.md, .sql
@@ -76,6 +77,13 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
         paths['coverage'] = json.loads(Path(dossier, 'index.json').read_text(encoding='utf-8'))['coverage']
     else:
         print('no *Documentation*.pdf under legacy/: captions, tab order, masks and checkbox properties stay unknown')
+    # What the sources keep packed: designer properties, binary queries' SQL, thumbnails (no WINDEV, no PDF needed).
+    paths['decoded'] = str(analysis / f'decoded-{stamp}')
+    run('windev_decode.py', legacy, '--out', paths['decoded'], *(['--dossier', dossier] if dossier else []))
+    decoded = json.loads(Path(paths['decoded'], 'index.json').read_text(encoding='utf-8'))
+    paths['decoded_coverage'] = decoded['coverage']
+    if decoded.get('calibration'):
+        paths['decoded_calibration'] = decoded['calibration']
     if compile_dir:
         run('event_legend.py', Path(compile_dir).parent, '--compile-dir', compile_dir, '--out', docs / 'mapping/event-codes.md')
         paths['event_legend'] = str(docs / 'mapping/event-codes.md')

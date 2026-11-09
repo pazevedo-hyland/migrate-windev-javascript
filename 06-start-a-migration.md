@@ -16,7 +16,7 @@ Put the WINDEV project folder (text format, with its `.cpl` folder and the dossi
 
 ## 4. Inspect
 
-One command runs the whole evidence pipeline in order — inspector, dossier extraction, event legend, evidence report and navigation map, schema draft, layout drawings — into fresh dated folders, and records their paths in `analysis-local/latest.json`:
+One command runs the whole evidence pipeline in order — inspector, dossier extraction, source decoding, event legend, evidence report and navigation map, schema draft, layout drawings — into fresh dated folders, and records their paths in `analysis-local/latest.json`:
 
 ```sh
 python3 scripts/prepare_evidence.py
@@ -34,7 +34,15 @@ Add `--fallback-encoding cp1252` for older non-Unicode sources, `--extra-ext .ww
 
 The inspector is deliberately shallow: it extracts code blocks with their window/control path and raw event code, raw XDD metadata, a **parity seed** (one row per block, table and unresolved export), and secret locations. It never guesses meanings. See [scripts/README](scripts/README.md).
 
-## 4a. Extract the dossier (if one exists)
+## 4a. Decode the designer properties and binary files
+
+```sh
+python3 scripts/windev_decode.py legacy/<project folder> --out analysis-local/decoded-<stamp> [--dossier analysis-local/dossier-<stamp>]
+```
+
+Per source file, every element's decoded properties: for window controls position, size, caption, tooltip, initial state, tab order, anchors, linked item, group and button type; for table columns width and caption; for report controls geometry in millimetres; for everything else its strings in file order (images, style names, masks, fonts). Per binary file, its unpacked blocks: `queries.json` holds every `.WDR` query's SQL and `images/` a thumbnail of each window and report. Read `coverage` in `index.json`: `properties_failed` must be 0 and `controls_with_fields` equal to `controls`. With `--dossier`, `calibration` counts, field by field, where the decoded value equals the dossier's — run it on any project that has even a partial dossier, and before trusting the offsets on a WINDEV version not measured yet. Cite a decoded value as `decoded: WIN_X/BTN_Y/<field>`. The format, the measured results and how to name one more property: [what is inside the project files](docs/windev-file-formats.md).
+
+## 4a-bis. Extract the dossier (if one exists)
 
 ```sh
 python3 scripts/dossier_extract.py legacy/<path to>/<project>_Documentation.pdf --out analysis-local/dossier-<stamp>

@@ -43,6 +43,9 @@ class PrepareEvidenceTests(unittest.TestCase):
             images = [p.name for p in (root / 'docs/evidence/images').iterdir()]
         self.assertEqual(latest['inspect'], paths['inspect'])
         self.assertNotIn('dossier', latest)
+        self.assertEqual(latest['decoded'], paths['decoded'])
+        self.assertIn('properties_failed', latest['decoded_coverage'])
+        self.assertNotIn('decoded_calibration', latest)
         self.assertIn('Encoded actions (1 distinct, 1 slots)', report)
         self.assertIn('WIN_A[WIN_A] --> WIN_B[WIN_B]', navigation)
         self.assertIn('| A-', sheet)

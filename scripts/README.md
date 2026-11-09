@@ -24,7 +24,7 @@ Use a new output directory per run: existing output is rejected so stale and cur
 - `context.siblings`: scalar keys next to the block, such as the raw event `type` code — **not interpreted**. Window global declarations (`PROCEDURE MyWindow(…)`) usually have no `type`;
 - `procedures`: `PROCEDURE`/`PROCÉDURE` declarations found in the block.
 
-`literal_keys` in the inventory counts every literal block key found in a file, so other embedded sources are visible; extract them with `--block-key`. The tool does not parse the full WINDEV text format, resolve resource strings, decode internal properties or interpret numeric event identifiers.
+`literal_keys` in the inventory counts every literal block key found in a file, so other embedded sources are visible; extract them with `--block-key`. The tool does not parse the full WINDEV text format, resolve resource strings or interpret numeric event identifiers; `windev_decode.py` decodes the internal properties.
 
 **XDD** is parsed as XML with its declared encoding; DTD/entity declarations and non-ASCII-compatible XML are rejected. Each field's raw XML metadata and table attributes are retained, with other top-level metadata/relationships. Numeric type/key codes are deliberately not translated.
 
@@ -39,6 +39,20 @@ Use a new output directory per run: existing output is rejected so stale and cur
 - `secret-hints.json` — `path`, `line` and hint type for likely hardcoded credentials and connection calls. **Values are never copied.** Treat findings as credentials to revoke.
 
 Outputs contain business logic and possibly secrets: keep them local (`analysis-local/` is ignored) and sanitize before sharing.
+
+## `windev_decode.py` — designer properties and binary files, without WINDEV
+
+```sh
+python3 scripts/windev_decode.py legacy/<project folder> --out analysis-local/decoded-1 [--dossier <dossier dir>] [--encoding cp1252] [--raw] [--blocks]
+```
+
+Decodes every `internal_properties` value of the text sources (base64 → fixed-key byte cipher → LZW → property chunks) and every packed block of the binary `PCS` files (`.WDR`, `.wdp`, `.wda`, `.cpl` copies, `.cache`). Standard library only; a new output directory per run; the source is only read.
+
+- `properties/<source>.json` — per element: `owner` (`window`, `controls`, `columns`, `blocks`, `options`…), `name`, `type`, `parents`, each chunk's id, version, size and `strings`, and `fields` where the layout is known: window controls (`x`, `y`, `width`, `height`, `window_x`/`window_y` outside tabs and tables, `visible`, `state`, `caption`, `tooltip`, `initial_value`, `anchor`, `anchor_rates`, `linked_item`, `tab_stop`, `tab_order`, `group`, `popup_menu`, `double_click_button`, `button_type`), windows (size), table columns (`width`, `caption`), report bands and controls (`x_mm`, `y_mm`, `width_mm`, `height_mm`). A field list cut short by an unknown layout carries `partial`; a value that does not decode carries `error` and no fields.
+- `containers/<file>.json` — each unpacked block: offset, sizes, hash, its strings, `kind` (`sql`, `image`) when recognised. `queries.json` — query name → SQL. `images/` — thumbnails as BMP. `--blocks` saves every block; `--raw` keeps chunks as hex for mapping more fields.
+- `index.json` — `coverage` (values decoded and failed, controls with fields and captions, report controls with geometry, containers, blocks, queries, images) and, with `--dossier`, `calibration`: per field, how many decoded values equal the dossier's.
+
+On the real project: 3,993 of 3,993 values decoded; against its dossier, size 1,069/1,069, window position 843/843, tab order 1,034/1,034, state 1,021/1,021, button type 588/588, anchor rates 1,130/1,130, captions 819/820 (with the accents the PDF lost), report geometry 493/493; 5 of 5 query SQL texts. Offsets were measured on file format 25: on another version check `coverage` and `calibration` first. Format, limits and how the key was obtained: [docs/windev-file-formats.md](../docs/windev-file-formats.md).
 
 ## `parity_check.py` — the parity gate
 
