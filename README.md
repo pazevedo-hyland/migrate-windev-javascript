@@ -76,6 +76,7 @@ At the end of the roadmap: `parity_check.py --require-complete` passes, golden s
 | [09 — WLanguage traps](09-wlanguage-traps.md) | Semantics that silently break translations |
 | [10 — Parity and verification](10-parity-and-verification.md) | Closed-world matrix, golden scenarios, UI/report/native checks, gates |
 | [Scripts](scripts/README.md) | Inspector, parity gate, export comparator |
+| [Extraction strategy](docs/extraction-strategy.md) | Four levels of evidence, how each is proven, the audit of what is still unexplained and how to close it |
 | [What is inside the project files](docs/windev-file-formats.md) | `internal_properties`, binary queries and the other project files decoded: what each holds and how far the tools read it |
 | [Upstream audit](docs/upstream-audit.md) | Where every upstream section lives now, and what was replaced |
 

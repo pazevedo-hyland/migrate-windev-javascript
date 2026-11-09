@@ -58,8 +58,23 @@ def pack(unit, latest):
     callers = next((v for k, v in report.get('callers', {}).items() if k.lower() == unit.lower()), [])
     calls = {f: [s for s in sites if s[0].lower() == unit.lower()] for f, sites in report.get('usage', {}).items()}
     mentions = lambda items: [i for i in items if unit.lower() in i.lower()]
+    # From the decoder: what differs from the usual values of each control's kind and no property explains yet,
+    # the fonts in use, and the SQL of the unit's embedded query.
+    unexplained, fonts, embedded_sql = [], {}, None
+    decoded = Path(latest['decoded']) if latest.get('decoded') else None
+    if decoded and (decoded / 'audit.json').exists():
+        unexplained = [{k: e[k] for k in ('name', 'line', 'variant', 'differences')}
+                       for e in load(decoded / 'audit.json')['elements']
+                       if e['unit'].lower() == unit.lower() and '/1.0' not in e['variant']]
+        for path in (decoded / 'properties').rglob('*.json'):
+            if path.name.lower().rsplit('.', 2)[0] == unit.lower():
+                for item in load(path)['elements']:
+                    if item.get('fonts') and item['name']:
+                        fonts[item['name']] = item['fonts']
+                    embedded_sql = embedded_sql or item.get('sql')
     return {'unit': unit, 'source': source['path'], 'seed_rows': seed, 'blocks': blocks, 'encoded_actions': actions,
-            'dossier': element, 'opened_or_printed_by': callers,
+            'dossier': element, 'opened_or_printed_by': callers, 'unexplained_differences': unexplained,
+            'fonts': fonts, 'embedded_query_sql': embedded_sql,
             'calls': {f: [{'line': s[1], 'argument': s[2]} for s in sites] for f, sites in calls.items() if sites},
             'embedded_query_items': next((v for k, v in compiled.get('report_queries', {}).items()
                                           if k.lower() == unit.lower()), None),

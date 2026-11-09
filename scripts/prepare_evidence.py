@@ -76,13 +76,23 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
         run('dossier_extract.py', dossier_pdf, '--out', dossier, *([] if images else ['--no-images']))
         paths['coverage'] = json.loads(Path(dossier, 'index.json').read_text(encoding='utf-8'))['coverage']
     else:
-        print('no *Documentation*.pdf under legacy/: masks, planes and checkbox properties stay unknown; captions, '
-              'geometry, tab order and SQL come from the sources')
+        print('no *Documentation*.pdf under legacy/: masks, alignment and most checkbox properties stay unknown; '
+              'captions, geometry, planes, tab order and SQL come from the sources')
+    # A dossier, even of a few windows, teaches where more properties sit: this project's field map, over the one
+    # shipped with the scripts. Without a dossier the shipped map is used as is.
+    fieldmap = []
+    if dossier:
+        analysis.mkdir(parents=True, exist_ok=True)
+        paths['fieldmap'] = str(analysis / f'fieldmap-{stamp}.json')
+        print(run('windev_fieldmap.py', 'learn', legacy, '--dossier', dossier, '--out', paths['fieldmap']).strip())
+        fieldmap = ['--fieldmap', paths['fieldmap']]
     # What the sources keep packed: designer properties, binary queries' SQL, thumbnails (no WINDEV, no PDF needed).
     paths['decoded'] = str(analysis / f'decoded-{stamp}')
-    run('windev_decode.py', legacy, '--out', paths['decoded'], '--evidence', *(['--dossier', dossier] if dossier else []))
+    run('windev_decode.py', legacy, '--out', paths['decoded'], '--evidence', *fieldmap,
+        *(['--dossier', dossier] if dossier else []))
     decoded = json.loads(Path(paths['decoded'], 'index.json').read_text(encoding='utf-8'))
     paths['decoded_coverage'] = decoded['coverage']
+    paths['decoded_audit'] = decoded['audit']
     if decoded.get('calibration'):
         paths['decoded_calibration'] = decoded['calibration']
     # Every later tool reads `dossier`: from here on it is the decoded values written over the PDF extract (kept as

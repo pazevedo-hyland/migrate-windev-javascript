@@ -10,6 +10,7 @@ Measured on one project (file format 25: `major_version : 25` in its sources; 11
 | Window control size | 1,148 controls | 1,144 of 1,144 equal |
 | Control position in the window | all but the 17 controls inside table cells | 1,126 of 1,126 equal |
 | Visible | | 802 of 802 equal |
+| Plane | | 1,144 of 1,144 equal |
 | Tab order and tab stop | | 1,034 of 1,034 equal |
 | Initial state (active, read-only, grayed) | | 1,081 of 1,081 equal |
 | Button type (normal, validate, abort) | | 589 of 589 equal |
@@ -19,6 +20,8 @@ Measured on one project (file format 25: `major_version : 25` in its sources; 11
 | Window size and title | 112 windows | size 111 of 112 equal (the window with a menu bar differs by its height); title 112 of 112 |
 | Report control geometry (mm) | 497 controls | 493 of 493 equal |
 | Query SQL from binary `.WDR` | 5 of 5 | same text, without the PDF's line wraps |
+| SQL of queries embedded in windows and reports | 19 of 20 | not in the dossier at all |
+| Fonts and text colours | every control | not printed by the dossier: read, not compared |
 | Window and report thumbnails | 219 images | — |
 
 A screen layout generated with no PDF at all (`screen_layout.py` on one 77-control window with tabs, tables and a supercontrol) equals the layout validated earlier from the dossier on every position, size, kind, anchor, tab order, state, Visible tick, button type and button image. What the PDF still adds there: planes, the other tick-mark properties, alignment, masks, input types, caption widths and table options.
@@ -71,6 +74,7 @@ Found in chunk `0` by its signature: a version, four integers, eight zero bytes 
 | initial state | u32 | 0 active, 1 read-only, 4 grayed |
 | tooltip | string | |
 | caption | string, 24 bytes later | statics, edits, combos, check boxes, tabs. A button keeps it empty and has its caption after the block |
+| plane | u32 right after the caption | 0 = every plane |
 | initial value | string, 4 bytes later | an edit's value, an image control's file |
 | anchor | u16 | bits: 1 bottom, 2 height, 4 right, 8 width |
 | linked item | string | the data binding, `Table.Item` |
@@ -92,6 +96,20 @@ Everything else a control has (colours, fonts, masks, planes, input type, column
 3. Keep an offset only when it explains **every** control of that type, as the table above does; add it to `control_fields` with a test.
 
 A property changed in WINDEV on a copy of one window, saved in text format and decoded before and after, settles an offset in minutes.
+
+### Fonts, options, embedded queries
+
+- **Fonts**: a font is a Windows `LOGFONT` (height, width, escapement, orientation, weight, italic, underline, strike-out, character set, four precision bytes) whose face name is a framed string. A negative height is pixels at 96 dpi (−11 = 8.25 pt). The four bytes after the face are read as the text colour (red, green, blue, 0). Each element lists its `fonts` in file order: a button has four (one per state), an edit its caption font and its input font. Which font belongs to which part is by order, not named.
+- **Options**: each choice of a radio button or check box and each menu option is an element of its own (owner `options`) whose first string is its caption.
+- **Embedded queries**: a window's or report's own query (`<name>$Query`, owner `elements`) holds a whole PCS container in chunk `4`; its SQL is read like a `.WDR` file's and added to `queries.json`.
+
+### Properties without a known layout: the field map and the audit
+
+Replacing each string of a chunk by one zero byte gives the layout an all-empty element would have, so a byte position means the same in every element of a kind, counted from the chunk's start or end or, for a control, from the start or end of the common block. On that footing `scripts/windev_fieldmap.py`:
+
+- **learns** where a dossier property sits: the position whose bytes map one-to-one to the property's values for every control of that kind (a number read directly, an enumeration, or a string slot), then scores it on windows left out of the learning. `strong` = at least 8 held-out predictions, none wrong, no other position fitting, and for a yes/no at least 3 of the rarer value. Everything else is `weak` and not applied.
+- **applies** strong entries to every element (`properties` in the decoder's output, written into the evidence folder in the dossier's own form). The map shipped as `scripts/windev_fieldmap.json` was learned on the measured project; `learn` on another project completes it.
+- **audits**: per element, the bytes that differ from the most common value of its kind and that no parsed field, learned property, font or string covers. Positions where most elements differ from each other are identifiers and are left out. See [extraction strategy](extraction-strategy.md) for how to use the list.
 
 ### How the other tools get these values
 
@@ -132,7 +150,7 @@ Blocks that are not SQL or images are listed with their strings (`text`); `--blo
 
 - **Runtime behavior**: what a dialog's Esc does, values set by code at opening, data-dependent states. From the code, and where the code cannot settle it, from the running application.
 - **Predefined button actions** (the encoded event slots of `evidence_report.py`): each slot's `internal_properties` now decodes like any other; the records are small and not yet named. Until they are, the proposed answers stay.
-- **Fields not yet named** (section 1): present in the chunks, listed as strings or raw bytes.
+- **Fields not yet named** (section 1): present in the chunks; each control's differences from the usual values of its kind are listed in `audit.json`.
 
 ## 5. How this was established, and its limits
 

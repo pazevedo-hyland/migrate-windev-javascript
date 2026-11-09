@@ -248,6 +248,30 @@ def strings(data, encoding='cp1252'):
     return found
 
 
+def fonts(data, encoding='cp1252'):
+    """Font records of a chunk, in file order: a Windows LOGFONT whose face name is a framed string, then four
+    bytes read here as the text colour (not checked against another source). Returns (fonts, byte spans)."""
+    found, spans = [], []
+    for match in FRAMED.finditer(data):
+        start = match.start()
+        if start < 28 or not match[2]:
+            continue
+        height, _, _, _, weight, italic, underline, strike = struct.unpack_from('<iiiiIBBB', data, start - 28)
+        if not (5 <= abs(height) < 400 and weight % 100 == 0 and 100 <= weight <= 900
+                and max(italic, underline, strike) <= 1) or FILE_PATH.search(match[2]) or b'\\' in match[2]:
+            continue
+        font = {'face': text(match[2], encoding), 'height': height, 'weight': weight}
+        if height < 0:
+            font['points'] = round(-height * 72 / 96, 1)       # a negative LOGFONT height is pixels at 96 dpi
+        font.update({key: True for key, flag in (('italic', italic), ('underline', underline), ('strikeout', strike)) if flag})
+        colour = data[match.end():match.end() + 4]
+        if len(colour) == 4 and colour[3] == 0:
+            font['colour'] = '#%02x%02x%02x' % (colour[0], colour[1], colour[2])
+        found.append(font)
+        spans += [(start - 28, 28), (match.end(), 4)]
+    return found, spans
+
+
 def anchors(value):
     return [name for bit, name in ANCHOR_BITS.items() if value & bit]
 
@@ -261,24 +285,32 @@ def control_fields(data, encoding='cp1252'):
     x, y, width, height = struct.unpack_from('<4i', data, start)
     fields = {'x': x, 'y': y, 'width': width, 'height': height, 'layout_version': struct.unpack('<I', match[1])[0]}
     read = lambda offset: framed_string(data, offset, encoding)
+    spans = fields['_spans'] = [(start - 4, 20), (start + 24, 8)]    # the bytes read as numbers, for the audit
     try:
         offset = start + 32
         fields['visible'] = bool(struct.unpack_from('<I', data, offset)[0])
+        spans.append((offset, 4))
         fields['double_click_button'], offset = read(offset + 5)
         fields['popup_menu'], offset = read(offset)
         state = struct.unpack_from('<I', data, offset)[0]
         fields['state'] = STATES.get(state, state)
+        spans.append((offset, 4))
         fields['tooltip'], offset = read(offset + 4)
         fields['caption'], offset = read(offset + 24)
+        fields['plane'] = struct.unpack_from('<I', data, offset)[0]
+        spans.append((offset, 4))
         fields['initial_value'], offset = read(offset + 4)
         anchor = struct.unpack_from('<H', data, offset)[0]
         fields['anchor'] = anchors(anchor)
+        spans.append((offset, 2))
         fields['linked_item'], offset = read(offset + 2)
         fields['tab_stop'] = bool(struct.unpack_from('<I', data, offset)[0])
         fields['tab_order'] = struct.unpack_from('<i', data, offset + 16)[0] + 1   # kept when the stop is off; 0 = none
+        spans += [(offset, 4), (offset + 16, 4)]
         fields['group'], offset = read(offset + 20)
         right, wide, bottom, high = struct.unpack_from('<4I', data, offset + 12)
         fields['anchor_rates'] = {'right': right, 'bottom': bottom, 'width': wide, 'height': high}
+        spans.append((offset + 12, 16))
         fields['_end'] = offset + 28
     except (ValueError, IndexError, struct.error) as error:
         fields['partial'] = str(error)
@@ -339,13 +371,20 @@ def button_tail(data, end, encoding='cp1252'):
     return None
 
 
-def describe(owner, kind, chunks, encoding='cp1252'):
+def describe(owner, kind, chunks, encoding='cp1252', keep_end=False):
     """Named fields for the element kinds whose layout is known; every chunk's strings for all of them."""
     by_id = {c['id']: c['data'] for c in chunks}
     fields = None
     if owner == 'controls' and 0 in by_id:
         fields = control_fields(by_id[0], encoding)
         end = fields.pop('_end', None) if fields else None
+        spans = fields.pop('_spans', []) if fields else []
+        if keep_end and fields is not None:
+            # Where the shared block ends (an anchor) and which bytes were read, for windev_fieldmap.py.
+            fields['_spans'] = spans + ([(len(by_id[0]) - 50, 1)] if kind == '4' else []) \
+                + ([(len(by_id[0]) - 58, 4)] if kind == '16' else [])
+            if end:
+                fields['_end'] = end
         if fields is not None and kind == '4' and len(by_id[0]) >= 50:
             fields['button_type'] = BUTTON_TYPES.get(by_id[0][-50], by_id[0][-50])
             tail = button_tail(by_id[0], end, encoding) if end else None
@@ -366,6 +405,10 @@ def describe(owner, kind, chunks, encoding='cp1252'):
             fields = {'caption': framed_string(by_id[0], 4, encoding)[0]}
         except (ValueError, IndexError, struct.error):
             fields = None
+    elif owner == 'options' and 0 in by_id:
+        # A menu option or one choice of a radio button or check box: its caption is its first string.
+        first = next((m[2] for m in FRAMED.finditer(by_id[0]) if m[2]), None)
+        fields = {'caption': text(first, encoding)} if first is not None and FRAMED.search(by_id[0]).start() <= 8 else None
     elif owner in ('controls', 'blocks') and 15 in by_id:
         fields = report_fields(by_id[15], encoding)
     elif owner == 'window' and 0 in by_id:
@@ -431,7 +474,8 @@ def property_slots(source):
     return slots
 
 
-def decode_source(source, encoding='cp1252', raw=False):
+def decode_source(source, encoding='cp1252', raw=False, mapper=None, fieldmap=None, unit='', suffix='.wdw',
+                  samples=None):
     elements, panes = [], {}
     for slot in property_slots(source):
         entry = {key: slot[key] for key in ('line', 'owner', 'name', 'type', 'parents')}
@@ -444,9 +488,29 @@ def decode_source(source, encoding='cp1252', raw=False):
         entry['chunks'] = [{'id': c['id'], 'version': c['version'], 'size': len(c['data']),
                             'strings': strings(c['data'], encoding), **({'hex': c['data'].hex()} if raw else {})}
                            for c in chunks]
-        fields = describe(slot['owner'], slot['type'], chunks, encoding)
+        fields = describe(slot['owner'], slot['type'], chunks, encoding, keep_end=mapper is not None)
+        if mapper is not None:
+            # Properties a field map names (windev_fieldmap.py), and the chunk kept for the audit.
+            properties = {}
+            for chunk in chunks:
+                sample = mapper.sample_of(unit, suffix, slot, chunk, fields or {}, encoding)
+                properties.update(mapper.apply(fieldmap or {}, sample))
+                if samples is not None:
+                    samples.append(sample)
+            if properties:
+                entry['properties'] = properties
+            (fields or {}).pop('_end', None)
+            (fields or {}).pop('_spans', None)
         if fields:
             entry['fields'] = fields
+        used = [f for c in chunks if c['id'] in (0, 15) for f in fonts(c['data'], encoding)[0]]
+        if used:
+            entry['fonts'] = used
+        for chunk in chunks:
+            if chunk['data'][:4] == b'PCS\0':   # an embedded query is a whole container inside the element
+                sql = next((s['sql'] for s, _ in decode_container(chunk['data'], encoding)['blocks'] if s.get('sql')), None)
+                if sql:
+                    entry['sql'] = sql
         if slot['owner'] == 'controls' and slot['type'] in KINDS:
             entry['kind'] = KINDS[slot['type']]
         # A tab's panes come before their controls: a control directly under a tab is in the last pane seen.
@@ -604,6 +668,8 @@ def calibrate(decoded, dossier):
                       else None,
                       'button_type': theirs['button_type'].lower() == fields.get('button_type')
                       if theirs.get('button_type') else None,
+                      'plane': str(theirs['plane']) == str(fields['plane'])
+                      if theirs.get('plane') is not None and 'plane' in fields else None,
                       'visible': theirs['flags']['Visible'] == fields.get('visible')
                       if 'Visible' in (theirs.get('flags') or {}) and 'visible' in fields else None,
                       'button_background_image': file_name(theirs.get('background_image')) == file_name(fields['background_image'])
@@ -690,8 +756,11 @@ def merge_control(entry, element, language):
                     put(key, fields[key])
             if fields.get('initial_value') and not entry.get('initial_value'):
                 put('initial_value', fields['initial_value'])
-            if element.get('pane') and entry.get('plane') is None:
+            put('plane', fields['plane'])
+            if element.get('pane'):
                 put('pane', element['pane'])
+            if 'TAB Key' not in (entry.get('flags') or {}):
+                entry.setdefault('flags', {})['TAB Key'] = fields['tab_stop']
             raw = entry.setdefault('raw', [])
             other = ('Anchor rate', 'Anchor to content', 'Anchor resources')
             mask = sum(bit for bit, name in ANCHOR_BITS.items() if name in fields['anchor'])
@@ -703,6 +772,20 @@ def merge_control(entry, element, language):
                 raw.append(f"Anchor rate to right {rates['right']} Anchor rate bottom {rates['bottom']} "
                            f"Anc. rate width {rates['width']} Anchor rate height {rates['height']}")
                 written.append('anchor_rates')
+    for name, value in (element.get('properties') or {}).items():
+        # Properties a field map names, in the dossier's own form; what the dossier already says is kept.
+        if isinstance(value, str) and value.startswith('unknown:'):
+            continue
+        if name.startswith('flag:'):
+            if name[5:] not in (entry.get('flags') or {}):
+                entry.setdefault('flags', {})[name[5:]] = value == 'True' if isinstance(value, str) else bool(value)
+                written.append(name)
+        elif name.startswith('line:'):
+            if not any(line.startswith(name[5:] + ' ') for line in entry.setdefault('raw', [])):
+                entry['raw'].append(f'{name[5:]} {value}')
+                written.append(name)
+        elif entry.get(name) in (None, '') and value != '':
+            put(name, value)
     if fields.get('caption'):
         key = next(iter(entry['caption']), language) if isinstance(entry.get('caption'), dict) and entry['caption'] else language
         put('caption', {**(entry.get('caption') if isinstance(entry.get('caption'), dict) else {}), key: fields['caption']})
@@ -771,7 +854,8 @@ def write_evidence(sources, queries, target, dossier=None):
     return counts
 
 
-def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, save_blocks=False, evidence=False):
+def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, save_blocks=False, evidence=False,
+                   fieldmap=None):
     source, output = Path(source).resolve(), Path(output).resolve()
     if not source.is_dir():
         raise ValueError('Source must be a directory')
@@ -779,8 +863,11 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
         raise ValueError('Output must be outside the source directory')
     output.mkdir(parents=True, exist_ok=False)
     coverage = {'text_sources': 0, 'properties': 0, 'properties_failed': 0, 'controls': 0, 'controls_with_fields': 0,
-                'controls_with_caption': 0, 'report_controls': 0, 'report_controls_with_geometry': 0, 'containers': 0, 'blocks': 0, 'queries_with_sql': 0, 'images': 0}
-    files, by_name, queries, sources = [], {}, {}, {}
+                'controls_with_caption': 0, 'report_controls': 0, 'report_controls_with_geometry': 0, 'containers': 0, 'blocks': 0, 'queries_with_sql': 0,
+                'embedded_queries_with_sql': 0, 'elements_with_learned_properties': 0, 'images': 0}
+    files, by_name, queries, sources, samples = [], {}, {}, {}, []
+    import windev_fieldmap as mapper   # imports this module: loaded here, not at the top
+    learned = mapper.load_map(fieldmap)
     for current, folders, names in os.walk(source):
         folders[:] = sorted(f for f in folders if f.lower() not in SKIP and not f.lower().startswith('bkp_'))
         for name in sorted(names):
@@ -824,9 +911,14 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                 source_text = read_text(data)
                 if not source_text or 'internal_properties' not in source_text:
                     continue
-                elements = decode_source(source_text, encoding, raw)
+                elements = decode_source(source_text, encoding, raw, mapper, learned, path.stem, path.suffix.lower(),
+                                         samples if path.stem.lower() not in by_name else None)
                 coverage['text_sources'] += 1
                 for element in elements:
+                    if element.get('sql') and element['name']:
+                        queries.setdefault(element['name'], element['sql'])
+                        coverage['embedded_queries_with_sql'] += 1
+                    coverage['elements_with_learned_properties'] += 'properties' in element
                     coverage['properties'] += 1
                     coverage['properties_failed'] += 'error' in element
                     if element['owner'] == 'controls' and path.suffix.lower() == '.wde':
@@ -856,6 +948,13 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                              'tab whose style is not known.',
                              'Field offsets come from a format-25 project: check coverage and calibration elsewhere.',
                              'Outputs contain business logic and possibly secrets: keep them local.']}
+    # What no named property explains: per element, the bytes that differ from the usual value of its kind.
+    summary, findings = mapper.audit(samples, learned)
+    (output / 'audit.json').write_text(json.dumps({'summary': summary, 'elements': findings}, indent=1), encoding='utf-8')
+    index['audit'] = {'chunks': sum(v['elements'] for v in summary.values()),
+                      'without_unexplained_difference': sum(v['without_unexplained_difference'] for v in summary.values()),
+                      'unexplained_runs': sum(v['unexplained_runs'] for v in summary.values()),
+                      'field_map_variants': len(learned)}
     if dossier:
         index['calibration'] = calibrate(by_name, dossier)
     if evidence:
@@ -875,12 +974,15 @@ def main():
     parser.add_argument('--evidence', action='store_true',
                         help='also write <out>/evidence: the decoded values in the dossier extract\'s shape (over a copy '
                              'of --dossier when given), for the tools that read a dossier')
+    parser.add_argument('--fieldmap', type=Path,
+                        help='properties learned by windev_fieldmap.py (default: windev_fieldmap.json beside this script)')
     args = parser.parse_args()
     try:
-        index = decode_project(args.source, args.out, args.dossier, args.encoding, args.raw, args.blocks, args.evidence)
+        index = decode_project(args.source, args.out, args.dossier, args.encoding, args.raw, args.blocks, args.evidence,
+                               args.fieldmap)
     except (OSError, ValueError, LookupError) as error:
         parser.exit(1, f'Decoding failed: {error}\n')
-    print(json.dumps({key: index[key] for key in ('coverage', 'calibration', 'evidence') if key in index}, indent=2))
+    print(json.dumps({key: index[key] for key in ('coverage', 'audit', 'calibration', 'evidence') if key in index}, indent=2))
 
 
 if __name__ == '__main__':
