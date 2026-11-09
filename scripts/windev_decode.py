@@ -30,12 +30,18 @@ UTF16 = re.compile(rb'(?:[\x20-\x7e\xa0-\xff]\x00){4,}')
 # Common control block: version tag, x, y, width, height, 8 zero bytes, maximum width and height.
 COMMON = re.compile(rb'(?s)(.{4})(.{16})\x00{8}\xff\xff\xff[\x07\x7f\xff]\xff\xff\xff[\x07\x7f\xff]')
 IMAGE_FILE = re.compile(rb'\.(png|gif|jpe?g|bmp|ico|svg|tiff?|emf|wmf)$', re.I)
+FILE_PATH = re.compile(rb'^\.{0,2}\\|\.(png|gif|jpe?g|bmp|ico|svg|wdw|wde)$', re.I)
 SKIP = {'.git', 'node_modules', 'backup', 'history', 'target', 'dist'}
 TEXT_EXTENSIONS = {'.wdw', '.wde', '.wdg', '.wdc', '.wdp', '.wdr', '.wdi', '.wdt', '.wdm'}
 DATA_EXTENSIONS = {'.fic', '.ndx', '.mmo', '.ftx', '.exe', '.dll', '.wdl', '.wdk', '.zip', '.pdf'}
 STATES = {0: 'active', 1: 'read-only', 4: 'grayed'}
 BUTTON_TYPES = {0: 'normal', 1: 'validate', 2: 'interrupt', 3: 'abort', 4: 'help'}   # 2 and 4: WINDEV's list, not observed
 ANCHOR_BITS = {1: 'bottom', 2: 'height', 4: 'right', 8: 'width'}
+# Control type codes of the text format -> the kind names WINDEV's documentation prints (each seen on the measured project).
+KINDS = {'2': 'Edit control', '3': 'Static', '4': 'Button', '5': 'Check Box', '6': 'Radio Button', '7': 'List Box',
+         '8': 'Image', '9': 'Table', '11': 'Spin', '14': 'Combo Box', '16': 'Tab', '20': 'Shape',
+         '32': 'Internal Window', '40': 'Supercontrol', '47': 'Calendar', '80': 'Scheduler', '111': 'Dashboard'}
+TAB_PANE_TOP = {0: 26, 2: 2}
 
 
 # ---------------------------------------------------------------- cipher
@@ -313,6 +319,26 @@ def report_fields(data, encoding='cp1252'):
             'height_mm': round(bottom - top, 3)}
 
 
+def button_tail(data, end, encoding='cp1252'):
+    """What follows a button's common block: caption, background image, its number of states, image. The record
+    starts 107 or 111 bytes after the block; a reading is kept only when its strings are exactly the first strings
+    found there, so a shifted layout is refused instead of misread."""
+    found = [m.start() for m in FRAMED.finditer(data, end) if m[2]]
+    for start in (end + 107, end + 111):
+        try:
+            caption, after_caption = framed_string(data, start, encoding)
+            background, after_background = framed_string(data, after_caption, encoding)
+            states = struct.unpack_from('<I', data, after_background)[0]
+            image, _ = framed_string(data, after_background + 4, encoding)
+        except (ValueError, IndexError, struct.error):
+            continue
+        used = [offset for offset, value in ((start, caption), (after_caption, background), (after_background + 4, image))
+                if value]
+        if used and used == found[:len(used)]:
+            return {'caption': caption, 'background_image': background, 'background_states': states, 'image': image}
+    return None
+
+
 def describe(owner, kind, chunks, encoding='cp1252'):
     """Named fields for the element kinds whose layout is known; every chunk's strings for all of them."""
     by_id = {c['id']: c['data'] for c in chunks}
@@ -322,15 +348,33 @@ def describe(owner, kind, chunks, encoding='cp1252'):
         end = fields.pop('_end', None) if fields else None
         if fields is not None and kind == '4' and len(by_id[0]) >= 50:
             fields['button_type'] = BUTTON_TYPES.get(by_id[0][-50], by_id[0][-50])
-            if end and not fields['caption']:
+            tail = button_tail(by_id[0], end, encoding) if end else None
+            if tail:
+                fields.update({key: value for key, value in tail.items() if key != 'caption' or not fields['caption']})
+            elif end and not fields['caption']:
                 # A button's caption follows the common block; a picture-only button has its image there instead.
                 after = [m for m in FRAMED.finditer(by_id[0], end) if m[2]]
                 if after and not IMAGE_FILE.search(after[0][2]):
                     fields['caption'] = text(after[0][2], encoding)
+        if fields is not None and kind == '16' and len(by_id[0]) >= 58:
+            # Where a tab's panes start below its top edge, by tab style (two styles measured; others stay unknown).
+            style = struct.unpack_from('<I', by_id[0], len(by_id[0]) - 58)[0]
+            if style in TAB_PANE_TOP:
+                fields['pane_top'] = TAB_PANE_TOP[style]
+    elif owner == 'tabs' and 0 in by_id:
+        try:
+            fields = {'caption': framed_string(by_id[0], 4, encoding)[0]}
+        except (ValueError, IndexError, struct.error):
+            fields = None
     elif owner in ('controls', 'blocks') and 15 in by_id:
         fields = report_fields(by_id[15], encoding)
     elif owner == 'window' and 0 in by_id:
         fields = window_fields(by_id[0])
+        if fields is not None:
+            # The title follows the window's font; an empty title leaves a file path there instead.
+            texts = [m[2] for m in FRAMED.finditer(by_id[0]) if m[2] and not m[2].startswith(b'<')]
+            title = texts[1] if len(texts) > 1 else b''
+            fields['title'] = '' if FILE_PATH.search(title) else text(title, encoding)
     elif owner == 'columns' and 0 in by_id:
         fields = column_fields(by_id[0], encoding)
     return fields
@@ -388,7 +432,7 @@ def property_slots(source):
 
 
 def decode_source(source, encoding='cp1252', raw=False):
-    elements = []
+    elements, panes = [], {}
     for slot in property_slots(source):
         entry = {key: slot[key] for key in ('line', 'owner', 'name', 'type', 'parents')}
         try:
@@ -403,16 +447,53 @@ def decode_source(source, encoding='cp1252', raw=False):
         fields = describe(slot['owner'], slot['type'], chunks, encoding)
         if fields:
             entry['fields'] = fields
+        if slot['owner'] == 'controls' and slot['type'] in KINDS:
+            entry['kind'] = KINDS[slot['type']]
+        # A tab's panes come before their controls: a control directly under a tab is in the last pane seen.
+        if slot['owner'] == 'tabs':
+            panes[tuple(slot['parents'])] = panes.get(tuple(slot['parents']), 0) + 1
+            entry['pane'] = panes[tuple(slot['parents'])]
+        elif slot['owner'] == 'controls' and tuple(slot['parents']) in panes:
+            entry['pane'] = panes[tuple(slot['parents'])]
         elements.append(entry)
-    # Window coordinates where the parents are plain containers. A tab (16) adds its pane origin and a table (9)
-    # places controls in cells: those children keep parent-relative positions only.
+    # Window coordinates: the parents' positions added, plus each tab's pane origin where its style is known.
+    # A table (9) places controls in cells: those children keep parent-relative positions only.
     controls = {e['name']: e for e in elements if e['owner'] == 'controls' and 'x' in e.get('fields', ())}
     for entry in controls.values():
         chain = [controls[name] for name in entry['parents'] if name in controls]
-        if all(parent['type'] not in ('16', '9') for parent in chain):
-            entry['fields']['window_x'] = entry['fields']['x'] + sum(parent['fields']['x'] for parent in chain)
-            entry['fields']['window_y'] = entry['fields']['y'] + sum(parent['fields']['y'] for parent in chain)
+        if any(parent['type'] == '9' or (parent['type'] == '16' and 'pane_top' not in parent['fields']) for parent in chain):
+            continue
+        entry['fields']['window_x'] = entry['fields']['x'] + sum(parent['fields']['x'] for parent in chain)
+        entry['fields']['window_y'] = entry['fields']['y'] + sum(parent['fields']['y'] + parent['fields'].get('pane_top', 0)
+                                                               for parent in chain)
     return elements
+
+
+def source_language(source):
+    """The first language a text source declares (`languages : - pt-PT`)."""
+    match = re.search(r'^ *languages :\s*\n *- *(\S+)', source, re.M)
+    return match[1] if match else None
+
+
+def layout_geometry(source, encoding='cp1252'):
+    """Geometry for the inspector's layout items, in file order: (owner, name) -> list of boxes. Window controls in
+    window pixels (only where the whole position is known), columns with their width, report bands and controls in
+    millimetres (controls relative to their band)."""
+    boxes = {}
+    for element in decode_source(source, encoding):
+        fields = element.get('fields') or {}
+        box = None
+        if 'x_mm' in fields:
+            box = {'x': fields['x_mm'], 'y': fields['y_mm'], 'width': fields['width_mm'], 'height': fields['height_mm']}
+            if element['owner'] == 'blocks':
+                box['x'] = 0
+        elif element['owner'] == 'controls' and 'window_x' in fields:
+            box = {'x': fields['window_x'], 'y': fields['window_y'], 'width': fields['width'], 'height': fields['height']}
+        elif element['owner'] == 'columns' and fields.get('width') is not None:
+            box = {'width': fields['width']}
+        if element['owner'] in ('controls', 'columns', 'blocks') and element['name']:
+            boxes.setdefault((element['owner'], element['name']), []).append(box)
+    return boxes
 
 
 # ---------------------------------------------------------------- binary containers
@@ -492,6 +573,12 @@ def squeeze(value):
     return re.sub(r'[\s\x80-\U0010ffff]+', '', value or '')
 
 
+def file_name(value):
+    """An image's file name whatever the folder; the PDF wraps long names, so white space is dropped."""
+    value = next(iter(value.values()), '') if isinstance(value, dict) else value or ''
+    return re.sub(r'\s+', '', re.split(r'[\\/]', value)[-1]).lower()
+
+
 def calibrate(decoded, dossier):
     """Compare decoded control fields with the dossier extract (`dossier_extract.py`), field by field."""
     report = {}
@@ -516,7 +603,13 @@ def calibrate(decoded, dossier):
                       'caption': squeeze(caption) == squeeze(fields.get('caption', '')) if caption
                       else None,
                       'button_type': theirs['button_type'].lower() == fields.get('button_type')
-                      if theirs.get('button_type') else None}
+                      if theirs.get('button_type') else None,
+                      'visible': theirs['flags']['Visible'] == fields.get('visible')
+                      if 'Visible' in (theirs.get('flags') or {}) and 'visible' in fields else None,
+                      'button_background_image': file_name(theirs.get('background_image')) == file_name(fields['background_image'])
+                      if 'background_image' in fields else None,
+                      'button_image': file_name(theirs.get('image')) == file_name(fields['image'])
+                      if 'image' in fields else None}
             for field, same in checks.items():
                 if same is not None:
                     counts = report.setdefault(field, {'same': 0, 'different': 0})
@@ -530,10 +623,155 @@ def calibrate(decoded, dossier):
                 same = all(abs(theirs.get(key, 0) - fields[key]) < 0.02 for key in ('x_mm', 'y_mm', 'width_mm', 'height_mm'))
                 counts = report.setdefault('report_geometry_mm', {'same': 0, 'different': 0})
                 counts['same' if same else 'different'] += 1
+    for path in sorted(Path(dossier, 'windev-window').glob('*.json')):
+        title = json.loads(path.read_text(encoding='utf-8')).get('title')
+        title = next(iter(title.values()), '') if isinstance(title, dict) else title or ''
+        window = next((e for e in decoded.get(path.stem.lower(), []) if e['owner'] == 'window' and e.get('fields')), None)
+        if window:
+            same = squeeze(re.sub(r'^[A-Z]{2}:$', '', title.strip())) == squeeze(window['fields'].get('title'))
+            counts = report.setdefault('window_title', {'same': 0, 'different': 0})
+            counts['same' if same else 'different'] += 1
     return report
 
 
-def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, save_blocks=False):
+# The dossier's wording for each anchor combination seen; other combinations keep their rates only.
+ANCHOR_NAMES = {0: '<None>', 1: 'Bottom', 2: 'Height', 4: 'Right', 5: 'Right and bottom', 6: 'Height and right',
+                8: 'Width', 9: 'Width and bottom', 10: 'Width and height', 11: 'Bottom, height and width',
+                12: 'Right and width', 14: 'Right, height and width', 15: 'Right and bottom, height and width'}
+
+
+def existing(folder, stem):
+    """A dossier file for this element whatever its case (WINDEV names are case-insensitive)."""
+    return next((p for p in folder.glob('*.json') if p.stem.lower() == stem.lower()), folder / f'{stem}.json')
+
+
+def merge_control(entry, element, language):
+    """Put one decoded element into a dossier-shaped control entry. Decoded values replace the PDF's for the fields
+    the decoder reads exactly; everything else the dossier had stays. `decoded` lists what was written."""
+    fields, written = element['fields'], []
+
+    def put(key, value):
+        if value is not None and entry.get(key) != value:
+            entry[key] = value
+            written.append(key)
+
+    if element['owner'] == 'columns':
+        entry.setdefault('kind', 'Table column')
+        put('width', fields.get('width'))
+    elif 'x_mm' in fields:
+        for key in ('x_mm', 'y_mm', 'width_mm', 'height_mm'):
+            if entry.get(key) is None:
+                put(key, fields[key])
+        return written
+    else:
+        if element.get('kind'):
+            entry.setdefault('kind', element['kind'])
+        put('width', fields['width'])
+        put('height', fields['height'])
+        if 'window_x' in fields:
+            put('x', fields['window_x'])
+            put('y', fields['window_y'])
+        if 'partial' not in fields:
+            put('tab_order', fields['tab_order'] if fields['tab_stop'] and fields['tab_order'] else -1)
+            put('state', {'active': 'Active', 'read-only': 'Read-only', 'grayed': 'Grayed'}.get(fields['state']))
+            if isinstance(fields.get('button_type'), str):
+                put('button_type', fields['button_type'].capitalize())
+            if 'Visible' not in (entry.get('flags') or {}):
+                entry.setdefault('flags', {})['Visible'] = fields['visible']
+                written.append('flags.Visible')
+            for key in ('background_image', 'image'):       # exact paths: the PDF wraps long file names
+                if fields.get(key):
+                    old = entry.get(key) if isinstance(entry.get(key), dict) else {}
+                    put(key, {**old, next(iter(old), language): fields[key]})
+            if fields.get('background_image') and not any(line.startswith('Nb. background states') for line in entry.get('raw', [])):
+                entry.setdefault('raw', []).append(f"Nb. background states {fields['background_states']}")
+            for key in ('tooltip', 'linked_item', 'group', 'popup_menu', 'double_click_button'):
+                if fields.get(key):
+                    put(key, fields[key])
+            if fields.get('initial_value') and not entry.get('initial_value'):
+                put('initial_value', fields['initial_value'])
+            if element.get('pane') and entry.get('plane') is None:
+                put('pane', element['pane'])
+            raw = entry.setdefault('raw', [])
+            other = ('Anchor rate', 'Anchor to content', 'Anchor resources')
+            mask = sum(bit for bit, name in ANCHOR_BITS.items() if name in fields['anchor'])
+            if mask in ANCHOR_NAMES and not any(line.startswith('Anchor ') and not line.startswith(other) for line in raw):
+                raw.append(f'Anchor {ANCHOR_NAMES[mask]}')
+                written.append('anchor')
+            if not any(RATES.match(line) for line in raw):
+                rates = fields['anchor_rates']
+                raw.append(f"Anchor rate to right {rates['right']} Anchor rate bottom {rates['bottom']} "
+                           f"Anc. rate width {rates['width']} Anchor rate height {rates['height']}")
+                written.append('anchor_rates')
+    if fields.get('caption'):
+        key = next(iter(entry['caption']), language) if isinstance(entry.get('caption'), dict) and entry['caption'] else language
+        put('caption', {**(entry.get('caption') if isinstance(entry.get('caption'), dict) else {}), key: fields['caption']})
+    return written
+
+
+def write_evidence(sources, queries, target, dossier=None):
+    """A folder in the shape `dossier_extract.py` writes, so every tool that reads a dossier reads the decoded values:
+    a copy of the dossier extract when there is one (the fallback for what the decoder does not name), with decoded
+    captions, geometry, tab order, state, button type, anchors and SQL written over it, and entries for the windows,
+    controls, reports and queries the dossier lacks."""
+    import shutil
+    target = Path(target)
+    if dossier:
+        shutil.copytree(dossier, target)
+    counts = {'elements': 0, 'controls': 0, 'new_elements': 0, 'new_controls': 0, 'queries': 0}
+    for stem, item in sorted(sources.items()):
+        folder = target / ('windev-window' if item['suffix'] == '.wdw' else 'report')
+        if item['suffix'] not in ('.wdw', '.wde'):
+            continue
+        folder.mkdir(parents=True, exist_ok=True)
+        path = existing(folder, stem)
+        element = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {'lines': []}
+        counts['elements'] += 1
+        counts['new_elements'] += not path.exists()
+        language = item['language'] or 'default'
+        known = {name.lower(): name for name in element.setdefault('controls', {})}
+        for decoded in item['elements']:
+            fields = decoded.get('fields')
+            if not fields or not decoded['name']:
+                continue
+            if decoded['owner'] == 'window':
+                if not element.get('size'):
+                    element['size'] = {key: fields[key] for key in ('x', 'y', 'width', 'height')}
+                if fields.get('title'):
+                    old = element.get('title') if isinstance(element.get('title'), dict) else {}
+                    element['title'] = {**old, next(iter(old), language): fields['title']}
+                continue
+            if decoded['owner'] not in ('controls', 'columns'):
+                continue
+            name = known.get(decoded['name'].lower())
+            if name is None:
+                name = known[decoded['name'].lower()] = decoded['name']
+                element['controls'][name] = {'raw': []}
+                counts['new_controls'] += 1
+            written = merge_control(element['controls'][name], decoded, language)
+            if written:
+                element['controls'][name]['decoded'] = written
+            counts['controls'] += 1
+        path.write_text(json.dumps(element, indent=1, ensure_ascii=False), encoding='utf-8')
+    for name, sql in sorted(queries.items()):
+        folder = target / 'query'
+        folder.mkdir(parents=True, exist_ok=True)
+        path = existing(folder, name)
+        query = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {'lines': []}
+        if query.get('sql') and query['sql'] != sql:
+            query['sql_pdf'] = query['sql']    # the PDF's text: wrapped and re-spaced
+        query['sql'] = sql
+        query['decoded'] = ['sql']
+        path.write_text(json.dumps(query, indent=1, ensure_ascii=False), encoding='utf-8')
+        counts['queries'] += 1
+    index_path = target / 'index.json'
+    index = json.loads(index_path.read_text(encoding='utf-8')) if index_path.exists() else {'images': False}
+    index['decoded'] = {**counts, 'dossier': bool(dossier)}
+    index_path.write_text(json.dumps(index, indent=1, ensure_ascii=False), encoding='utf-8')
+    return counts
+
+
+def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, save_blocks=False, evidence=False):
     source, output = Path(source).resolve(), Path(output).resolve()
     if not source.is_dir():
         raise ValueError('Source must be a directory')
@@ -542,7 +780,7 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
     output.mkdir(parents=True, exist_ok=False)
     coverage = {'text_sources': 0, 'properties': 0, 'properties_failed': 0, 'controls': 0, 'controls_with_fields': 0,
                 'controls_with_caption': 0, 'report_controls': 0, 'report_controls_with_geometry': 0, 'containers': 0, 'blocks': 0, 'queries_with_sql': 0, 'images': 0}
-    files, by_name, queries = [], {}, {}
+    files, by_name, queries, sources = [], {}, {}, {}
     for current, folders, names in os.walk(source):
         folders[:] = sorted(f for f in folders if f.lower() not in SKIP and not f.lower().startswith('bkp_'))
         for name in sorted(names):
@@ -598,7 +836,11 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                         coverage['controls'] += 1
                         coverage['controls_with_fields'] += 'fields' in element and 'partial' not in element['fields']
                         coverage['controls_with_caption'] += bool((element.get('fields') or {}).get('caption'))
-                by_name[path.stem.lower()] = elements
+                # A project element wins over a same-named file deeper in the tree (templates, copies).
+                if path.stem.lower() not in by_name:
+                    by_name[path.stem.lower()] = elements
+                    sources[path.stem] = {'elements': elements, 'suffix': path.suffix.lower(),
+                                          'language': source_language(source_text)}
                 target = output / 'properties' / (relative + '.json')
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(json.dumps({'path': relative, 'elements': elements}, indent=1, ensure_ascii=False),
@@ -610,11 +852,14 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
     index = {'format_version': 1, 'coverage': coverage, 'files': files,
              'limitations': ['Named fields exist for window controls, windows, table columns and report geometry; other elements list '
                              'their strings in file order.',
-                             'x/y are relative to the parent control; window_x/window_y exist where no parent is a tab or a table.',
+                             'x/y are relative to the parent control; window_x/window_y exist except inside a table or a '
+                             'tab whose style is not known.',
                              'Field offsets come from a format-25 project: check coverage and calibration elsewhere.',
                              'Outputs contain business logic and possibly secrets: keep them local.']}
     if dossier:
         index['calibration'] = calibrate(by_name, dossier)
+    if evidence:
+        index['evidence'] = write_evidence(sources, queries, output / 'evidence', dossier)
     (output / 'index.json').write_text(json.dumps(index, indent=1, ensure_ascii=False), encoding='utf-8')
     return index
 
@@ -627,12 +872,15 @@ def main():
     parser.add_argument('--encoding', default='cp1252', help='code page of non-Unicode strings (default cp1252)')
     parser.add_argument('--raw', action='store_true', help='keep each chunk as hex (to map more fields)')
     parser.add_argument('--blocks', action='store_true', help='save every unpacked container block')
+    parser.add_argument('--evidence', action='store_true',
+                        help='also write <out>/evidence: the decoded values in the dossier extract\'s shape (over a copy '
+                             'of --dossier when given), for the tools that read a dossier')
     args = parser.parse_args()
     try:
-        index = decode_project(args.source, args.out, args.dossier, args.encoding, args.raw, args.blocks)
+        index = decode_project(args.source, args.out, args.dossier, args.encoding, args.raw, args.blocks, args.evidence)
     except (OSError, ValueError, LookupError) as error:
         parser.exit(1, f'Decoding failed: {error}\n')
-    print(json.dumps({key: index[key] for key in ('coverage', 'calibration') if key in index}, indent=2))
+    print(json.dumps({key: index[key] for key in ('coverage', 'calibration', 'evidence') if key in index}, indent=2))
 
 
 if __name__ == '__main__':

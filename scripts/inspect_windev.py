@@ -236,6 +236,28 @@ def control_layout(text):
     return items
 
 
+def decoded_layout(text, layout):
+    """Fill the layout from `internal_properties` when the text format keeps geometry packed there (no readable
+    x/y/width/height at all). Items whose whole position is not known stay empty. Returns the number filled."""
+    if any(item.get('width') or item.get('height') for item in layout):
+        return 0
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import windev_decode
+        boxes = windev_decode.layout_geometry(text)
+    except Exception:   # an unknown packing: the layout simply stays without geometry
+        return 0
+    owners, filled = {'control': 'controls', 'column': 'columns', 'band': 'blocks'}, 0
+    for item in layout:
+        queue = boxes.get((owners[item['kind']], item['name']))
+        box = queue.pop(0) if queue else None
+        if box:
+            item.update(box)
+            filled += 1
+    return filled
+
+
 def control_names(text):
     """Every control and table column declared in a window/report, in source order."""
     return [item['name'] for item in control_layout(text) if item['kind'] != 'band']
@@ -439,14 +461,16 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 name = element_name(text, path.stem)
                 layout = control_layout(text)
+                decoded = decoded_layout(text, layout)
                 controls = [item['name'] for item in layout if item['kind'] != 'band']
                 slots = encoded_slots(text, blocks)
                 destination.write_text(json.dumps({'path': relative, 'name': name, 'controls': controls, 'layout': layout,
+                                                   **({'layout_source': 'internal_properties'} if decoded else {}),
                                                    'dialogs': dialogs(text), 'encoded_slots': slots, 'blocks': blocks},
                                                   indent=2, ensure_ascii=False), encoding='utf-8')
                 entry.update(status='text', name=name, code_blocks=len(blocks), controls=len(controls),
                              literal_keys=literal_keys(text),
-                             encoded_properties='internal_properties' in text,
+                             encoded_properties='internal_properties' in text, decoded_geometry=decoded,
                              encoded_actions=sum(1 for s in slots if not s['has_code']))
                 seeds.extend(seed_rows(relative, kind, blocks, name, key))
                 # A code-less slot with encoded properties is behavior too (a predefined action): seed it.

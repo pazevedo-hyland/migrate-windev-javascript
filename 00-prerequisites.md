@@ -31,8 +31,8 @@ Reading a text-format window file does not require WINDEV; reproducing runtime b
 **No WINDEV machine?** Much of the migration still works from the project folder alone:
 
 - **Readable without WINDEV:** text-format sources (`.wdw`, `.wde`, `.wdp`), the XDD schema, and the compile folder's event labels.
-- **Decoded from the same files** (`windev_decode.py`): control geometry, captions, tab order, initial state, anchors, linked items, button types, report geometry, every query's SQL, project code from a binary `.wdp`, a thumbnail of each window and report.
-- **From the dossier PDF, if present:** full-size window images, masks and the tick-mark properties (planes, Visible, column options) the decoder does not name yet; a second source for everything above.
+- **Decoded from the same files** (`windev_decode.py`, used by the whole pipeline): control geometry, captions, window titles, tab order, initial state, Visible, anchors, linked items, button types and images, tab panes, report geometry, every query's SQL, project code from a binary `.wdp`, a thumbnail of each window and report.
+- **From the dossier PDF, if present:** full-size window images, masks, alignment, planes and the tick-mark properties other than Visible, which the decoder does not name yet; a second source for everything above. The pipeline writes decoded values over the PDF's and keeps the PDF's for the rest.
 - **Data:** export it through PC SOFT's HFSQL ODBC driver on any Windows PC ([data export](scripts/windows/README.md)). Do not decode `.fic` files from the schema by hand: record layouts vary by field type and table and a homemade decoder is unreliable.
 - **Without a dossier:** properties the decoder does not name yet stay `unresolved` until they are mapped ([how](docs/windev-file-formats.md#mapping-one-more-field)), someone with WINDEV prints the dossier of the windows concerned, or the users decide them. On a WINDEV version the decoder was not measured on, check its `coverage` before trusting a field.
 

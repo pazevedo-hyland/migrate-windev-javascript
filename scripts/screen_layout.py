@@ -448,7 +448,10 @@ def layout(unit, latest, language=None):
         entry['displayed_item'] = details.get('displayed_item')
         if item['kind'] == 'column':
             columns.append({'name': item['name'], 'path': path, 'parent': parent,
-                                     'title': entry['caption'], 'width': details.get('width'),
+                                     # The source's own width first (read in file order, so right for columns
+                                     # that share a name across tables); the dossier's otherwise.
+                                     'title': entry['caption'], 'width': item.get('width') or details.get('width'),
+                                     **({'width_source': 'source'} if item.get('width') else {}),
                                      'h_align': details.get('h_align'), 'input_type': details.get('input_type'),
                                      'linked_item': details.get('linked_item'), 'index': details.get('column_index'),
                                      'flags': details.get('flags'),

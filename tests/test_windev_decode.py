@@ -21,7 +21,7 @@ def framed(text):
 
 def control_chunk(x, y, width, height, caption='', state=0, anchor=0, tab=0, tab_stop=1, link='', group='',
                   tooltip='', value='', menu='', double_click='', visible=1, rates=(1000, 1000, 1000, 1000),
-                  button_type=None):
+                  button_type=None, tab_style=0):
     """A control's chunk 0 as the format lays it out: type-specific part, common block, type-specific tail."""
     data = b'\x70\x02\0\0' + b'\x11' * 40
     data += struct.pack('<I4i', 0x25f, x, y, width, height) + b'\0' * 8 + b'\xff\xff\xff\x07' * 2
@@ -33,6 +33,7 @@ def control_chunk(x, y, width, height, caption='', state=0, anchor=0, tab=0, tab
     tail = bytearray(b'\0' * 60)
     if button_type is not None:
         tail[-50] = button_type
+    tail[-58:-54] = struct.pack('<I', tab_style)
     return data + bytes(tail)
 
 
@@ -151,14 +152,15 @@ window :
 '''
 
 
-def window_chunk(width, height):
-    return b'\x02\0\0\0\x07\0\x06\0' + b'\0' * 8 + struct.pack('<I4i', 0x25f, 0, 0, width, height) + b'\0' * 20
+def window_chunk(width, height, title='Customers'):
+    return (b'\x02\0\0\0\x07\0\x06\0' + b'\0' * 8 + struct.pack('<I4i', 0x25f, 0, 0, width, height) + b'\0' * 20
+            + framed('MS Shell Dlg') + b'\0' * 9 + framed(title) + framed('<DIR>\\bg.png') + framed('.\\WIN_A.wdw'))
 
 
 class Project(unittest.TestCase):
-    def source(self):
+    def source(self, tab_style=0):
         return SOURCE.format(window=value_of(window_chunk(350, 240)),
-                             tab=value_of(control_chunk(6, 6, 300, 200)),
+                             tab=value_of(control_chunk(6, 6, 300, 200, tab_style=tab_style)),
                              inside=value_of(control_chunk(10, 20, 100, 24, caption='Name')),
                              box=value_of(control_chunk(50, 60, 200, 100)),
                              button=value_of(control_chunk(5, 7, 80, 24, button_type=1)),
@@ -175,7 +177,14 @@ class Project(unittest.TestCase):
         self.assertEqual(button['fields']['button_type'], 'validate')
         inside = elements['EDT_Inside']
         self.assertEqual(inside['parents'], ['WIN_A', 'TAB_Main'])
-        self.assertNotIn('window_x', inside['fields'])       # a tab's pane origin is not in the source
+        # A tab adds where its panes start, known per tab style: 26 px for style 0, 2 px for style 2.
+        self.assertEqual((inside['fields']['window_x'], inside['fields']['window_y']), (16, 52))
+        self.assertEqual((inside['kind'], elements['TAB_Main']['fields']['pane_top']), ('Edit control', 26))
+        flat = {e['name']: e for e in module.decode_source(self.source(tab_style=2))}
+        self.assertEqual(flat['EDT_Inside']['fields']['window_y'], 28)
+        unknown = {e['name']: e for e in module.decode_source(self.source(tab_style=7))}
+        self.assertNotIn('window_x', unknown['EDT_Inside']['fields'])   # an unmeasured style: no position is invented
+        self.assertEqual(elements['WIN_A']['fields']['title'], 'Customers')
         self.assertEqual(elements['TABLE_A']['type'], '9')
         self.assertEqual(elements['COL_Name']['fields'], {'width': 220, 'caption': 'Descrição'})
         self.assertEqual(elements['COL_Name']['parents'], ['WIN_A', 'TABLE_A'])
@@ -206,7 +215,7 @@ class Project(unittest.TestCase):
             self.assertEqual(queries, {'QRY_Customers': 'SELECT\n Customer.Name AS Name\nFROM\n Customer'})
             self.assertTrue((out / 'images' / 'QRY_Customers.WDR.1.bmp').read_bytes().startswith(b'BM'))
             self.assertEqual(index['calibration']['size'], {'same': 1, 'different': 1})
-            self.assertEqual(index['calibration']['window_position'], {'same': 1, 'different': 0})
+            self.assertEqual(index['calibration']['window_position'], {'same': 2, 'different': 0})
             self.assertEqual(index['calibration']['button_type'], {'same': 1, 'different': 0})
             self.assertEqual(index['calibration']['tab_order'], {'same': 1, 'different': 1})
             self.assertEqual(index['calibration']['anchor_rates'], {'same': 1, 'different': 0})
@@ -216,6 +225,67 @@ class Project(unittest.TestCase):
                 module.decode_project(project, project / 'inside')
             with self.assertRaises(FileExistsError):
                 module.decode_project(project, out)
+
+    def test_evidence_folder_alone_and_over_a_dossier(self):
+        with tempfile.TemporaryDirectory() as folder:
+            project, dossier = Path(folder, 'project'), Path(folder, 'dossier')
+            project.mkdir()
+            (project / 'WIN_A.wdw').write_text(self.source() + 'languages :\n - pt-PT\n', encoding='utf-8')
+            line = lambda sql: b'\x03' + framed(sql) + framed('AUTHOR') + b'\0' * 12
+            (project / 'QRY_Customers.WDR').write_bytes(b'PCS\0' + module.pack(b'\x10\0\0\0' + line('SELECT ') + line('\t1')))
+            # Without a dossier: every control gets an entry in the dossier's shape.
+            alone = module.decode_project(project, Path(folder, 'alone'), evidence=True)
+            self.assertEqual(alone['evidence'], {'elements': 1, 'controls': 6, 'new_elements': 1, 'new_controls': 6,
+                                                 'queries': 1})
+            window = json.loads(Path(folder, 'alone/evidence/windev-window/WIN_A.json').read_text(encoding='utf-8'))
+            self.assertEqual(window['title'], {'pt-PT': 'Customers'})
+            self.assertEqual(window['size'], {'x': 0, 'y': 0, 'width': 350, 'height': 240})
+            inside = window['controls']['EDT_Inside']
+            self.assertEqual((inside['kind'], inside['x'], inside['y'], inside['width'], inside['caption']),
+                             ('Edit control', 16, 52, 100, {'pt-PT': 'Name'}))
+            self.assertEqual((inside['tab_order'], inside['state']), (-1, 'Active'))
+            self.assertIn('Anchor <None>', inside['raw'])
+            self.assertEqual(window['controls']['BTN_Ok']['button_type'], 'Validate')
+            self.assertEqual(window['controls']['COL_Name'], {'raw': [], 'kind': 'Table column', 'width': 220,
+                                                              'caption': {'pt-PT': 'Descrição'}, 'decoded': ['width', 'caption']})
+            query = json.loads(Path(folder, 'alone/evidence/query/QRY_Customers.json').read_text(encoding='utf-8'))
+            self.assertEqual(query['sql'], 'SELECT\n 1')
+            # Over a dossier: decoded values replace the PDF's, what only the PDF has stays, its spelling of names too.
+            (dossier / 'windev-window').mkdir(parents=True)
+            (dossier / 'query').mkdir()
+            (dossier / 'index.json').write_text(json.dumps({'images': True, 'coverage': {}}), encoding='utf-8')
+            (dossier / 'windev-window' / 'win_a.json').write_text(json.dumps({'title': {'PT': 'Cust omers'}, 'controls': {
+                'edt_inside': {'kind': 'Edit control', 'caption': {'PT': 'Nam e'}, 'input_mask': '999', 'x': 1, 'y': 1,
+                               'raw': ['Anchor Width', 'Input mask PT: 999']}}}), encoding='utf-8')
+            (dossier / 'query' / 'QRY_Customers.json').write_text(json.dumps({'sql': 'SELECT\n1', 'parameters': []}),
+                                                                  encoding='utf-8')
+            module.decode_project(project, Path(folder, 'merged'), dossier, evidence=True)
+            merged = json.loads(Path(folder, 'merged/evidence/windev-window/win_a.json').read_text(encoding='utf-8'))
+            control = merged['controls']['edt_inside']
+            self.assertEqual((control['caption'], control['input_mask'], control['x'], control['y']), ({'PT': 'Name'}, '999', 16, 52))
+            self.assertEqual(control['raw'][0], 'Anchor Width')            # the dossier's own anchor line is kept
+            self.assertEqual(merged['title'], {'PT': 'Customers'})
+            self.assertIn('BTN_Ok', merged['controls'])                    # a control the dossier lacked
+            query = json.loads(Path(folder, 'merged/evidence/query/QRY_Customers.json').read_text(encoding='utf-8'))
+            self.assertEqual((query['sql'], query['sql_pdf'], query['parameters']), ('SELECT\n 1', 'SELECT\n1', []))
+            self.assertTrue(json.loads(Path(folder, 'merged/evidence/index.json').read_text(encoding='utf-8'))['decoded']['dossier'])
+            self.assertEqual(json.loads((dossier / 'windev-window' / 'win_a.json').read_text(encoding='utf-8'))['title'],
+                             {'PT': 'Cust omers'})                          # the extract itself is not touched
+
+    def test_inspector_layout_gets_decoded_geometry(self):
+        inspector = load('scripts/inspect_windev.py')
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder, 'project')
+            project.mkdir()
+            (project / 'WIN_A.wdw').write_text(self.source(), encoding='utf-8')
+            inspector.inspect(project, Path(folder, 'out'))
+            code = json.loads(Path(folder, 'out/code/WIN_A.wdw.json').read_text(encoding='utf-8'))
+        layout = {item['name']: item for item in code['layout']}
+        self.assertEqual(code['layout_source'], 'internal_properties')
+        self.assertEqual([layout['BTN_Ok'][key] for key in ('x', 'y', 'width', 'height')], [55, 67, 80, 24])
+        self.assertEqual((layout['EDT_Inside']['x'], layout['EDT_Inside']['y']), (16, 52))
+        self.assertEqual(layout['COL_Name']['width'], 220)
+        self.assertEqual(code['controls'], ['TAB_Main', 'EDT_Inside', 'SC_Box', 'BTN_Ok', 'TABLE_A', 'COL_Name'])
 
     def test_a_value_that_does_not_decode_is_reported_not_guessed(self):
         elements = module.decode_source('window :\n name : W\n internal_properties : BQAAAAUAAAAAAAAAAAAAAAAA\n')

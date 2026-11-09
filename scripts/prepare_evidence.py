@@ -76,14 +76,21 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
         run('dossier_extract.py', dossier_pdf, '--out', dossier, *([] if images else ['--no-images']))
         paths['coverage'] = json.loads(Path(dossier, 'index.json').read_text(encoding='utf-8'))['coverage']
     else:
-        print('no *Documentation*.pdf under legacy/: captions, tab order, masks and checkbox properties stay unknown')
+        print('no *Documentation*.pdf under legacy/: masks, planes and checkbox properties stay unknown; captions, '
+              'geometry, tab order and SQL come from the sources')
     # What the sources keep packed: designer properties, binary queries' SQL, thumbnails (no WINDEV, no PDF needed).
     paths['decoded'] = str(analysis / f'decoded-{stamp}')
-    run('windev_decode.py', legacy, '--out', paths['decoded'], *(['--dossier', dossier] if dossier else []))
+    run('windev_decode.py', legacy, '--out', paths['decoded'], '--evidence', *(['--dossier', dossier] if dossier else []))
     decoded = json.loads(Path(paths['decoded'], 'index.json').read_text(encoding='utf-8'))
     paths['decoded_coverage'] = decoded['coverage']
     if decoded.get('calibration'):
         paths['decoded_calibration'] = decoded['calibration']
+    # Every later tool reads `dossier`: from here on it is the decoded values written over the PDF extract (kept as
+    # the fallback for what the decoder does not name), or the decoded values alone when there is no PDF.
+    if decoded['evidence']['controls'] or decoded['evidence']['queries']:
+        if dossier:
+            paths['dossier_pdf'] = dossier
+        dossier = paths['dossier'] = str(Path(paths['decoded'], 'evidence'))
     if compile_dir:
         run('event_legend.py', Path(compile_dir).parent, '--compile-dir', compile_dir, '--out', docs / 'mapping/event-codes.md')
         paths['event_legend'] = str(docs / 'mapping/event-codes.md')

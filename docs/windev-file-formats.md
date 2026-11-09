@@ -7,17 +7,21 @@ Measured on one project (file format 25: `major_version : 25` in its sources; 11
 | Decoded from the sources | Result | Against the dossier |
 |---|---|---|
 | `internal_properties` values | 3,993 of 3,993 decoded | — |
-| Window control size | 1,148 controls | 1,069 of 1,069 equal |
-| Control position in the window | 843 controls outside tabs and tables | 843 of 843 equal |
+| Window control size | 1,148 controls | 1,144 of 1,144 equal |
+| Control position in the window | all but the 17 controls inside table cells | 1,126 of 1,126 equal |
+| Visible | | 802 of 802 equal |
 | Tab order and tab stop | | 1,034 of 1,034 equal |
-| Initial state (active, read-only, grayed) | | 1,021 of 1,021 equal |
-| Button type (normal, validate, abort) | | 588 of 588 equal |
+| Initial state (active, read-only, grayed) | | 1,081 of 1,081 equal |
+| Button type (normal, validate, abort) | | 589 of 589 equal |
+| Button image, background image and its number of states | | 588 of 589 equal each |
 | Anchor rates | | 1,130 of 1,130 equal |
 | Captions | 822 controls with one | 819 of 820 equal; accents correct where the PDF lost them |
-| Window size | 112 windows | 111 of 112 equal (the window with a menu bar differs by its height) |
+| Window size and title | 112 windows | size 111 of 112 equal (the window with a menu bar differs by its height); title 112 of 112 |
 | Report control geometry (mm) | 497 controls | 493 of 493 equal |
 | Query SQL from binary `.WDR` | 5 of 5 | same text, without the PDF's line wraps |
 | Window and report thumbnails | 219 images | — |
+
+A screen layout generated with no PDF at all (`screen_layout.py` on one 77-control window with tabs, tables and a supercontrol) equals the layout validated earlier from the dossier on every position, size, kind, anchor, tab order, state, Visible tick, button type and button image. What the PDF still adds there: planes, the other tick-mark properties, alignment, masks, input types, caption widths and table options.
 
 The offsets below come from that one format. On another WINDEV version, run the tool, read `coverage` in `index.json`, and compare with a dossier of a few windows or with the running app before trusting a field.
 
@@ -61,7 +65,7 @@ Found in chunk `0` by its signature: a version, four integers, eight zero bytes 
 | Field | Where | Notes |
 |---|---|---|
 | x, y, width, height | 4 × i32 | x and y are **relative to the parent control** |
-| visible | +32, u32 | not confirmed against the dossier (its tick marks were not compared) |
+| visible | +32, u32 | the dossier's Visible tick |
 | double-click button | string after 5 bytes | a table's or list's button, e.g. `BTN_Modify` |
 | popup menu | string | `<NO CONTEXT MENU>` or a menu name |
 | initial state | u32 | 0 active, 1 read-only, 4 grayed |
@@ -74,8 +78,10 @@ Found in chunk `0` by its signature: a version, four integers, eight zero bytes 
 | group | string | |
 | anchor rates | 4 × u32, 12 bytes later | right, width, bottom, height, in thousandths |
 | button type | byte 50 before the end of the chunk | 0 normal, 1 validate, 3 abort (2 and 4 not observed) |
+| button caption, background image, number of background states, image | a record 107 or 111 bytes after the anchor rates | string, string, u32, string. Kept only when these are exactly the first strings found there |
+| tab style | u32, 58 bytes before the end of a tab's chunk | 0: panes start 26 px below the tab's top; 2: 2 px. Other values not measured |
 
-**Positions.** Add the parents' x and y to get window coordinates. This is exact inside plain containers (supercontrols, internal windows). A **tab** adds its pane origin (26 px or 2 px below the tab's top in the measured project, depending on the tab) and a **table** places controls in cells: the tool gives `window_x`/`window_y` only where no parent is a tab or a table, and leaves the rest parent-relative.
+**Positions.** Add the parents' x and y to get window coordinates; a **tab** parent also adds where its panes start (its style, above). A tab of an unmeasured style gives its children no window position, and a **table** places controls in cells: those keep parent-relative `x`/`y` only. Each pane of a tab is an element of its own (owner `tabs`, with its caption); a control directly inside a tab carries `pane`, the number of its pane. A pane is not a WINDEV plane: planes are not named yet.
 
 ### Mapping one more field
 
@@ -86,6 +92,12 @@ Everything else a control has (colours, fonts, masks, planes, input type, column
 3. Keep an offset only when it explains **every** control of that type, as the table above does; add it to `control_fields` with a test.
 
 A property changed in WINDEV on a copy of one window, saved in text format and decoded before and after, settles an offset in minutes.
+
+### How the other tools get these values
+
+- `inspect_windev.py` fills its `layout` (positions and sizes of controls, column widths, report bands and controls) from `internal_properties` when the source has no readable geometry, and marks the file `layout_source: internal_properties`. `render_layouts.py` and `screen_layout.py` read that layout as before.
+- `windev_decode.py --evidence` writes `<out>/evidence/`, a folder in the shape `dossier_extract.py` writes: when a dossier extract is given it is copied and the decoded captions, titles, geometry, tab order, state, Visible, button type and images, anchors and SQL are written over it (each control lists them in `decoded`; a query keeps the PDF's text as `sql_pdf`); controls, windows, reports and queries the dossier lacks get entries. Everything the decoder does not name stays as the dossier had it. Without a dossier the folder holds the decoded values alone.
+- `prepare_evidence.py` makes that folder the `dossier` of `analysis-local/latest.json`, so `evidence_report.py`, `render_layouts.py`, `screen_layout.py` and `unit_evidence.py` use it unchanged; the PDF extract stays at `dossier_pdf`.
 
 ## 2. Binary files: the PCS container
 
