@@ -47,7 +47,7 @@ The whole pipeline was run on the measured project with its PDF taken away, and 
 |---|---|
 | Schema draft | WINDEV type and SQL type equal for 252 of 252 columns (type names from the built-in code table); captions from the analysis file equal for 218 of 220 and present for 27 the dossier lacked |
 | Screen layouts | identical for position, size, kind, plane, anchors and rates, tab order, state, Visible, caption, style, button type, images, image states and stretching, edit input type, size, mask, alignment and caption width, date options, column width, title, alignment, place, linked item, shown or hidden and four more options |
-| Evidence report | same callers and the same proposals for predefined actions; four of the five runtime questions are not raised (last item below) |
+| Evidence report | same callers, the same proposals for predefined actions and the same five runtime questions |
 | Code, events, navigation, code map, queries with SQL | unchanged: they never came from the PDF |
 
 What only the PDF gave, on that project:
@@ -56,7 +56,6 @@ What only the PDF gave, on that project:
 - a **table's** own options (scrollbars, selection mode, magnifier) and a column's "assisted input" (learned for one record length only), "with input", "sorted", "fixed", "RTF": same reason for all but the first;
 - the input type and alignment the dossier prints for statics, combos, check boxes and radio buttons (their defaults);
 - positions of the 18 controls inside table cells;
-- the four runtime questions about Validate buttons, which need the button's caption beside its code (the caption is decoded: the report still builds them from the dossier's control list).
 
 None of these is geometry, code or data. Each stays `unresolved` for the unit that needs it, and one property changed in WINDEV on a copy of a window settles its position for every project of that format.
 

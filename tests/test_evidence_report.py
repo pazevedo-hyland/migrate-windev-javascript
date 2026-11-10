@@ -76,6 +76,18 @@ class EvidenceReportTests(unittest.TestCase):
             rows, gaps = module.coverage(root / 'inspect', root / 'dossier', {'Clientes'})
             used = module.calls(root / 'inspect')
             questions = module.runtime_questions(root / 'inspect', root / 'dossier', 'pt-PT')
+            # Without a dossier the entry comes from the decoder: the button type is a field, not a printed row, and
+            # the analysis is stated once instead of one gap per table.
+            (root / 'decoded/windev-window').mkdir(parents=True)
+            (root / 'decoded/index.json').write_text(json.dumps({'images': False, 'decoded': {'dossier': False}}))
+            (root / 'decoded/windev-window/WIN_A.json').write_text(json.dumps({'controls': {
+                'BTN_Ok': {'kind': 'Button', 'caption': {'pt-PT': 'Validar'}, 'button_type': 'Validate', 'raw': []}}}))
+            decoded = dict(module.runtime_questions(root / 'inspect', root / 'decoded', 'pt-PT'))
+            _, decoded_gaps = module.coverage(root / 'inspect', root / 'decoded', {'Clientes'})
+        self.assertEqual(decoded[next(q for q in decoded if 'Validate button "Validar"' in q)]['answer'], 'stays open')
+        self.assertEqual([g for g in decoded_gaps if 'Clientes' in g or g.startswith('analysis')],
+                         ['analysis: no dossier names the item types of the 1 tables; they come from the schema draft\'s '
+                          'built-in code table (see its "Codes nothing names yet" line, if any)'])
         self.assertIn('WIN_A: 1 controls without dossier description: EDT_X', gaps)  # case-insensitive match
         self.assertIn('WIN_B: no dossier entry (captions, tab order, masks unknown)', gaps)
         self.assertIn('QRY_A: query without SQL in the dossier', gaps)

@@ -278,7 +278,9 @@ def runtime_questions(inspect_dir, dossier_dir, language=None, actions=(), skinn
     for name, data in sorted(elements.items()):
         for control, details in windows.get(name, {}).get('controls', {}).items():
             raw = ' '.join(details.get('raw', [])) + ' ' + details.get('row', '')
-            if details.get('kind') != 'Button' or not re.search(r'\bValidate\b', raw):
+            # The dossier prints the button type in the control's row; a decoded entry names it in `button_type`.
+            if details.get('kind') != 'Button' or not (details.get('button_type') == 'Validate'
+                                                      or re.search(r'\bValidate\b', raw)):
                 continue
             short = control.split('.')[-1]
             code = control_code(data, short)
