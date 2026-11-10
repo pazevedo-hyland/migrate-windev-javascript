@@ -420,13 +420,13 @@ def column_fields(data, encoding='cp1252'):
     try:
         align, _, _, sortable, moveable = struct.unpack_from('<5I', data, offset)
         linked, after = framed_string(data, offset + 32, encoding)
-        adjustable, _, _, multiline, search = struct.unpack_from('<5I', data, after + 4)
+        adjustable, visible, _, multiline, search = struct.unpack_from('<5I', data, after + 4)
     except (ValueError, IndexError, struct.error):
         return fields
-    if align in ALIGN_H and max(sortable, moveable, adjustable, multiline, search) <= 1:
+    if align in ALIGN_H and max(sortable, moveable, adjustable, visible, multiline, search) <= 1:
         fields.update({'h_align': ALIGN_H[align], 'sortable': bool(sortable), 'moveable': bool(moveable),
-                       'linked_item': linked, 'adjustable_width': bool(adjustable), 'multiline': bool(multiline),
-                       'with_search': bool(search)})
+                       'linked_item': linked, 'adjustable_width': bool(adjustable), 'visible': bool(visible),
+                       'multiline': bool(multiline), 'with_search': bool(search)})
         # The bytes read, for the audit (removed by `describe` unless asked for).
         fields['_spans'] = [(4, 4), (offset, 4), (offset + 12, 8), (after + 4, 4), (after + 16, 8)]
     return fields
@@ -572,6 +572,11 @@ def describe(owner, kind, chunks, encoding='cp1252', keep_end=False):
                 spans = spans + record[1]
         if fields is not None and (kind == '7' or owner == 'dropdown') and end:
             fields.update(list_record(by_id[0], end, encoding) or {})
+        if fields is not None and kind in ('5', '6'):
+            # A check box or radio button names two pictures: the one behind the selected choice, then its tick.
+            pictures = [text(m[2], encoding) for m in FRAMED.finditer(by_id[0]) if m[2] and IMAGE_FILE.search(m[2])]
+            if len(pictures) >= 2:
+                fields['tick_image'] = pictures[1]
         if fields is not None and kind == '3' and used and 'h_align' in used[0]:
             fields.update({'h_align': used[0]['h_align'], 'v_align': used[0]['v_align']})   # a static's only font
         if fields is not None and owner == 'controls' and kind in ('2', '14') and used \
@@ -1171,6 +1176,17 @@ def style_differences(element, style, limit=12):
     return lines[:limit]
 
 
+ANALYSIS_ITEM = re.compile(rb'(?s)([A-Za-z_\x80-\xff][\w$\x80-\xff]*)\x00\d{8}\x00.{6}[^\x00]*\x00[^\x00]*\x00.{22}'
+                           rb'([^\x00]*)\x00')
+
+
+def analysis_records(block, encoding='cp1252'):
+    """The items and keys of an analysis (`.wda`) in file order: [name, caption]. Each record is the name, the day
+    it was created, six bytes, who created and who last changed it, 22 bytes, then its caption. Records follow the
+    analysis file by file; items deleted since are still there. `schema_draft.py` gives them to the tables."""
+    return [[text(m[1], encoding), text(m[2], encoding)] for m in ANALYSIS_ITEM.finditer(block)]
+
+
 def read_text(data):
     if data.startswith((b'\xff\xfe', b'\xfe\xff')):
         return data.decode('utf-16')
@@ -1298,6 +1314,8 @@ def calibrate(decoded, dossier):
                 first = raw_line(theirs, 'Initial content ' + next(iter(theirs.get('caption') or {'PT': ''}), 'PT') + ':')
                 if first is not None or 'initial_content' in lists:
                     checks['list_initial_content'] = squeeze(first or '') == squeeze((lists.get('initial_content') or [''])[0])
+            if fields.get('tick_image') and theirs.get('image'):
+                checks['tick_image'] = file_name(theirs['image']) == file_name(fields['tick_image'])
             row = re.search(r'(Left|Center|Right|Justifie)\w* (Top|Center|Bottom)$', theirs.get('row') or '')
             if row and 'v_align' in fields:
                 # The dossier's column cuts "Justified".
@@ -1311,7 +1329,7 @@ def calibrate(decoded, dossier):
                 continue
             flags = theirs.get('flags') or {}
             options = {'Sortable column': 'sortable', 'Moveable': 'moveable', 'Adjustable width': 'adjustable_width',
-                       'Multiline': 'multiline', 'With search': 'with_search'}
+                       'Multiline': 'multiline', 'With search': 'with_search', 'Visible': 'visible'}
             count('column_alignment', theirs['h_align'].lower() == column['h_align'] if theirs.get('h_align') else None)
             for label, key in options.items():
                 count('column_options', flags[label] == column[key] if label in flags else None)
@@ -1421,7 +1439,7 @@ def merge_control(entry, element, language):
             fill('linked_item', fields['linked_item'])
             flags = entry.setdefault('flags', {})
             for label, key in (('Sortable column', 'sortable'), ('Moveable', 'moveable'), ('Adjustable width', 'adjustable_width'),
-                               ('Multiline', 'multiline'), ('With search', 'with_search')):
+                               ('Multiline', 'multiline'), ('With search', 'with_search'), ('Visible', 'visible')):
                 if label not in flags:
                     flags[label] = fields[key]
                     written.append(f'flags.{label}')
@@ -1468,6 +1486,8 @@ def merge_control(entry, element, language):
                     put(key, {**old, next(iter(old), language): fields[key]})
             if fields.get('background_image') and not any(line.startswith('Nb. background states') for line in entry.get('raw', [])):
                 entry.setdefault('raw', []).append(f"Nb. background states {fields['background_states']}")
+            if fields.get('tick_image') and not entry.get('image'):
+                put('image', {language: fields['tick_image']})
             if 'image_states' in fields and raw_line(entry, 'Nb. image states') is None:
                 entry.setdefault('raw', []).append(f"Nb. image states {fields['image_states']}")
             if 'background_stretch' in fields and raw_line(entry, 'Stretch background image') is None:
@@ -1703,6 +1723,13 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                         summary['file'] = target.relative_to(output).as_posix()
                     if summary.get('sql') and path.suffix.lower() == '.wdr':
                         queries.setdefault(path.stem, summary['sql'])
+                    if path.suffix.lower() == '.wda' and 'analysis' not in project:
+                        records = analysis_records(block, encoding)
+                        if records:
+                            (output / 'analysis.json').write_text(
+                                json.dumps({'path': relative, 'records': records}, indent=1, ensure_ascii=False), encoding='utf-8')
+                            project['analysis'] = 'analysis.json'
+                            coverage['analysis_item_records'] = len(records)
                     if path.suffix.lower() == '.wdp' and path.parent == source_root:
                         lines = code_lines(summary['text'])
                         if lines and 'code' not in project:

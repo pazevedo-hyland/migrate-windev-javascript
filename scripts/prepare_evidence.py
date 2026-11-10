@@ -122,6 +122,7 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
     paths.update(evidence_report=str(docs / 'evidence-report.md'), navigation=str(docs / 'navigation.md'))
     if any(Path(paths['inspect'], 'schema').rglob('*.json')):
         run('schema_draft.py', paths['inspect'], *(['--dossier', dossier] if dossier else []),
+            *(['--decoded', paths['decoded']] if paths.get('decoded') else []),
             '--out', docs / 'schema/schema-draft.md')
         paths['schema_draft'] = str(docs / 'schema/schema-draft.md')
     else:

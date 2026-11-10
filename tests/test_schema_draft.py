@@ -27,7 +27,8 @@ class SchemaDraftTests(unittest.TestCase):
             (root / 'inspect/schema/App.xdd.json').write_text(json.dumps({'tables': [{'attributes': {'Nom': 'Clientes'}, 'fields': [
                 field('ClientesID', '24', key='1'), field('Codigo', '27', key='1', default='0'),
                 field('Nome', '2', key='2', size='100'), field('Saldo', '41'), field('Ativo', '37', size='1'),
-                field('Nascimento', '14'),  # the dossier missed this item: its type comes from the legend? no: no pair
+                field('Nascimento', '99'),  # the dossier missed this item and no dossier ever named code 99
+                field('Hora', '11'),        # not in this dossier either, but named by the built-in table
                 field('CodigoNome', None, key='2', composite=['Codigo', 'Nome'])]}]}))
             (root / 'dossier/analysis/App.wda.json').write_text(json.dumps({'files': {'Clientes': {'items': [
                 {'name': 'ClientesID', 'type': 'Automatic identifier (8 bytes)'},
@@ -39,7 +40,8 @@ class SchemaDraftTests(unittest.TestCase):
         columns = {c['name']: c for c in data['tables'][0]['columns']}
         self.assertIn('2^53', columns['Codigo']['decision'])
         self.assertIn('decimal', columns['Saldo']['decision'])
-        self.assertIsNone(columns['Nascimento']['sqlite'])  # code 14 never paired with a name: unresolved, not guessed
+        self.assertIsNone(columns['Nascimento']['sqlite'])  # code 99 never paired with a name: unresolved, not guessed
+        self.assertEqual((columns['Hora']['type'], data['built_in_codes'], data['unnamed_codes']), ('Time (hhmm)', ['11'], ['99']))
         self.assertEqual(data['tables'][0]['keys'][-1], {'name': 'CodigoNome', 'columns': ['Codigo', 'Nome'], 'key': 'duplicates'})
         sql = module.ddl(data)
         connection = sqlite3.connect(':memory:')

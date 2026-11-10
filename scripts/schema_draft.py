@@ -30,6 +30,13 @@ TYPES = [
     (r'Password', 'TEXT', 'HFSQL password item (salted hash): do not copy; plan reset or rehash (08 transformation checklist)'),
 ]
 KEY_TYPES = {'0': None, '1': 'unique', '2': 'duplicates'}
+# XDD type code -> WINDEV type name, for a project without a dossier. Each pair was named by a dossier (the second
+# migration's project, 249 items): a code not listed here stays `code N` until a dossier or WINDEV's documentation
+# names it.
+TYPE_CODES = {'2': 'String', '9': 'Unsigned 2-byte integer', '11': 'Time (hhmm)', '14': 'Date (yyyymmdd)',
+              '26': 'Unsigned 4-byte integer', '27': 'Unsigned 8-byte integer', '29': 'Text Memo',
+              '34': 'Date and Time (yyyymmddhhmmssccc)', '35': 'Duration', '36': 'Unsigned 1-byte integer', '37': 'Boolean',
+              '41': 'Decimal'}
 
 
 def tag(text, name):
@@ -53,6 +60,34 @@ def load_analysis(dossier_dir):
     return files
 
 
+def load_records(decoded_dir):
+    """[name, caption] records of the analysis file, from windev_decode.py (`analysis.json`)."""
+    path = Path(decoded_dir, 'analysis.json') if decoded_dir else None
+    return json.loads(path.read_text(encoding='utf-8'))['records'] if path and path.exists() else []
+
+
+def captions_by_table(tables, records):
+    """{table index: {item name lower: caption}}. The records follow the analysis file by file, with items deleted
+    since in between: a table takes the run of records that carry its item and key names; the run ends at a name it
+    already has (the next file's first item is usually named like one of its own) or at a name only the next
+    table has."""
+    names_of = lambda t: ({f['attributes']['Nom'].lower() for f in t['fields']})
+    result, cursor = {}, 0
+    for index, table in enumerate(tables):
+        wanted = names_of(table)
+        following = names_of(tables[index + 1]) if index + 1 < len(tables) else set()
+        found = {}
+        while cursor < len(records):
+            name = records[cursor][0].lower()
+            if name in found or (name not in wanted and name in following and found):
+                break
+            if name in wanted:
+                found[name] = records[cursor][1]
+            cursor += 1
+        result[index] = found
+    return result
+
+
 def sql_type(type_name):
     for pattern, sqlite, decision in TYPES:
         if type_name and re.fullmatch(rf'(?:{pattern})(?: \(.*\))?', type_name):
@@ -60,11 +95,12 @@ def sql_type(type_name):
     return None, None
 
 
-def draft(inspect_dir, dossier_dir=None):
+def draft(inspect_dir, dossier_dir=None, decoded_dir=None):
     tables, analysis = load_schema(inspect_dir), load_analysis(dossier_dir)
+    from_file = captions_by_table(tables, load_records(decoded_dir))
     votes = collections.defaultdict(collections.Counter)
     result = []
-    for table in tables:
+    for index, table in enumerate(tables):
         name = table['attributes'].get('Nom') or table['attributes'].get('Name')
         named = analysis.get(name.lower(), {})
         columns, keys = [], []
@@ -75,6 +111,9 @@ def draft(inspect_dir, dossier_dir=None):
                       'type': item.get('type'),
                       'default': (re.search(r'Valeur="([^"]*)"', raw) or [None, None])[1],
                       'nullable': 'RubNullSupporte="1"' in raw}
+            if not column['caption'] and from_file.get(index, {}).get(column['name'].lower()):
+                # The analysis file's own caption (exact accents), when no dossier gave one.
+                column['caption'], column['caption_source'] = from_file[index][column['name'].lower()], 'analysis file'
             components = re.findall(r'<COMPOSANTE Nom="([^"]+)"', raw)
             if components:
                 keys.append({'name': column['name'], 'columns': components, 'key': column['key']})
@@ -86,12 +125,17 @@ def draft(inspect_dir, dossier_dir=None):
             columns.append(column)
         result.append({'table': name, 'columns': columns, 'keys': keys})
     legend = {code: counter.most_common(1)[0][0] for code, counter in votes.items()}
+    # Codes this project's dossier did not name: the names other dossiers gave them.
+    used = {column['code'] for table in result for column in table['columns'] if column['code']}
+    built_in = sorted(code for code in used if code not in legend and code in TYPE_CODES)
+    legend.update({code: TYPE_CODES[code] for code in built_in})
     conflicts = {code: dict(counter) for code, counter in votes.items() if len(counter) > 1}
     for table in result:
         for column in table['columns']:
             column['type'] = column['type'] or legend.get(column['code'])  # an item the dossier missed
             column['sqlite'], column['decision'] = sql_type(column['type'])
-    return {'tables': result, 'type_legend': legend, 'conflicts': conflicts}
+    return {'tables': result, 'type_legend': legend, 'conflicts': conflicts, 'built_in_codes': built_in,
+            'unnamed_codes': sorted(used - set(legend), key=int)}
 
 
 def ddl(data):
@@ -130,6 +174,11 @@ def markdown(data):
         lines.append(f'| {code} | {name} | {sqlite or "unresolved"} | {decision or "—"} |')
     if data['conflicts']:
         lines += ['', f"Conflicting names for one code (check the extract): {data['conflicts']}"]
+    if data.get('built_in_codes'):
+        lines += ['', f"Named from the built-in table, not from this project's dossier: codes {', '.join(data['built_in_codes'])}."]
+    if data.get('unnamed_codes'):
+        lines += ['', f"Codes nothing names yet: {', '.join(data['unnamed_codes'])}. Name them from WINDEV (the item's "
+                  'description in the analysis editor) before writing migrations.']
     lines += ['', '## Decisions per column', '', '| Table | Column | Caption | WINDEV type | Key | Decision |', '|---|---|---|---|---|---|']
     for table in data['tables']:
         for c in table['columns']:
@@ -162,9 +211,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('inspect_dir', type=Path, help='inspect_windev.py output that read the .xdd')
     parser.add_argument('--dossier', type=Path, help='dossier_extract.py output, for type names and captions')
+    parser.add_argument('--decoded', type=Path, help='windev_decode.py output, for item captions read from the analysis file')
     parser.add_argument('--out', type=Path, required=True, help='Markdown decisions (a .sql and .json sibling are written)')
     args = parser.parse_args()
-    data = draft(args.inspect_dir, args.dossier)
+    data = draft(args.inspect_dir, args.dossier, args.decoded)
     args.out.write_text(markdown(data), encoding='utf-8')
     args.out.with_suffix('.sql').write_text(ddl(data), encoding='utf-8')
     args.out.with_suffix('.json').write_text(json.dumps(data, indent=1, ensure_ascii=False), encoding='utf-8')

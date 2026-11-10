@@ -357,7 +357,7 @@ class KindRecords(unittest.TestCase):
         column = next(e for e in elements if e['owner'] == 'columns')
         self.assertEqual(column['fields'], {'width': 80, 'caption': 'Total', 'h_align': 'right', 'sortable': True,
                                             'moveable': False, 'linked_item': 'Order.total', 'adjustable_width': True,
-                                            'multiline': False, 'with_search': True})
+                                            'visible': True, 'multiline': False, 'with_search': True})
         cell = next(e for e in elements if e['owner'] == 'content')
         self.assertEqual((cell['kind'], cell['fields']['input_type'], cell['parents'][-1]), ('Edit control', 'numeric', 'COL_Total'))
         self.assertNotIn('caption_width', cell['fields'])
@@ -424,7 +424,7 @@ class KindRecords(unittest.TestCase):
         self.assertEqual((column['h_align'], column['linked_item'], column['input_type'], column['input_mask']),
                          ('Right', 'Order.total', 'Numeric', {'pt-PT': '99'}))
         self.assertEqual(column['flags'], {'Sortable column': True, 'Moveable': False, 'Adjustable width': True,
-                                           'Multiline': False, 'With search': True})
+                                           'Multiline': False, 'With search': True, 'Visible': True})
         self.assertEqual((column['column_index'], calibration.get('column_index')), (1, None))     # the dossier gave no index
 
 

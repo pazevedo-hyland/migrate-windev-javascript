@@ -41,6 +41,27 @@ Then per unit: `unit_evidence.py <UNIT>` gives the mapper its code, events, doss
 
 ### What a project without a printable dossier gets
 
+The whole pipeline was run on the measured project with its PDF taken away, and every output compared with the PDF-backed run (112 windows, 1,148 controls, 32 tables).
+
+| Output | Without the PDF |
+|---|---|
+| Schema draft | WINDEV type and SQL type equal for 252 of 252 columns (type names from the built-in code table); captions from the analysis file equal for 218 of 220 and present for 27 the dossier lacked |
+| Screen layouts | identical for position, size, kind, plane, anchors and rates, tab order, state, Visible, caption, style, button type, images, image states and stretching, edit input type, size, mask, alignment and caption width, date options, column width, title, alignment, place, linked item, shown or hidden and four more options |
+| Evidence report | same callers and the same proposals for predefined actions; no question is lost that the sources can raise |
+| Code, events, navigation, code map, queries with SQL | unchanged: they never came from the PDF |
+
+What only the PDF gave, on that project:
+
+- a **window's** type and its other tick marks (status bar, resizable, save position…): none of them ever varies there, so no position can be told from another;
+- a **table's** own options (scrollbars, selection mode, magnifier) and a column's "assisted input" (learned for one record length only), "with input", "sorted", "fixed", "RTF": same reason for all but the first;
+- the input type and alignment the dossier prints for statics, combos, check boxes and radio buttons (their defaults);
+- positions of the 18 controls inside table cells;
+- the four runtime questions about Validate buttons, which need the button's caption beside its code (the caption is decoded: the report still builds them from the dossier's control list).
+
+None of these is geometry, code or data. Each stays `unresolved` for the unit that needs it, and one property changed in WINDEV on a copy of a window settles its position for every project of that format.
+
+### The earlier, single-window measurement
+
 Run with no PDF, the same project produced, for four windows (287 controls, among them the largest window), layouts equal to those made with the dossier on position, size, plane, kind, anchors, tab order, state, Visible, caption, button type, images, image states and background stretching, an edit's input type, size, mask, alignment and caption width, and a column's alignment, place and linked item (9 caption widths and 2 column input types differ). Missing: the alignment and input type the dossier prints for combos, radio buttons and statics, a table's own options, the tick-mark properties not read yet (a column's assisted input, a check box's three states…), the skin image of check boxes and radio buttons. Those are the audit's and the weak list's job (below).
 
 ## 4. Closing what is left, cheapest first

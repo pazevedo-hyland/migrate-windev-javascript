@@ -31,6 +31,9 @@ Measured on one project (file format 25: `major_version : 25` in its sources; 11
 | Skin styles (`Templates/<skin>/<skin>.sty`) | 1,203 styles in 3 skins | not in the dossier. 1,015 controls name a style found there; 291 of them changed a font, a colour or a frame from it |
 | Query parameters | 13 of 24 queries have some | names read from the SQL (`{pOrder}`); the dossier extract had none |
 | Predefined actions that name an element | 9 Print buttons, each naming its report | not in the dossier; each named report is one no code calls and that the window's compiled code mentions |
+| Table column shown or hidden | 275 columns with a dossier value | 275 of 275 equal (57 hidden) |
+| Tick image of check boxes and radio buttons | | 43 of 43 equal |
+| Item captions of the analysis (`.wda`) | 308 records | 218 of 220 equal; 27 items get a caption the dossier lacked |
 | Report control geometry (mm) | 497 controls | 493 of 493 equal |
 | Report control kind (static, calculation, preset, image, shape) | | 493 of 493 equal |
 | Report type, data source, margins | 27 reports | 26 of 26 equal each |
@@ -127,7 +130,8 @@ Found in chunk `0` by its signature: a version, four integers, eight zero bytes 
 | Table column | alignment | u32 right after the caption | 0 left, 1 centre, 2 right |
 | | sortable, moveable | u32 at + 12 and + 16 after the caption | |
 | | linked item | string at + 32 after the caption | a column shown through a link holds `File.Item<TAB>OtherFile.Key.Item` |
-| | adjustable width, multiline, with search | u32 at + 4, + 16, + 20 after the linked item | kept only when all five options are 0 or 1 |
+| | adjustable width, visible, multiline, with search | u32 at + 4, + 8, + 16, + 20 after the linked item | kept only when all six options are 0 or 1 |
+| Check box, radio button | tick image | the second image file named in the record (the first is the picture behind the selected choice) | |
 | Window | opening mode | one byte, 312 bytes after the face of the window's font | 2 centred in the screen, 3 centred in the parent window |
 | | title, background image | two strings, 316 bytes after that face | |
 | | title bar, system menu, minimize icon, maximize icon | 4 × u32, 5 bytes after the background image | maximize was never off where the dossier names it clearly: its place is the one left |
@@ -217,7 +221,7 @@ Every binary project file starts with `PCS\0`: `.wdp` (project), `.WDR` (query),
 | `<project>.wdp` | project code (declarations, initialisation, constants) one record per line, each followed by its author (an empty line is a record without text); the project explorer's folders with their elements; configurations (`32-bit Windows executable`…); editor resources | `project/<project>.code.wl`: the start-up code when the `.wdp` is not in text format (220 lines here: constants, connection set-up from an INI file, schema update); `project.json` → `folders`: the authors' own grouping of windows (back office, front office, monitor…), a ready-made slice list |
 | `<project>.cpl/<user>/*.wdw`, `*.wde` | the same description and code as the text file, in binary | a second copy to compare with; the only copy when the project was never switched to text format |
 | `*.wdw.cache`, `*.wde.cache` | description, compiled state and a **thumbnail** of the window or report as WINDEV draws it (about 150 px) | `images/`: a picture of every window without the dossier — small, but enough to see a layout is right |
-| `<project>.ana/<project>.wda` | the whole analysis (files, items, keys, links, captions) | the `.xdd` beside it is the same content as XML: prefer it |
+| `<project>.ana/<project>.wda` | the whole analysis (files, items, keys, links, captions) | the `.xdd` beside it gives the structure as XML but **not the captions**: `analysis.json` lists each item's record (name, caption) in file order — the name, the day it was created, six bytes, who created and last changed it, 22 bytes, the caption — and `schema_draft.py` gives them to the tables |
 | `*.wdw.wcw`, `.wbw`, `.wrw` in `.cpl/<user>/00000000/` | compiled code with WINDEV's event labels (`Click BTN_Save`) | already used by `event_legend.py` |
 
 Blocks that are not SQL or images are listed with their strings (`text`); `--blocks` saves each one for closer reading. `<project>.wdd` has no such block in this project (it is stored another way): use the `.xdd`.

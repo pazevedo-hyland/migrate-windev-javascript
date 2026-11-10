@@ -88,6 +88,8 @@ def coverage(inspect_dir, dossier_dir, schema_tables):
     windows, reports, queries, tables = dossier_items(dossier_dir)
     index = Path(dossier_dir or '.', 'index.json')
     images = load_json(index).get('images', True) if dossier_dir and index.exists() else True
+    # A dossier was printed (and extracted), or the folder holds only what the decoder read from the sources.
+    printed = bool(dossier_dir) and (not index.exists() or (load_json(index).get('decoded') or {}).get('dossier', True))
     rows, gaps = [], []
     for name, data in sorted(inspected.items(), key=lambda item: item[0].lower()):
         kind = Path(data['path']).suffix.lower()
@@ -128,8 +130,13 @@ def coverage(inspect_dir, dossier_dir, schema_tables):
         described = tables.get(name)
         rows.append({'element': name, 'kind': 'table', 'items': len((described or {}).get('items', [])),
                      'typed': bool(described)})
-        if not described:
+        if not described and (tables or printed):
             gaps.append(f'{name}: table without typed items in the dossier analysis')
+    if schema_tables and not tables and not printed:
+        # No dossier describes the analysis: one statement, not one gap per table. The schema draft names the
+        # type codes from its built-in table and lists any it cannot name.
+        gaps.append(f'analysis: no dossier names the item types of the {len(schema_tables)} tables; they come from the '
+                    "schema draft's built-in code table (see its \"Codes nothing names yet\" line, if any)")
     return rows, gaps
 
 
