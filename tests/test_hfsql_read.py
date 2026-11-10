@@ -148,6 +148,25 @@ class DataFiles(unittest.TestCase):
         with self.assertRaisesRegex(module.Unreadable, 'without its .mmo'):
             module.read_table(data_file(self.length, [record(CUSTOMER)]), self.tables[0])
 
+    def test_measured_record_length_and_integers_stored_wider(self):
+        table = {'name': 'Links', 'items': [
+            {'name': 'station', 'type_code': 5, 'size': 4, 'position': 0, 'key': None},
+            {'name': 'worker', 'type_code': 36, 'size': 1, 'position': 1, 'key': None}]}
+        rows = [record([struct.pack('<i', 1), struct.pack('<I', 13)], flags=b'\xff'),
+                record([struct.pack('<i', 2), struct.pack('<I', 8)], flags=b'\xff')]
+        data = data_file(17, rows)
+        self.assertEqual(module.measured_lengths(data), [17])
+        with self.assertRaisesRegex(module.Unreadable, r'not the 14 bytes the analysis gives for 2 items \(the file fits records of 17'):
+            module.read_table(data, table)
+        items, read, _ = module.read_table(data, table, fit_integers=True)
+        self.assertEqual((read, items[1]['stored_size'], 'stored_size' in items[0]), ([['1', '13'], ['2', '8']], 4, False))
+        too_big = data_file(17, [record([struct.pack('<i', 1), struct.pack('<I', 300)], flags=b'\xff')])
+        with self.assertRaisesRegex(module.Unreadable, 'worker: 300 does not fit the 1 bytes'):
+            module.read_table(too_big, table, fit_integers=True)
+        two_ways = {'name': 'Links', 'items': [dict(table['items'][1], name='a', position=0), table['items'][1]]}
+        with self.assertRaisesRegex(module.Unreadable, '2 ways of widening its integers'):
+            module.read_table(data_file(14, [record([b'\1\0\0\0', b'\2'], flags=b'\xff')]), two_ways, fit_integers=True)
+
     def test_export_writes_sqlite_csv_and_manifest(self):
         with tempfile.TemporaryDirectory() as folder:
             source, out = Path(folder, 'data'), Path(folder, 'out')

@@ -265,7 +265,7 @@ A data file's chunk gives its number, name, day of creation and, after two 32-ch
 
 **Not read**: null support (it never varies here), links between files (this analysis declares none), the four bytes after a file's creation day (close to the record length, but one more than the real one for 4 files), type codes beyond those met.
 
-**The other way an analysis is stored.** WINDEV 28's examples and tutorial keep a 1 KB stub in `.wda` and the description in HFSQL files beside it (`DEFFIC.FIC`, `DEFRUB.FIC`, `Liaison.FIC`…), an older form. Those are not read: for such a project the `.xdd` is the source.
+**Not every `.wda` holds the analysis.** In WINDEV 28's examples and tutorial (8 analyses) the `.wda` is a 1 KB stub, and no file of the `.ana` folder holds an item name in clear; HFSQL files sit beside it (`DEFFIC.FIC`, `DEFRUB.FIC`, `Liaison.FIC`…) whose records are not readable as stored. Nothing is read from such an analysis (`analysis.json` is not written): the `.xdd` is the source there.
 
 ### The skin: what a style name stands for
 
@@ -311,7 +311,7 @@ A memo block is two bytes, its size twice, a byte, the offset of the next block 
 
 Compared with the HFSQL 28 ODBC driver on the measured project's data: 29 files, 24,896 rows, 224,567 values, all equal (text, integers, booleans, dates, times, dates and times, durations, decimals, memos in one or several blocks).
 
-**Refused, with the reason in the manifest**: a file whose records are not the length the analysis gives. One of the 30 is like that: its records are 3 bytes longer than its two items, because the file was created under an earlier description of one item and never rebuilt; the driver copes by reading the file's own description, which this reader cannot. A compressed or encrypted file fails the same check. **Not measured**: reals, currency, signed integers of other sizes, Unicode text, binary memos, passwords, arrays — their bytes are written as `base64:` and the type codes listed in the manifest. The bit per item is read as "has a value" (every bit was set here; a cleared bit gives NULL, unverified).
+**Refused, with the reason in the manifest**: a file whose records are not the length the analysis gives (the message gives the length the file itself fits, measured the same way for every length). One of the 30 is like that: its records are 17 bytes, 3 more than its two items, because the file was created under an earlier description of one item and never rebuilt; the driver copes by reading the file's own description, which this reader cannot. A compressed or encrypted file fails the same check. With `--fit-integers` such a file is read when exactly one way of storing its integer items in a larger integer gives the measured length and every value still fits the item's size: here one 1-byte item kept in 4 bytes, and the 19 rows equal the driver's — with it, 30 of 30 files, 24,915 rows, 224,605 values. The manifest marks those items as assumed. **Not measured**: reals, currency, signed integers of other sizes, Unicode text, binary memos, passwords, arrays — their bytes are written as `base64:` and the type codes listed in the manifest. The bit per item is read as "has a value" (every bit was set here; a cleared bit gives NULL, unverified).
 
 ### What a full survey of one project left unread
 
