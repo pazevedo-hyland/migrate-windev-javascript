@@ -73,6 +73,7 @@ Never compose a business transaction from several independent `invoke` calls: a 
 - [Capabilities](https://v2.tauri.app/security/capabilities/) restrict which commands and plugins each window can use: grant only what is needed, restrict filesystem scopes, set a deliberate content security policy.
 - A hidden or disabled button is not authorization: commands check permissions (see Groupware in [07](07-platform-replacements.md)).
 - For shared business data, a **server API** owns authorization and transactions with PostgreSQL behind it. Never put shared database credentials in desktop clients, and never place SQLite on a network share. Offline synchronization is a separate feature with explicit conflict rules.
+- For the shared topology, [templates/server](templates/server/README.md) is a ready add-on: business rules as named procedures run on a Node server against PostgreSQL (or an embedded PGlite folder for a single site) and, unchanged, in the browser preview on in-memory PGlite, so each rule has one implementation and each user save one transaction. Adopt it by ADR. It does not authenticate the session the client sends: keep it on a trusted network until you add authentication.
 
 ## UI architecture choices (decide once, by ADR)
 

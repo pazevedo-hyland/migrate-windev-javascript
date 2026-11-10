@@ -32,6 +32,21 @@ export function WdTable<T>({ control: sourceControl, rows, rowId, cell, selected
   const control = useAnchoredControl(sourceControl);
   if (!control.columns) throw new Error(`Table columns unresolved: ${control.path}`);
   const sourceColumns = control.columns;
+  // WINDEV tables sort by a click on a column title and search with the magnifier ("Magnifier mode Search": select the
+  // first row starting with the typed text). Screens that pass onSort / onColumnSearch keep their own behaviour; others
+  // get this default. Per-column flags, when extracted, still decide; absent flags mean yes (WINDEV's default for
+  // a new table column; checked against the running legacy app on the second migration).
+  const [localSort, setLocalSort] = useState<{ id: string; desc: boolean } | null>(null);
+  const textOf = (node: ReactNode): string => typeof node === "string" || typeof node === "number" ? String(node) : "";
+  const sortedRows = useMemo(() => {
+    if (onSort || !localSort) return rows;
+    const column = sourceColumns.find(item => item.path === localSort.id);
+    if (!column) return rows;
+    const keyed = rows.map(row => ({ row, key: textOf(cell(row, column)) }));
+    keyed.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true, sensitivity: "base" }) * (localSort.desc ? -1 : 1));
+    return keyed.map(item => item.row);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, localSort, onSort, sourceColumns]);
   const container = useRef<HTMLDivElement>(null);
   const duplicateIds = useMemo(() => {
     const ids = rows.map(rowId); return new Set(ids).size !== ids.length;
@@ -42,7 +57,7 @@ export function WdTable<T>({ control: sourceControl, rows, rowId, cell, selected
     return { id: column.path, size: column.width, minSize: Math.min(24, column.width),
       maxSize: Number.MAX_SAFE_INTEGER, enableResizing: column.flags?.["Adjustable width"] === true };
   }), [sourceColumns]);
-  const table = useReactTable({ data: rows, columns, getRowId: rowId, getCoreRowModel: getCoreRowModel(),
+  const table = useReactTable({ data: sortedRows, columns, getRowId: rowId, getCoreRowModel: getCoreRowModel(),
     manualSorting: true, autoResetAll: false, enableRowSelection: false, columnResizeMode: "onChange", state: { columnSizing: widths, columnOrder: order, columnVisibility: Object.fromEntries(hiddenColumns.map(key => [key, false])) },
     onColumnOrderChange: update => {
       if (onColumnOrderChange) onColumnOrderChange(typeof update === "function" ? update(order) : update);
@@ -67,12 +82,13 @@ export function WdTable<T>({ control: sourceControl, rows, rowId, cell, selected
   const headerHeight = showHeaders ? measuredHeaderHeight : 0;
   useLayoutEffect(() => {
     const element = header.current;
-    if (!virtualized || !showHeaders || !element) return;
-    const update = () => setMeasuredHeaderHeight(element.getBoundingClientRect().height);
+    // Measured for the virtual list's padding and for the row-line background, which starts below the titles.
+    if (!showHeaders || !element) return;
+    const update = () => { const height = element.getBoundingClientRect().height; if (height > 0) setMeasuredHeaderHeight(height); };
     update();
     const observer = new ResizeObserver(update); observer.observe(element);
     return () => observer.disconnect();
-  }, [virtualized, showHeaders]);
+  }, [showHeaders]);
   const itemKey = useCallback((index: number) => displayed[index].id, [displayed]);
   // Hidden hosts report zero offsets without changing their retained native scroll position.
   const observeOffset = useCallback<typeof observeElementOffset>((instance, notify) => observeElementOffset(instance, (offset, scrolling) => {
@@ -120,7 +136,7 @@ export function WdTable<T>({ control: sourceControl, rows, rowId, cell, selected
       if (showHeaders || !configureColumns || options?.column_context_menu !== "Yes" || !onHiddenColumnsChange) return;
       event.preventDefault(); setConfigurationOpen(true);
     }}
-    hidden={(control.visible ?? control.flags?.Visible) === false} style={{ ...controlBox(control), ...(effectiveRowHeight ? { backgroundImage: `repeating-linear-gradient(to bottom, transparent 0 ${effectiveRowHeight - 1}px, #e0e2e4 ${effectiveRowHeight - 1}px ${effectiveRowHeight}px)` } : {}), overflowY: scrollbarMode(options?.vertical_scrollbar), overflowX: scrollbarMode(options?.horizontal_scrollbar), touchAction: options?.touch_scrolling === "No" ? "none" : undefined }} tabIndex={String(control.tab_order) === "-1" ? -1 : 0}
+    hidden={(control.visible ?? control.flags?.Visible) === false} style={{ ...controlBox(control), ...(effectiveRowHeight ? { backgroundImage: `repeating-linear-gradient(to bottom, transparent 0 ${effectiveRowHeight - 1}px, #e0e2e4 ${effectiveRowHeight - 1}px ${effectiveRowHeight}px)`, backgroundPosition: `0 ${headerHeight}px`, backgroundAttachment: "local" } : {}), overflowY: scrollbarMode(options?.vertical_scrollbar), overflowX: scrollbarMode(options?.horizontal_scrollbar), touchAction: options?.touch_scrolling === "No" ? "none" : undefined }} tabIndex={String(control.tab_order) === "-1" ? -1 : 0}
     onKeyDown={event => {
       if (event.target !== event.currentTarget) return;
       const index = displayed.findIndex(row => row.id === selectedId);
@@ -144,7 +160,7 @@ export function WdTable<T>({ control: sourceControl, rows, rowId, cell, selected
         {onResetColumns && <button type="button" onClick={() => { onResetColumns(); setConfigurationOpen(false); container.current?.focus(); }}>{config.labels.resetColumns}</button>}
       </div>}
     </div>}
-    <div className="wd-table-grid" aria-hidden="true" style={{ width: table.getTotalSize(), top: showHeaders ? undefined : 0 }}>
+    <div className="wd-table-grid" aria-hidden="true" style={{ width: table.getTotalSize(), top: headerHeight }}>
       {table.getVisibleLeafColumns().map(column => <span key={column.id} style={{ width: column.getSize() }} />)}
     </div>
     <table aria-label={control.caption ?? control.name} aria-rowcount={virtualized ? displayed.length + (showHeaders ? 1 : 0) : undefined} style={{ width: table.getTotalSize() }}>
@@ -178,17 +194,26 @@ export function WdTable<T>({ control: sourceControl, rows, rowId, cell, selected
             if (target && moveColumn(column.id, target)) keyboardFocus.current = event.target as HTMLElement;
           }}>
           {searchColumn === column.id ? <input autoFocus className="wd-column-search-input" aria-label={`${config.labels.search} ${source.title ?? source.name}`} value={searchTerm}
-            onChange={event => { setSearchTerm(event.target.value); onColumnSearch?.(source, event.target.value); }}
+            onChange={event => {
+              const term = event.target.value; setSearchTerm(term);
+              if (onColumnSearch) { onColumnSearch(source, term); return; }
+              const wanted = term.trim().toLocaleLowerCase();
+              const hit = wanted ? displayed.find(row => textOf(cell(row.original, source)).trim().toLocaleLowerCase().startsWith(wanted)) : undefined;
+              if (hit) onSelect(hit.id);
+            }}
             onKeyDown={event => {
               if (event.key !== "Escape" && event.key !== "Enter") return;
               event.preventDefault(); event.stopPropagation(); setSearchColumn(null);
               if (event.key === "Escape") onColumnSearch?.(source, "");
               container.current?.focus();
             }} /> : <>
-            {onSort && source.flags?.["Sortable column"] === true
-              ? <button {...captionProps} className={onColumnSearch && source.flags?.["With search"] ? "wd-searchable-caption" : undefined} type="button" onClick={() => onSort(source)}>{source.title}</button> : <span {...captionProps} tabIndex={movable ? 0 : undefined} className="wd-column-caption">{source.title}</span>}
-            {onColumnSearch && source.flags?.["With search"] === true && <button type="button" className="wd-column-search" data-testid={`${source.name}__search`} aria-label={`${config.labels.search} ${source.title ?? source.name}`}
-              onClick={() => { setSearchColumn(column.id); setSearchTerm(""); onColumnSearch(source, ""); }}><span aria-hidden="true" /></button>}
+            {(source.flags?.["Sortable column"] ?? true) !== false
+              ? <button {...captionProps} className={`wd-sortable-caption${(source.flags?.["With search"] ?? true) !== false ? " wd-searchable-caption" : ""}`} type="button"
+                  aria-sort={!onSort && localSort?.id === column.id ? (localSort.desc ? "descending" : "ascending") : undefined}
+                  onClick={() => onSort ? onSort(source) : setLocalSort(previous => previous?.id === column.id ? { id: column.id, desc: !previous.desc } : { id: column.id, desc: false })}>{source.title}</button>
+              : <span {...captionProps} tabIndex={movable ? 0 : undefined} className="wd-column-caption">{source.title}</span>}
+            {(source.flags?.["With search"] ?? true) !== false && <button type="button" className="wd-column-search" data-testid={`${source.name}__search`} aria-label={`${config.labels.search} ${source.title ?? source.name}`}
+              onClick={() => { setSearchColumn(column.id); setSearchTerm(""); onColumnSearch?.(source, ""); }}><span aria-hidden="true" /></button>}
           </>}
           {column.getCanResize() && <span role="separator" aria-orientation="vertical" aria-label={source.title ?? source.name}
             aria-valuenow={column.getSize()} aria-valuemin={Math.min(24, source.width!)} aria-valuemax={Number.MAX_SAFE_INTEGER} aria-valuetext={`${column.getSize()} px`} tabIndex={0} data-testid={`${source.name}__resize`} className="wd-column-resize"

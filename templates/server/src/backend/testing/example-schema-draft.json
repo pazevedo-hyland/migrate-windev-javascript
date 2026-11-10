@@ -1,0 +1,39 @@
+{"tables": [
+ {"table": "Customer", "columns": [
+   {"name": "Code", "type": "Unicode string", "size": "10", "key": "unique", "default": "", "caption": "Code"},
+   {"name": "Name", "type": "Unicode string", "size": "50", "key": "duplicates", "default": "", "caption": null},
+   {"name": "Balance", "type": "Decimal", "size": "7", "key": null, "default": "", "caption": null},
+   {"name": "Inactive", "type": "Boolean", "size": "1", "key": null, "default": "0", "caption": null},
+   {"name": "Created", "type": "Date", "size": "8", "key": null, "default": "", "caption": null}],
+  "keys": [{"name": "Code", "columns": ["Code"], "key": "unique"}, {"name": "Name", "columns": ["Name"], "key": "duplicates"}]},
+ {"table": "Order_Line", "columns": [
+   {"name": "OrderNo", "type": "4-byte integer", "size": "4", "key": null, "default": "", "caption": null},
+   {"name": "Line", "type": "2-byte integer", "size": "2", "key": null, "default": "", "caption": null},
+   {"name": "Customer", "type": "Unicode string", "size": "10", "key": "duplicates", "default": "", "caption": null},
+   {"name": "Started", "type": "Date and Time", "size": "8", "key": null, "default": "", "caption": null},
+   {"name": "Ended", "type": "Date and Time", "size": "8", "key": null, "default": "", "caption": null},
+   {"name": "Quantity", "type": "Decimal", "size": "7", "key": null, "default": "", "caption": null},
+   {"name": "Closed", "type": "Boolean", "size": "1", "key": null, "default": "0", "caption": null}],
+  "keys": [{"name": "Customer", "columns": ["Customer"], "key": "duplicates"}, {"name": "OrderLine", "columns": ["OrderNo", "Line"], "key": "unique"}]},
+ {"table": "Process_Step", "columns": [
+   {"name": "Article", "type": "Unicode string", "size": "15", "key": null, "default": "", "caption": null},
+   {"name": "Process", "type": "Unicode string", "size": "10", "key": null, "default": "", "caption": null},
+   {"name": "Minutes", "type": "Duration", "size": "8", "key": null, "default": "", "caption": null},
+   {"name": "Step", "type": "2-byte integer", "size": "2", "key": null, "default": "", "caption": null}],
+  "keys": []},
+ {"table": "Settings", "columns": [
+   {"name": "CompanyName", "type": "Unicode string", "size": "50", "key": null, "default": "", "caption": null},
+   {"name": "MorningStart", "type": "Time", "size": "4", "key": null, "default": "", "caption": null},
+   {"name": "Rate", "type": "8-byte real", "size": "8", "key": null, "default": "", "caption": null}],
+  "keys": []},
+ {"table": "Clocking", "columns": [
+   {"name": "IDClocking", "type": "Automatic identifier", "size": "8", "key": "unique", "default": "", "caption": null},
+   {"name": "Unique_Id", "type": "8-byte integer", "size": "8", "key": "unique", "default": "", "caption": null},
+   {"name": "Employee", "type": "4-byte integer", "size": "4", "key": "duplicates", "default": "", "caption": null},
+   {"name": "Clock_In", "type": "Date and Time", "size": "8", "key": null, "default": "", "caption": null}],
+  "keys": [{"name": "IDClocking", "columns": ["IDClocking"], "key": "unique"}, {"name": "Unique_Id", "columns": ["Unique_Id"], "key": "unique"}, {"name": "Employee", "columns": ["Employee"], "key": "duplicates"}]},
+ {"table": "Photo", "columns": [
+   {"name": "Code", "type": "Unicode string", "size": "10", "key": "unique", "default": "", "caption": null},
+   {"name": "Picture", "type": "Binary Memo", "size": "8", "key": null, "default": "", "caption": null}],
+  "keys": [{"name": "Code", "columns": ["Code"], "key": "unique"}]}
+]}

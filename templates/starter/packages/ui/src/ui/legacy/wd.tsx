@@ -18,7 +18,7 @@ export function WdButton({ control: source, chrome = false, interpretAmpersand =
     data-wd-mnemonic={caption.letter ? caption.letter.toLocaleLowerCase(config.locale) : undefined}
     aria-keyshortcuts={props["aria-keyshortcuts"] ?? (caption.letter ? `Alt+${caption.letter}` : undefined)}
     hidden={props.hidden ?? ((control.visible ?? control.flags?.Visible) === false)} tabIndex={tabIndex ?? (control.flags?.["TAB Key"] === false || String(control.tab_order) === "-1" ? -1 : undefined)}
-    className={`wd-button ${chrome ? "wd-chrome-button" : ""} ${className}`}
+    className={`wd-button ${chrome ? "wd-chrome-button" : ""} ${!chrome && control.background_image ? "wd-button--skin" : ""} ${!chrome && control.image && !control.caption ? "wd-button--picture" : ""} ${className}`}
     style={{ ...controlBox(control), ...buttonSkin(control, config.assets), ...style }}>
     {!chrome && <span>{!interpretAmpersand ? control.caption : <>{caption.before}{caption.letter && <u>{caption.letter}</u>}{caption.after}</>}</span>}
     {control.image && <span className="wd-button-icon" aria-hidden="true" />}
@@ -58,6 +58,8 @@ export function WdRadio({ control: source, options, value, onChange, disabled, l
   const tabStop = selected < 0 ? 0 : selected;
   return <div role="radiogroup" aria-label={label} data-testid={control.name} data-control-path={control.path}
     hidden={(control.visible ?? control.flags?.Visible) === false} className="wd-radio" style={controlBox(control)}>
+    {/* WINDEV draws a radio group's caption above its options (designer images), the options share the rest. */}
+    {control.caption ? <span className="wd-radio-caption" aria-hidden="true">{control.caption}</span> : null}
     {options.map((option, index) => <button key={option.value} ref={node => { buttons.current[index] = node; }} type="button" role="radio"
       aria-checked={selected === index} disabled={disabled} data-radio-value={option.value}
       tabIndex={control.flags?.["TAB Key"] === false || String(control.tab_order) === "-1" || index !== tabStop ? -1 : 0}
@@ -79,9 +81,13 @@ export function WdRadio({ control: source, options, value, onChange, disabled, l
 }
 
 /** Render extracted geometry when present; absent chrome uses neutral target defaults. */
-export function WdFrame({ layout, instance, children, width, height, onClose, onMinimize, onToggleMaximize }: {
+export function WdFrame({ layout, instance, children, width, height, title: titleOverride, onClose, onMinimize, onToggleMaximize, onKeyDown }: {
   layout: LegacyLayout; instance: string; children: ReactNode; width?: number; height?: number;
+  /** ..Title at runtime (undefined: the layout's title). */
+  title?: string;
   onClose: () => void; onMinimize: () => void; onToggleMaximize: () => void;
+  /** Keys the window's controls did not stop (e.g. Esc = the window's Abort button). */
+  onKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
 }) {
   const config = useUiConfig(), size = layout.window.size;
   if (!size) throw new Error(`Frame geometry unresolved: ${layout.window.name}`);
@@ -102,9 +108,28 @@ export function WdFrame({ layout, instance, children, width, height, onClose, on
       style={group ? { left: control.x - group.x, top: control.y - group.y } : { left: undefined, right: size.width - control.x - (control.width ?? 0) }} />;
   });
   const restore = layout.controls.find(control => control.name === "BTN_Syst_Restore");
-  const titleText = title?.caption ?? layout.window.title ?? layout.window.name;
+  const titleText = titleOverride ?? title?.caption ?? layout.window.title ?? layout.window.name;
+  // Window description without "Title bar" (dossier tick absent): no bar, the client area starts at the top.
+  const untitled = layout.window.flags?.["Title bar"] === false;
+  const defaultChrome = <div className="wd-default-chrome">{actions.filter(action => action.name === "BTN_SYST_FERMER" || layout.window.flags?.[action.name === "BTN_SYST_MINIMIZE" ? "Minimize icon" : "Maximize icon"] !== false).map(action => <button key={action.name} type="button" className="wd-chrome-button"
+    aria-label={action.label} data-testid={`${instance}__${action.name}`} onClick={action.action}>{action.symbol}</button>)}</div>;
+  // No title control and no extracted system buttons: the window has the system title bar ABOVE its client area.
+  // WINDEV control coordinates are client-relative, so drawing the title and close box inside the client area put
+  // them over the top controls (a real form: layout match with its designer image 32 % -> 79 % once moved out).
+  // The frame keeps the layout's size, which includes the bar.
+  if (!title && !extractedChrome) return <section data-testid={instance} data-layout={layout.window.name} aria-label={titleText}
+    data-wd-keyboard-scope="" tabIndex={-1} onKeyDown={event => { activateMnemonic(event, config.locale); onKeyDown?.(event); }}
+    className={`wd-frame wd-frame--native${untitled ? " wd-frame--untitled" : ""}${layout.window.background_image ? " wd-frame--image" : ""}`} style={{ ...skin, width: frameWidth, height: frameHeight }}>
+    {!untitled && <div className="wd-native-titlebar">
+      <div className="wd-title" data-testid={`${instance}__title`}>{titleText}</div>
+      {defaultChrome}
+    </div>}
+    <div className="wd-client">
+      <FrameDeltaContext.Provider value={{ width: frameWidth - size.width, height: frameHeight - size.height }}>{children}</FrameDeltaContext.Provider>
+    </div>
+  </section>;
   return <section data-testid={instance} data-layout={layout.window.name} aria-label={titleText}
-    data-wd-keyboard-scope="" tabIndex={-1} onKeyDown={event => activateMnemonic(event, config.locale)}
+    data-wd-keyboard-scope="" tabIndex={-1} onKeyDown={event => { activateMnemonic(event, config.locale); onKeyDown?.(event); }}
     className={`wd-frame${layout.window.background_image ? " wd-frame--image" : ""}`} style={{ ...skin, width: frameWidth, height: frameHeight }}>
     <div className="wd-client">
       <div className="wd-title" data-testid={title?.name ?? `${instance}__title`} data-control-path={title?.path} hidden={title ? hidden(title) : false}
@@ -117,8 +142,7 @@ export function WdFrame({ layout, instance, children, width, height, onClose, on
       </span>}
       {extractedChrome ? group ? <div data-testid={group.name} data-control-path={group.path} hidden={hidden(group)}
         style={{ position: "absolute", ...controlBox(group), left: undefined, right: size.width - group.x - (group.width ?? 0) }}>{chrome}</div> : chrome
-        : <div className="wd-default-chrome">{actions.filter(action => action.name === "BTN_SYST_FERMER" || layout.window.flags?.[action.name === "BTN_SYST_MINIMIZE" ? "Minimize icon" : "Maximize icon"] !== false).map(action => <button key={action.name} type="button" className="wd-chrome-button"
-          aria-label={action.label} data-testid={`${instance}__${action.name}`} onClick={action.action}>{action.symbol}</button>)}</div>}
+        : defaultChrome}
       <FrameDeltaContext.Provider value={{ width: frameWidth - size.width, height: frameHeight - size.height }}>{children}</FrameDeltaContext.Provider>
     </div>
   </section>;

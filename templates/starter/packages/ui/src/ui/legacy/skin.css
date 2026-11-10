@@ -3,17 +3,31 @@
 .wd-frame::before { content: ""; position: absolute; inset: 0; box-sizing: border-box; border: 1px solid #9ca9ba; border-radius: inherit; pointer-events: none; }
 .wd-frame--image::before { border-width: var(--wd-frame-border-width, 25px 8px 8px); border-image: var(--wd-frame) var(--wd-frame-slice, 25 8 8 8) fill stretch; }
 .wd-client { position: absolute; inset: 0; }
+/* Windows without a title control: system title bar above the client area (control coordinates are client-relative). */
+.wd-frame--native { --wd-native-title: 31px; }
+.wd-frame--native.wd-frame--untitled { --wd-native-title: 0px; }
+.wd-frame--native > .wd-client { top: var(--wd-native-title); }
+.wd-native-titlebar { position: absolute; left: 0; right: 0; top: 0; height: var(--wd-native-title); background: #fff; border-bottom: 1px solid #e3e3e3; box-sizing: border-box; }
+.wd-native-titlebar .wd-title { left: 10px; top: 4px; right: 150px; font-weight: 400; color: #1b1b1b; }
+.wd-native-titlebar .wd-default-chrome { top: 0; right: 0; gap: 0; }
+.wd-native-titlebar .wd-default-chrome button { width: 46px; height: 30px; border-radius: 0; font-size: 14px; }
+.wd-native-titlebar .wd-default-chrome button[data-testid$="__BTN_SYST_FERMER"]:hover { background: #c42b1c; color: #fff; }
 .wd-title { position: absolute; line-height: 22px; white-space: nowrap; overflow: hidden; font-weight: 600; user-select: none; }
 .wd-default-chrome { position: absolute; top: 4px; right: 4px; display: flex; gap: 2px; }
 .wd-default-chrome button { position: relative; width: 28px; height: 24px; font: 16px/1 system-ui, sans-serif; color: inherit; border: 0; border-radius: 3px; background: transparent; }
 .wd-default-chrome button:hover { background: #dfe6ee; }
 .wd-default-chrome button:focus-visible { outline: 2px solid #2563b9; outline-offset: -2px; }
 .wd-button { position: absolute; box-sizing: border-box; margin: 0; padding: 0 6px; border: 1px solid #a8b4c3; border-radius: 3px; background: #fff; color: inherit; font: inherit; line-height: 1.25; display: flex; align-items: center; justify-content: center; gap: 5px; cursor: default; border-image: var(--wd-background-0, none) 4 fill stretch; }
+/* Buttons drawn with a skin image (background_image). Skin-specific setting: a dark button image needs a light
+   caption, e.g. --wd-skin-button-color: #fff; --wd-skin-button-text-shadow: 0 1px 1px #0006 (measured on a blue skin). */
+.wd-button--skin { color: var(--wd-skin-button-color, inherit); text-shadow: var(--wd-skin-button-text-shadow, none); }
 .wd-button:hover { background-color: #eef3f9; border-color: #6988ad; border-image-source: var(--wd-background-1, none); }
 .wd-button:active { background-color: #dce7f5; border-image-source: var(--wd-background-2, none); }
 .wd-button:focus-visible { outline: 2px solid #2563b9; outline-offset: -2px; border-image-source: var(--wd-background-3, none); }
 .wd-button:disabled { opacity: .55; border-image-source: var(--wd-background-4, none); }
 .wd-button-icon { display: block; flex: none; width: 16px; height: 16px; background: var(--wd-icon-0, none) center / contain no-repeat; }
+/* A button that is only a picture: WINDEV draws the state image at its own size, centred. */
+.wd-button--picture .wd-button-icon { position: absolute; inset: 0; width: auto; height: auto; background-size: auto; }
 .wd-button:hover .wd-button-icon { background-image: var(--wd-icon-1, none); }
 .wd-button:active .wd-button-icon { background-image: var(--wd-icon-2, none); }
 .wd-button:focus-visible .wd-button-icon { background-image: var(--wd-icon-3, none); }
@@ -39,6 +53,7 @@
 .wd-checkbox input:disabled + .wd-check-mark { opacity: .55; }
 .wd-radio { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; }
 .wd-radio button { position: relative; display: flex; align-items: center; gap: 6px; flex: 1; min-height: 0; padding: 0 3px; margin: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; white-space: nowrap; }
+.wd-radio-caption { flex: none; height: 19px; line-height: 19px; padding: 0 3px; white-space: nowrap; overflow: hidden; }
 .wd-radio-mark { display: inline-block; box-sizing: border-box; flex: none; width: 13px; height: 13px; border: 1px solid #6c7f96; border-radius: 50%; background: white center / contain no-repeat; }
 .wd-radio button[aria-checked="true"] .wd-radio-mark { box-shadow: inset 0 0 0 3px #fff; background-color: #2563b9; }
 .wd-radio button:focus-visible { outline: 2px solid #2563b9; outline-offset: -1px; }

@@ -4,11 +4,16 @@
   inspect_windev.py   legacy/              -> analysis-local/inspect-<stamp>/   (code, layout, encoded slots, XDD, seed)
                                            -> docs/parity/parity-seed.csv      (committed copy, for the parity gate)
   dossier_extract.py  legacy/**/*Documentation*.pdf -> analysis-local/dossier-<stamp>/ (when a dossier exists)
+  windev_decode.py    legacy/              -> analysis-local/decoded-<stamp>/   (internal_properties, query SQL, thumbnails)
+  code_map.py                              -> docs/code-map.md, .json           (tables, queries, calls, globals per unit)
   event_legend.py     legacy/**/<project>.cpl        -> docs/mapping/event-codes.md     (when the compile folder exists)
   evidence_report.py                       -> docs/evidence-report.md, docs/navigation.md
   schema_draft.py                          -> docs/schema/schema-draft.md, .sql
   render_layouts.py                        -> analysis-local/layouts-<stamp>/
   images                                   -> docs/evidence/images/  (dossier images + layout drawings, committed)
+  readiness_report.py                      -> docs/readiness.md, docs/briefs/<unit>.md  (open points; a page per unit)
+  hfsql_read.py + data_profile.py  --data <copy of the data folder>
+                                           -> analysis-local/data-<stamp>/, docs/data/profile.md  (no driver needed)
 
 Every run writes fresh dated folders (the inspector refuses to reuse one) and records them in
 analysis-local/latest.json, so prompts can say "the paths in latest.json". Generated docs are overwritten.
@@ -49,14 +54,43 @@ def publish_images(dossier, layouts, target):
     return str(target)
 
 
-def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language=None, images=True):
+def find_compile_dir(legacy):
+    """The project's own <project>.cpl sits next to its .wdp; the analysis folder (.ana/code, .ana/LASTGEN,
+    .ana/ANA<n> history) holds other .cpl folders, so prefer one beside a .wdp, then the shallowest."""
+    cpls = [p for p in [*Path(legacy, 'code').glob('*.cpl'), *Path(legacy).rglob('*.cpl')] if p.is_dir()]
+    return next(iter(sorted(cpls, key=lambda p: (not any(p.parent.glob('*.wdp')), len(p.parts), str(p)))), None)
+
+
+def read_data(data, legacy, target, docs, schema_draft):
+    """The data files read directly (hfsql_read.py) and profiled. The analysis beside the data is preferred: it is
+    the one the files were written with. A file the reader refuses is reported, not fatal."""
+    data = Path(data)
+    beside = sorted(p for p in data.iterdir() if p.suffix.lower() == '.wda')
+    project = sorted(p for p in Path(legacy).rglob('*.wda') if p.parent.suffix.lower() == '.ana')
+    analysis_file = next(iter(beside + project), None)
+    if analysis_file is None:
+        print(f'--data: no analysis file (.wda) beside {data} or under {legacy}: data not read')
+        return None
+    command = [sys.executable, str(HERE / 'hfsql_read.py'), str(data), '--analysis', str(analysis_file), '--out', str(target)]
+    result = subprocess.run(command, capture_output=True, text=True)
+    sys.stderr.write(result.stderr)
+    print(result.stdout.strip())
+    if not Path(target, 'manifest.json').exists():
+        return None
+    if schema_draft:
+        (docs / 'data').mkdir(parents=True, exist_ok=True)
+        print(run('data_profile.py', Path(target, 'data.sqlite'), '--schema', Path(schema_draft).with_suffix('.json'),
+                  '--out', docs / 'data/profile.md').strip())
+    return str(target)
+
+
+def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language=None, images=True, data=None):
     legacy, analysis, docs = Path(legacy), Path(analysis), Path(docs)
     stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
     # The fixed layout first (00 §E), else anywhere under legacy/: the WINDEV project folder can be dropped in as is.
     find = lambda pattern, preferred: next(iter(sorted(preferred)), None) or next(iter(sorted(Path(legacy).rglob(pattern))), None)
     dossier_pdf = dossier_pdf or find('*[Dd]ocumentation*.pdf', Path(legacy, 'docs').glob('*[Dd]ocumentation*.pdf'))
-    compile_dir = compile_dir or next(iter(sorted(p for p in [*Path(legacy, 'code').glob('*.cpl'), *Path(legacy).rglob('*.cpl')]
-                                                   if p.is_dir())), None)
+    compile_dir = compile_dir or find_compile_dir(legacy)
     paths = {'stamp': stamp, 'legacy': str(legacy), 'inspect': str(analysis / f'inspect-{stamp}')}
     (docs / 'mapping').mkdir(parents=True, exist_ok=True)
     (docs / 'schema').mkdir(parents=True, exist_ok=True)
@@ -75,7 +109,34 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
         run('dossier_extract.py', dossier_pdf, '--out', dossier, *([] if images else ['--no-images']))
         paths['coverage'] = json.loads(Path(dossier, 'index.json').read_text(encoding='utf-8'))['coverage']
     else:
-        print('no *Documentation*.pdf under legacy/: captions, tab order, masks and checkbox properties stay unknown')
+        print('no *Documentation*.pdf under legacy/: masks, alignment and most checkbox properties stay unknown; '
+              'captions, geometry, planes, tab order and SQL come from the sources')
+    # A dossier, even of a few windows, teaches where more properties sit: this project's field map, over the one
+    # shipped with the scripts. Without a dossier the shipped map is used as is.
+    fieldmap = []
+    if dossier:
+        analysis.mkdir(parents=True, exist_ok=True)
+        paths['fieldmap'] = str(analysis / f'fieldmap-{stamp}.json')
+        print(run('windev_fieldmap.py', 'learn', legacy, '--dossier', dossier, '--out', paths['fieldmap']).strip())
+        fieldmap = ['--fieldmap', paths['fieldmap']]
+    # What the sources keep packed: designer properties, binary queries' SQL, thumbnails (no WINDEV, no PDF needed).
+    paths['decoded'] = str(analysis / f'decoded-{stamp}')
+    run('windev_decode.py', legacy, '--out', paths['decoded'], '--evidence', *fieldmap,
+        *(['--dossier', dossier] if dossier else []))
+    decoded = json.loads(Path(paths['decoded'], 'index.json').read_text(encoding='utf-8'))
+    paths['decoded_coverage'] = decoded['coverage']
+    paths['decoded_audit'] = decoded['audit']
+    if decoded.get('calibration'):
+        paths['decoded_calibration'] = decoded['calibration']
+    # Every later tool reads `dossier`: from here on it is the decoded values written over the PDF extract (kept as
+    # the fallback for what the decoder does not name), or the decoded values alone when there is no PDF.
+    if decoded['evidence']['controls'] or decoded['evidence']['queries']:
+        if dossier:
+            paths['dossier_pdf'] = dossier
+        dossier = paths['dossier'] = str(Path(paths['decoded'], 'evidence'))
+    # What the code touches: tables read and written, queries, procedures, windows, globals, per unit.
+    print(run('code_map.py', paths['inspect'], '--decoded', paths['decoded'], '--out', docs / 'code-map.md').strip())
+    paths['code_map'] = str(docs / 'code-map.md')
     if compile_dir:
         run('event_legend.py', Path(compile_dir).parent, '--compile-dir', compile_dir, '--out', docs / 'mapping/event-codes.md')
         paths['event_legend'] = str(docs / 'mapping/event-codes.md')
@@ -85,17 +146,30 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
                  *(['--compiled', docs / 'mapping/event-codes.json'] if compile_dir else []),
                  '--out', docs / 'evidence-report.md', *(['--language', language] if language else []))
     paths.update(evidence_report=str(docs / 'evidence-report.md'), navigation=str(docs / 'navigation.md'))
-    if any(Path(paths['inspect'], 'schema').rglob('*.json')):
+    analysis_file = Path(paths['decoded'], 'analysis.json') if paths.get('decoded') else None
+    from_file = bool(analysis_file and analysis_file.exists() and json.loads(analysis_file.read_text(encoding='utf-8')).get('tables'))
+    if any(Path(paths['inspect'], 'schema').rglob('*.json')) or from_file:
+        # Without an .xdd, the draft takes the structure from the analysis file the decoder read.
         run('schema_draft.py', paths['inspect'], *(['--dossier', dossier] if dossier else []),
+            *(['--decoded', paths['decoded']] if paths.get('decoded') else []),
             '--out', docs / 'schema/schema-draft.md')
         paths['schema_draft'] = str(docs / 'schema/schema-draft.md')
     else:
-        print('no .xdd in legacy/: no schema draft (export the analysis to legacy/schema/)')
+        print('no .xdd and no analysis file (.wda) read in legacy/: no schema draft (export the analysis to legacy/schema/)')
     paths['layouts'] = str(analysis / f'layouts-{stamp}')
     run('render_layouts.py', paths['inspect'], '--out', paths['layouts'], *(['--dossier', dossier] if dossier else []))
     paths['images'] = publish_images(dossier, paths['layouts'], docs / 'evidence/images')
     paths['summary'] = report.strip().splitlines()[-1] if report.strip() else ''
     analysis.mkdir(parents=True, exist_ok=True)
+    (analysis / 'latest.json').write_text(json.dumps(paths, indent=2), encoding='utf-8')
+    # What is still open, unit by unit, and one page per unit for the agent that takes it (reads the paths above).
+    print(run('readiness_report.py', '--latest', analysis / 'latest.json', '--out', docs / 'readiness.md',
+              '--briefs', docs / 'briefs').strip())
+    paths.update(readiness=str(docs / 'readiness.md'), briefs=str(docs / 'briefs'))
+    if data:
+        read = read_data(data, legacy, analysis / f'data-{stamp}', docs, paths.get('schema_draft'))
+        if read:
+            paths['data'] = read
     (analysis / 'latest.json').write_text(json.dumps(paths, indent=2), encoding='utf-8')
     return paths
 
@@ -110,9 +184,11 @@ def main():
     parser.add_argument('--language', help="the application's language for dialog texts, as WINDEV names it (pt-PT, "
                                            "fr-FR…); default: the first language of each text")
     parser.add_argument('--no-images', action='store_true', help='skip dossier images (faster)')
+    parser.add_argument('--data', type=Path, help='a COPY of the folder with the HFSQL Classic .fic/.mmo files: read without '
+                                                  'a driver into analysis-local/ and profiled (docs/data/profile.md)')
     args = parser.parse_args()
     paths = prepare(args.legacy, args.analysis, args.docs, args.dossier_pdf, args.compile_dir, args.language,
-                    not args.no_images)
+                    not args.no_images, args.data)
     print(json.dumps(paths, indent=2))
     warnings = (paths.get('coverage') or {}).get('warnings', [])
     for warning in warnings:

@@ -1,0 +1,335 @@
+# What is inside the WINDEV project files
+
+The project folder holds everything the project documentation PDF (the "dossier") prints, and more. This page says where each piece is, how it is stored and how far `scripts/windev_decode.py` reads it. Use it when the dossier is missing, cannot be generated (a very large project) or lost characters in the PDF.
+
+Measured on one project (file format 25: `major_version : 25` in its sources; 112 windows, 27 reports, 5 queries) and compared with that project's dossier:
+
+| Decoded from the sources | Result | Against the dossier |
+|---|---|---|
+| `internal_properties` values | 3,993 of 3,993 decoded | — |
+| Window control size | 1,148 controls | 1,144 of 1,144 equal |
+| Control position in the window | all but the 17 controls inside table cells | 1,126 of 1,126 equal |
+| Visible | | 802 of 802 equal |
+| Plane | | 1,144 of 1,144 equal |
+| Tab order and tab stop | | 1,034 of 1,034 equal |
+| Initial state (active, read-only, grayed) | | 1,081 of 1,081 equal |
+| Button type (normal, validate, abort) | | 589 of 589 equal |
+| Button image, background image and its number of states | | 588 of 589 equal each |
+| Anchor rates | | 1,130 of 1,130 equal |
+| Captions | 822 controls with one | 819 of 820 equal; accents correct where the PDF lost them. 292 of them are stored in UTF-8, the others in the code page, sometimes in one window: each string is read as UTF-8 when it is valid UTF-8 (before this was found, those 292 came out as `InÃ­cio`; the comparison with the PDF ignores accented letters and did not show it) |
+| Combo and list boxes: content in memory or from a file, browsed file, browsed, displayed and stored items | 44 with a dossier value | source 44 of 44 equal; the four names 106 of 106 |
+| Values typed in the designer for a combo or a combo column | 6 lists | the dossier prints the first value only: first values equal; the full lists (document types, order states, months) are in the source alone |
+| Window size and title | 112 windows | size 111 of 112 equal (the window with a menu bar differs by its height); title 112 of 112 |
+| Edit control: input type, input size, input mask, format of the returned value, alignment | 270 edit controls | 261 of 261 equal; 270 of 270 equal; 270 of 270 equal; 270 of 270 equal; 270 of 270 equal |
+| Where an edit's or combo's input area starts (caption width) | 310 controls | 281 of 294 equal; the others are one pixel off in the dossier, all in two windows |
+| Static text alignment (horizontal, vertical) | 74 statics | 74 of 74 equal |
+| Button: number of image states, how the background image is stretched | | 588 of 588 equal; 580 of 580 equal |
+| Table column: alignment, place in the table, five options (sortable, moveable, adjustable width, multiline, with search) | 310 columns | 250 of 250 equal; 270 of 270 equal; 1,375 of 1,375 equal |
+| Table column cell: input type and mask | | 243 of 243 equal; 240 of 240 equal |
+| Skin style of a control (`170 AquaBlue.BTN_Ok`) | 1,018 controls name one | not printed by the dossier |
+| Window: opening mode, title bar, system menu, minimize and maximize icons, own HFSQL context, background image | 112 windows | opening mode 112 of 112 equal; the five options 498 of 498 (the PDF extract mixes the names of neighbouring tick marks for some windows: those are not compared) |
+| Skin styles (`Templates/<skin>/<skin>.sty`) | 1,203 styles in 3 skins | not in the dossier. 1,015 controls name a style found there; 291 of them changed a font, a colour or a frame from it |
+| Query parameters | 13 of 24 queries have some | names read from the SQL (`{pOrder}`); the dossier extract had none |
+| Predefined actions that name an element | 9 Print buttons, each naming its report | not in the dossier; each named report is one no code calls and that the window's compiled code mentions |
+| Table column shown or hidden | 275 columns with a dossier value | 275 of 275 equal (57 hidden) |
+| Tick image of check boxes and radio buttons | | 43 of 43 equal |
+| Item captions of the analysis (`.wda`) | 308 records | 218 of 220 equal; 27 items get a caption the dossier lacked |
+| The analysis itself (`.wda`): data files, items, type code, size, key, default, parts of composite keys | 32 files, 252 items, 17 composite keys | against the `.xdd` export: 252 of 252 types, sizes and defaults, 269 of 269 keys, 17 of 17 composite keys. A schema draft made with no `.xdd` equals the one made with it on every field (2,268 of 2,268) |
+| Digits of decimal items, how text keys compare, deleted files and items | 12 decimals, 51 text keys | not in the `.xdd` nor the dossier: decimals against the stored data (16,826 values equal the ODBC driver's), key comparison against the index files (667 of 667 values that tell) |
+| The data (`.fic`, `.mmo`), read without a driver | 29 of 30 data files, 24,896 rows | against the HFSQL ODBC driver: 224,567 of 224,567 values equal. The 30th file is refused: it does not follow the analysis |
+| Report control geometry (mm) | 497 controls | 493 of 493 equal |
+| Report control kind (static, calculation, preset, image, shape) | | 493 of 493 equal |
+| Report type, data source, margins | 27 reports | 26 of 26 equal each |
+| Report band types | 133 bands | equal to the band names WINDEV gave them |
+| Query SQL from binary `.WDR` | 5 of 5 | same text, without the PDF's line wraps |
+| SQL of queries embedded in windows and reports | 19 of 20 | not in the dossier at all |
+| Fonts and text colours | every control | not printed by the dossier: read, not compared |
+| Window and report thumbnails | 219 images | — |
+
+Screen layouts generated with no PDF at all (`screen_layout.py` on four windows, 287 controls, among them the largest window of the project) equal the layouts generated with the dossier on every position (but the 3 controls inside table cells), size, kind, plane, anchor, tab order, state, Visible tick, caption, button type, button images and their state counts, background stretching, edit input type, size, mask and alignment, column alignment, index and linked item, and on all but 9 caption widths and 2 column input types. What the PDF still adds there: a table's own options, the tick-mark properties not named above, the skin image of check boxes and radio buttons, and the default input type the dossier prints for statics and combos.
+
+The offsets below come from that one format. On another WINDEV version, run the tool, read `coverage` in `index.json`, and compare with a dossier of a few windows or with the running app before trusting a field.
+
+## 1. `internal_properties` in text-format sources
+
+Text-format `.wdw`, `.wde`, `.wdg` and `.wdc` files keep code readable and put every designer property in `internal_properties : <base64>`. In this format there is no readable `x`, `y`, `width` or `height`: geometry is in there too.
+
+The value is not a secret format, only a packed one:
+
+1. **Base64** of: an 8-byte header (two 32-bit values, `5` and `5` here), then the body. If the first byte is `0` or `4`, there is no header and no cipher: the value is a packed block directly.
+2. **A byte cipher over the whole body**, with a fixed 16-byte key (`51 43 3a e7 24 db 48 68 aa 41 07 db 74 b7 4c 44`). Each byte is combined with its mirror byte, its neighbour and the key, so changing one property changes every byte: that is why two near-identical controls look unrelated in the file. `decrypt()` in the script is the whole algorithm (about 15 lines); `encrypt()` is its inverse.
+3. **A packed block**: byte `4`, packed size (u32), unpacked size (u32), two zero bytes, then LZW codes read low bit first, 9 to 16 bits wide. Codes 1–256 are the bytes 0–255, 0 resets the table, 257 ends. Byte `0` instead of `4` means stored data (u32 size, bytes).
+4. **Property chunks**: one count byte, then per chunk an id (u16), a version (u16) and a size (u32), then the chunk data in the same order.
+
+Re-encoding the decoded chunks with the script reproduces WINDEV's own bytes for 3,890 of the 3,993 values, so the reading is exact, not approximate.
+
+### Chunk contents
+
+Chunks are sequential binary records without field names. Three things make them readable:
+
+- **Strings are in two encodings.** The project's code page, and UTF-8 for texts last edited by a recent WINDEV. Nothing marks which: a string that is valid UTF-8 and has a byte above 127 is UTF-8.
+- **Strings** are framed: one zero byte when empty, else `ff ce 88 f1`, total length (u32), the text, a zero byte, `fe ed 98 e1`. The tool lists every string of every chunk in file order (`strings`), in the project's code page (`--encoding`, default Windows-1252), plus UTF-16 runs (report captions).
+- **Sub-records start with a version number** (`0x25f`, `0x262`, `0x25b`…), which is how a record is recognised.
+- **Layout is fixed per control type**, so an offset found on one button holds for all buttons of that format.
+
+Which chunk holds what (id, version):
+
+| Element | Chunks | Contents |
+|---|---|---|
+| Window control | `1`, then `0` (v14) | `1`: identifiers and links. `0`: type-specific style (fonts, colours, style name such as `170 AquaBlue.BTN_Simple`), the common block, type-specific tail (button caption and image, masks) |
+| Table column | `1`, `0` | `0`: version, width, caption, alignment and options, linked item (`Customer.Name`), more options (below) |
+| Column `content`, combo `dropdown`, `calendar` | `0` | the embedded edit/combo/calendar control. A column's `content` is its cell: a whole control with the common block, and for a text column the edit record with its input type and mask |
+| Window | `1`, `6`, `0` | `6`: platform, creator, skin template. `0`: version at 16, then x, y, width, height; title; background image; file name |
+| Menu option | `0` (and `1`) | caption, fonts |
+| Report, band, report control | `15` (v14), `1` | `15`: name, 8 bytes, then top, bottom, left, right as doubles in millimetres, then one byte for the element's type (below); font; caption. `1`: the same captions in UTF-16. The report's own `15`: name, type, data source, messages, page and margins |
+| `code_elements`, `code_parameters`, `string_res`, `rad`, `custom_note` | `5`, `2`, `3`, `9`… | small fixed records; rarely needed |
+
+### The common block of a window control
+
+Found in chunk `0` by its signature: a version, four integers, eight zero bytes and the maximum size (`ff ff ff 07` or `ff ff ff 7f`, twice). From the first integer:
+
+| Field | Where | Notes |
+|---|---|---|
+| x, y, width, height | 4 × i32 | x and y are **relative to the parent control** |
+| visible | +32, u32 | the dossier's Visible tick |
+| double-click button | string after 5 bytes | a table's or list's button, e.g. `BTN_Modify` |
+| popup menu | string | `<NO CONTEXT MENU>` or a menu name |
+| initial state | u32 | 0 active, 1 read-only, 4 grayed |
+| tooltip | string | |
+| caption | string, 24 bytes later | statics, edits, combos, check boxes, tabs. A button keeps it empty and has its caption after the block |
+| plane | u32 right after the caption | 0 = every plane |
+| initial value | string, 4 bytes later | an edit's value, an image control's file |
+| anchor | u16 | bits: 1 bottom, 2 height, 4 right, 8 width |
+| linked item | string | the data binding, `Table.Item` |
+| tab stop, tab order | u32, and i32 16 bytes later | order is zero-based; −1 = none. The dossier prints −1 when the stop is off |
+| group | string | |
+| order | u16 right after the group | 1..n among the controls of the same parent (per pane inside a tab): the designer's order. Numbering checked on 148 sibling groups; its use as drawing order is inferred |
+| anchor rates | 4 × u32, 12 bytes later | right, width, bottom, height, in thousandths |
+| button type | byte 50 before the end of the chunk | 0 normal, 1 validate, 3 abort (2 and 4 not observed) |
+| button caption, background image, number of background states, image | a record 107 bytes after the block end (below) | string, string, u32, string. Kept only when these are exactly the first strings found there |
+| tab style | u32, 58 bytes before the end of a tab's chunk | 0: panes start 26 px below the tab's top; 2: 2 px. Other values not measured |
+
+**Where the block ends.** The record of the control's own kind starts 28 bytes after the group's order. One window of the project (its largest, 118 of 124 controls) keeps four more bytes per control before that record: the maximum-size marker (`ff ff ff 7f`, or `ff ff ff ff`) that sits 26 bytes into the record says which. Every offset "after the block" below counts from the corrected position; before this was known those controls were read four bytes off.
+
+### Records of one kind of control
+
+| Kind | Field | Where | Checked |
+|---|---|---|---|
+| any | skin style | the first string of the form `<number> <skin>.<style>` before the common block | names are the skin's own (`BTN_Ok`, `BTN_Annuler`, `BTN_Supprimer`, `SAI_Simple`…): a button's role is often readable from it. Absent = a custom style |
+| any | font record | tag `0x25b`, 4 bytes, 4 bytes, horizontal alignment (u32: 0 left, 1 centre, 2 right, 3 justified), vertical alignment (u32: 0 top, 1 centre), `LOGFONT`, face, text colour | a static's only font gives the static's alignment |
+| any | frame record | tag `0x262`, border type (u32), background colour (4th byte `ff` = none), border colour | read by shape, not compared with another source |
+| Edit, Combo | caption width | 24 bytes after the first font's face: u32 `4`, then the width | the input area starts there, from the control's left edge |
+| Edit (and a column's cell) | version tag | block end + 51: u32 `1`, u32 `0x286` | when the tag is not there the record is not read |
+| | input size | + 59, u32 | |
+| | input type | + 71, u32 | 0 text, 1 numeric, 2 date, 3 time, 5 duration |
+| | type of the value | + 75, u16 | WINDEV's code; 13 with a numeric input is the dossier's "high-precision numeric" |
+| | alignment | + 77, u8 | 0 left, 1 centre, 2 right |
+| | input mask, returned format | two strings from + 121 | empty mask = the dossier's `0` |
+| Button | caption, background image, its states, image, its states | a record 107 bytes after the block end: string, string, u32, string, u32 | |
+| | background stretching | u32, 52 bytes after the fourth font's face | 2 width and height, 0 custom 9-slice scaling; only meaningful with a background image |
+| List box, a combo's `dropdown` | version tag | block end + 51: u32 `1`, u32 `0x270` | |
+| | content in memory | + 63, u32 | 1 memory, 0 a file or query. Whether a file is loaded in memory or read directly is not located |
+| | typed content, browsed file, browsed item, (u32), displayed item, stored item | strings from + 71 | the typed content is one value per line; a browsed query embedded in the window is named `<window>_1$Query` |
+| Table column | alignment | u32 right after the caption | 0 left, 1 centre, 2 right |
+| | sortable, moveable | u32 at + 12 and + 16 after the caption | |
+| | linked item | string at + 32 after the caption | a column shown through a link holds `File.Item<TAB>OtherFile.Key.Item` |
+| | adjustable width, visible, multiline, with search | u32 at + 4, + 8, + 16, + 20 after the linked item | kept only when all six options are 0 or 1 |
+| Check box, radio button | tick image | the second image file named in the record (the first is the picture behind the selected choice) | |
+| Window | opening mode | one byte, 312 bytes after the face of the window's font | 2 centred in the screen, 3 centred in the parent window |
+| | title, background image | two strings, 316 bytes after that face | |
+| | title bar, system menu, minimize icon, maximize icon | 4 × u32, 5 bytes after the background image | maximize was never off where the dossier names it clearly: its place is the one left |
+| | own HFSQL context | u32, 46 bytes after the background image | |
+| Event slot (`p_codes`, chunk `9`) | predefined action | five short strings every slot has (`*`, `*`, `*`, `23`, `0`); an action that needs an element adds a record: a kind (u32, 16 bytes before the name) and the element's name | kind 1100 with a report name on the RAD's Print buttons. A slot without that record has no element to act on; what the 85 plain records differ in (two values, by button role) is not named |
+| Report | type, data source | u32 at + 9 and + 13 after the report's name | 2 table, 4 label, 5 free; 0 none, 1 embedded query, 6 the dossier's "text file" |
+| | page | eight doubles in a row: height, width, margins top, bottom, left, right (mm) | found by shape. Reports created by the RAD keep a Letter size there while the dossier prints A4: the band widths follow the stored size |
+| Report band, report control | type | one byte after the four geometry doubles | bands: 1 start of document, 2 page header, 4 body, 6 break header, 7 break footer, 11 page footer, 12 end of document. Controls: 16 calculation, 17 shape, 18 image, 20 preset, 39 static. A code outside these lists is kept as `type_code` |
+
+**Positions.** Add the parents' x and y to get window coordinates; a **tab** parent also adds where its panes start (its style, above). A tab of an unmeasured style gives its children no window position, and a **table** places controls in cells: those keep parent-relative `x`/`y` only. Each pane of a tab is an element of its own (owner `tabs`, with its caption); a control directly inside a tab carries `pane`, the number of its pane. A pane is not a WINDEV plane: planes are not named yet.
+
+### Mapping one more field
+
+Everything else a control has (a table's options, the other tick-mark properties, most of a report control's style) is in the same chunks, not yet named. To name one:
+
+1. Run with `--raw` to keep each chunk as hex.
+2. Take two controls of the same type that differ in that property only (or the dossier's value for a few hundred controls) and compare their chunks from the common block signature, or from the end of the chunk.
+3. Keep an offset only when it explains **every** control of that type, as the tables above do; add it to the decoder with a test and a line in `calibrate`.
+
+The fastest search, used for the records above: for one kind of control, try every offset counted from the block end, from the chunk end and from the end of a string or font before it, and keep those where the bytes and the dossier's values map one-to-one for all controls. An offset that fits all but a few is usually right with the anchor wrong: look at what the exceptions share (here, one window).
+
+A property changed in WINDEV on a copy of one window, saved in text format and decoded before and after, settles an offset in minutes.
+
+### Fonts, options, embedded queries
+
+- **Fonts**: a font is a Windows `LOGFONT` (height, width, escapement, orientation, weight, italic, underline, strike-out, character set, four precision bytes) whose face name is a framed string. A negative height is pixels at 96 dpi (−11 = 8.25 pt). The four bytes after the face are read as the text colour (red, green, blue, 0). Each element lists its `fonts` in file order: a button has four (one per state), an edit its caption font and its input font. Which font belongs to which part is by order, not named.
+- **Menus**: a window's menu options, in file order with their captions and the options above them, form the tree (`menu` in the evidence folder); each option's code is a normal code block of the inspector.
+- **Report controls**: besides geometry, `linked_item` is the query item a control prints (`<report>$Query.item`, from chunk `1`) and `content` its own text, mask or preset (`[PAGENUM]/[NBPAGES]`).
+- **Options**: each choice of a radio button or check box and each menu option is an element of its own (owner `options`) whose first string is its caption.
+- **Embedded queries**: a window's or report's own query (`<name>$Query`, owner `elements`) holds a whole PCS container in chunk `4`; its SQL is read like a `.WDR` file's and added to `queries.json`.
+
+### Properties without a known layout: the field map and the audit
+
+Replacing each string of a chunk by one zero byte gives the layout an all-empty element would have, so a byte position means the same in every element of a kind, counted from the chunk's start or end or, for a control, from the start or end of the common block. On that footing `scripts/windev_fieldmap.py`:
+
+- **learns** where a dossier property sits: the position whose bytes map one-to-one to the property's values for every control of that kind (a number read directly, an enumeration, or a string slot), then scores it on windows left out of the learning. `strong` = at least 8 held-out predictions, none wrong, no other position fitting, and for a yes/no at least 3 of the rarer value. Everything else is `weak` and not applied.
+- **applies** strong entries to every element (`properties` in the decoder's output, written into the evidence folder in the dossier's own form). The map shipped as `scripts/windev_fieldmap.json` was learned on the measured project; `learn` on another project completes it.
+- **audits**: per element, the bytes that differ from the most common value of its kind and that no parsed field, learned property, font or string covers. Positions where most elements differ from each other are identifiers and are left out. See [extraction strategy](extraction-strategy.md) for how to use the list.
+
+### How the other tools get these values
+
+- `inspect_windev.py` fills its `layout` (positions and sizes of controls, column widths, report bands and controls) from `internal_properties` when the source has no readable geometry, and marks the file `layout_source: internal_properties`. `render_layouts.py` and `screen_layout.py` read that layout as before.
+- `windev_decode.py --evidence` writes `<out>/evidence/`, a folder in the shape `dossier_extract.py` writes: when a dossier extract is given it is copied and the decoded captions, titles, geometry, tab order, state, Visible, button type and images, anchors and SQL are written over it (each control lists them in `decoded`; a query keeps the PDF's text as `sql_pdf`); controls, windows, reports and queries the dossier lacks get entries. Everything the decoder does not name stays as the dossier had it. Without a dossier the folder holds the decoded values alone.
+- `prepare_evidence.py` makes that folder the `dossier` of `analysis-local/latest.json`, so `evidence_report.py`, `render_layouts.py`, `screen_layout.py` and `unit_evidence.py` use it unchanged; the PDF extract stays at `dossier_pdf`.
+
+## 2. Windows saved in binary format
+
+A project that was never switched to text format keeps each window as a binary `.wdw` (a PCS container, below). Its first packed block is the window's description, and it holds **the same records as a text source**, laid out as a tree:
+
+- the window first: version tag, its name, an 8-byte identifier, then x, y, width, height (four zero bytes come before in format 28);
+- then each control as `length (u32), type (u32), record`. The record is what a text source keeps in chunk `0`, with the control's name and identifier put inside it, between the common block's version tag and its rectangle. The type is the text format's `type :`;
+- a control inside another (in a tab, a supercontrol, an internal window) lies within the other's length, after the other's own record;
+- what a text source lists apart sits inside its control's record:
+  - a **column**: its type, its name, a version tag, its name again, an identifier, then the text format's column record with the **cell** in the middle (a word, the cell's type, the cell's record) and the column's last options after it, up to the mark `ba ab ba ab`;
+  - a record **without a name** (a cell, a combo's list, an edit's calendar) has one zero byte where the name would be; its type is the word before its own part;
+  - a tab's **pane**: tag `0x25a` and its caption, in the tab's record, each followed by the controls of that pane; the tab's style comes after the last of them;
+  - a check box's or radio button's **options**: each caption followed by the word `0x0e`, after the common block.
+
+Taking the name and identifier out gives the text format's bytes, apart from lengths kept inside the record and file paths (absolute here, `<REPGABARIT>\…` in text). So every reader of section 1 applies unchanged: `binary_window()` rebuilds each record and calls them.
+
+Measured two ways:
+
+| Check | Result |
+|---|---|
+| The 112 windows of the measured project, binary copy (`.cpl/<user>/`) against text source, element by element in file order | controls 1,148 of 1,148, columns 310 of 310, cells 310 of 310, combo lists 46 of 46, calendars 33 of 33, tab panes 25 of 25: same type, parents, pane and every field (position in the window, size, caption, state, tab order, anchors, plane, linked item, button type, edit input type and mask, column options, list binding, style…). Options of check boxes and radio buttons: 85 of 88 (the 3 with an empty caption are not seen) |
+| Known differences on that set | image paths are absolute where the text format writes `<REPGABARIT>\…` |
+| Code of the same 112 windows, binary against text | 1,023 of 1,035 code blocks found with the same lines (the other 12 hold only RAD markers in the text source), each with the same event number and the same control |
+| 696 windows of WINDEV 28's own examples and tutorials (format 28, never seen before) | 5,378 controls read from 5,541 named records, 5,376 with a complete common block; window size for 626 windows. Not compared with a second source |
+| Format 28 against 25 | head tag `0x273`/`0x274` instead of `0x270`; the common block reads the same; the edit record's tag is elsewhere, so input type and mask are refused there (26 of 133 edit controls read), not misread |
+| One tutorial project decoded whole (binary format 28, no dossier) | 8 windows, 127 controls, their columns with widths and linked items, 4 queries with SQL, 285 skin styles, 89 lines of project code, and 83 code blocks of 13 elements, each with its control and event |
+
+**Code of binary elements.** Their code is in the next block. Each event's code has a header — a byte (`0x14` in format 25, `0x15` in 28), a length, the number of lines, the event's number as a text source writes it in `type :` — then its lines, each `03`, the text, who wrote it, 12 bytes; an empty line has no text. The name of a control, after the number of its code type, opens the headers that belong to it; before any name the code is the element's own. `code/<file>.wl` holds the blocks under a line naming control and event, `code/<file>.json` the same as data with each block's first line in the `.wl` file (also for binary reports, classes and procedure sets).
+
+**The inspector reads them.** `inspect_windev.py` gives a binary window, report, class or procedure set the status `binary-decoded`: its `code/<file>.json` has the same shape as a text source's (blocks with their control path and event, procedures, controls, layout in window pixels), and the parity seed gets one row per code block. A binary file has no lines, so each block cites the listing the inspector writes beside its outputs (`<file> (binary) listing/<file>.wl:<first>-<last>`). The row that asks for an export stays, with the ID it always had: a text export still adds what this reading lacks. `evidence_report.py`, `code_map.py` and the others read these files unchanged. Windows of a `Templates` folder are WINDEV's skin templates and are left as before.
+
+On the tutorial project (binary, format 28): 3 windows and 1 procedure set decoded, 52 code blocks seeded, tables read and written per unit in the code map.
+
+**Reports, menus and predefined actions of binary elements**, each compared with the text sources of the measured project:
+
+| Read from the binary file | How it is stored | Binary against text |
+|---|---|---|
+| A report's type, data source, page and margins | the report's own record opens the block, as in chunk `15` of a text source | 27 of 27 reports, every field |
+| Report bands and controls | the text format's chunk `15` verbatim (name, eight bytes, four doubles, type), a control with its length before it, a band's record holding its controls | 133 of 133 bands, 497 of 497 controls: name, band, kind, geometry, fonts |
+| The item a report control prints | in another packed block: the control's name, then `<query>.<item>` | 49 of 49 |
+| A window's menu options | name, identifier, one or two tags (`0x2c2`, `0x2c4`), caption; the menu itself comes first | 54 of 54 names and captions, in order. Which sub-menu an option is in is not read |
+| Predefined actions that name an element | in the code block: the same record as a text source's event slot, after the control's name | 9 of 9, none invented in 112 windows |
+
+On WINDEV 28's tutorial project the same reader lists 11 reports with 152 controls and finds one predefined action — a Print button naming its report, with the same kind number 1100 — but not the report page, the linked items or the menu: those three sit differently in format 28.
+
+**Not there yet**: dialogs of a binary element (the measured project has none to compare with), the sub-menu an option belongs to, an option with an empty caption.
+
+**Controls inside table cells.** Their x in the window is the table's x, plus the widths of the shown columns before theirs, plus their own x, plus 1 (18 of 18 against the dossier). Their y needs the height of the table's header (25 for 16 of them, 2 for the 2 in a table without column titles), which is not located: they are left without a window position.
+
+## 3. Binary files: the PCS container
+
+Every binary project file starts with `PCS\0`: `.wdp` (project), `.WDR` (query), `.wdd`/`.wda` (analysis), `.sty`, `.WPF`, `.wdcoverage`, the `.wdw.cache`/`.wde.cache` files and, in `<project>.cpl/<user>/`, a binary copy of every window, report, class and procedure set. Inside are packed blocks of the same kind as above (byte `4`, sizes, LZW), **without the cipher**. The tool finds each block by its header and keeps it only if it unpacks to its declared size.
+
+| File | What its blocks hold | Use |
+|---|---|---|
+| `QRY_*.WDR` | the SQL, one record per line with author and date; the tables, items and parameters it binds; the query editor's object graph; a thumbnail | `queries.json`: query name → SQL. No export from WINDEV needed |
+| `<project>.wdp` | project code (declarations, initialisation, constants) one record per line, each followed by its author (an empty line is a record without text); the project explorer's folders with their elements; configurations (`32-bit Windows executable`…); editor resources | `project/<project>.code.wl`: the start-up code when the `.wdp` is not in text format (220 lines here: constants, connection set-up from an INI file, schema update); `project.json` → `folders`: the authors' own grouping of windows (back office, front office, monitor…), a ready-made slice list |
+| `<project>.cpl/<user>/*.wdw`, `*.wde` | the same description and code as the text file, in binary | a second copy to compare with; the only copy when the project was never switched to text format |
+| `*.wdw.cache`, `*.wde.cache` | description, compiled state and a **thumbnail** of the window or report as WINDEV draws it (about 150 px) | `images/`: a picture of every window without the dossier — small, but enough to see a layout is right |
+| `<project>.ana/<project>.wda` | the whole analysis (files, items, keys, captions) | `analysis.json` → `tables`: every data file with its items — the structure an `.xdd` gives, and what it does not give (below). `schema_draft.py` uses it for captions and decimal digits, and for the whole structure when the project has no `.xdd` |
+| `*.wdw.wcw`, `.wbw`, `.wrw` in `.cpl/<user>/00000000/` | compiled code with WINDEV's event labels (`Click BTN_Save`) | already used by `event_legend.py` |
+
+Blocks that are not SQL or images are listed with their strings (`text`); `--blocks` saves each one for closer reading. `<project>.wdd` has no such block in this project (it is stored another way): use the `.wda`, or the `.xdd`.
+
+### The analysis file
+
+The packed block of `<project>.wda` is a tree of chunks: `0c 00 00 00`, a type, a version, a length counted from the length field. Type 6 is a data file, type 5 an item; strings are UTF-8, each ended by a zero byte.
+
+| In an item's chunk | Where | Checked |
+|---|---|---|
+| Number, the number of its data file | words 1 and 3 | every item falls in its file |
+| Name, day of creation, author, who changed it last | strings after the four words, six bytes between the day and the authors | — |
+| Digits of a decimal | first two of those six bytes: decimals, then integer digits (`06 0a` = 10 integer digits and 6 decimals) | the 7 stored bytes of such an item are the value × 10⁶: 16,826 values equal the ODBC driver's |
+| Size | word 16 bytes after the second author | 252 of 252 against the `.xdd` |
+| Caption | string 22 bytes after the second author | 218 of 220 against the dossier |
+| Type code, key (1 unique, 2 with duplicates), composite key | bytes 3, 6 and 8 after the caption | 252 of 252, 269 of 269, 17 of 17 |
+| Position in the record, position in the editor | two 16-bit words after a 32-character identifier | records read in the first order equal the driver's columns; the `.xdd` lists items in the second |
+| Deleted item | the next byte is 0 | the 29 items the `.xdd` no longer has |
+| How a text key compares | the byte after that: 5 or 7 | in the index files (`.ndx`), values under 5 are stored in capitals without accents (604 of 604 values that tell the difference), under 7 also without spaces and punctuation (63 of 63). No text key here compares byte for byte |
+| Parts of a composite key | one small chunk per part, holding the part's item number | 17 of 17 |
+| Default value | a type-2 chunk holding it as text | 252 of 252 |
+
+A data file's chunk gives its number, name, day of creation and, after two 32-character identifiers and its rectangle in the editor's graph, a byte that is 0 when the file was deleted from the analysis (2 here, both absent from the `.xdd`).
+
+**Not read**: null support (it never varies here), links between files (this analysis declares none), the four bytes after a file's creation day (close to the record length, but one more than the real one for 4 files), type codes beyond those met.
+
+**Not every `.wda` holds the analysis.** In WINDEV 28's examples and tutorial (8 analyses) the `.wda` is a 1 KB stub, and no file of the `.ana` folder holds an item name in clear; HFSQL files sit beside it (`DEFFIC.FIC`, `DEFRUB.FIC`, `Liaison.FIC`…) whose records are not readable as stored. Nothing is read from such an analysis (`analysis.json` is not written): the `.xdd` is the source there.
+
+### The skin: what a style name stands for
+
+`Templates/WD/<skin>/<skin>.sty` is a PCS container that is **not packed**: its strings are readable in place. Each style is one record in the layout a control uses — fonts with their alignment and text colour, frames, image files — opened by the WINDEV version that wrote it (`25.0.225.3`) and closed by the style's name (`BTN_Ok`, `SAI_Simple`). The decoder writes `skin/<skin>.json` (402 styles per skin here) and compares each control with the style it names: `differs_from_style` lists what the control changed, one line per value (`fonts[0].colour: #fe0000 (style #2d2d2d)`).
+
+That turns "match the screenshot" into two smaller jobs: reproduce each skin style once (its fonts, colours and images are listed), then apply per control only the listed changes. A control with a style and no `differs_from_style` needs nothing of its own.
+
+## 4. Other files worth reading
+
+| File | Format | What it gives a migration |
+|---|---|---|
+| `<project>.xdd` | XML | the schema (already read by `inspect_windev.py`) |
+| `<project>.wdp` (first window) | in the block that lists the elements, a window named again outside the list, after a word 1 | `project.json` → `first_window`, and a `First window …` line in the evidence folder for `evidence_report.py`: equal to the dossier on the measured project; found in 3 of the 10 WINDEV example projects tried, not found in the other 7 (the rule is narrow on purpose: no name is better than a wrong one) |
+| `<project>.wdu` | text, one path per line: an element, then the files it uses | `project.json` → `used_files`: images, skin files and external files per element → the asset list |
+| `<project>.REP` | text | each data file's name and physical location |
+| `<project>.WPF` | PCS, plain strings | a profiler run, when one was recorded: the events, procedures and WLanguage functions the application executed during it |
+| `<project>.env` | UTF-16 INI | editor settings; not needed |
+| `HstDuree.log` | UTF-16 CSV | who worked on the project and when; not needed |
+| `Exe/*.fic`, `.ndx`, `.mmo` | HFSQL Classic | the data: `hfsql_read.py` reads a copy directly (below), or export through the ODBC driver ([data export](../scripts/windows/README.md)) |
+| `Exe/*.ini`, `CONFIG.INI` | text | deployment configuration the code reads |
+| `Templates/`, `*.sty`, `*.wdy` | images, PCS | the skin: images are usable as is (`skin_assets.py`); the `.sty` holds every style's fonts, colours, frames and images (`skin/<skin>.json`, above) |
+
+### Data files: `.fic` and `.mmo` without a driver
+
+`scripts/hfsql_read.py <copy of the data folder> --analysis <project>.wda --out <new folder>` writes what the ODBC export writes (`data.sqlite`, one CSV per file, `manifest.json`). It needs neither WINDEV nor the HFSQL driver, and runs on any system.
+
+A `.fic` is a header, then fixed-length records up to the end of the file. The header's size is not read (it holds the file's own description, enciphered): its last 44 bytes are a counter, the number of records, a zero, the number of deleted records, 20 zero bytes and the first free record; one unused record slot follows, then the records. The reader computes the record length from the analysis and takes the only position where those counts equal the slots that follow.
+
+| In a record | Stored as |
+|---|---|
+| State | one byte: `10` in use, `80` deleted (skipped, counted in the manifest) |
+| Then | two bytes, the time of the last change (seconds since 1970), a zero byte, one bit per item |
+| Text (type 2) | the size plus one byte, code page text ended by a zero |
+| Date (14), time (11) | text `yyyymmdd`, `hhmm`, plus the zero byte |
+| Date and time (34) | day, month (one byte each), year (two), milliseconds since midnight (four) |
+| Duration (35) | milliseconds, 8 bytes |
+| Decimal (41) | a signed integer of the item's size: the value × 10^decimals |
+| Integers (5, 9, 26, 27, 36), boolean (37) | little-endian, of the item's size; 5 is read signed |
+| Text memo (29) | the offset of a block in the `.mmo` file, or eight `ff` for none |
+| Composite keys, deleted items | not in the record |
+
+A memo block is two bytes, its size twice, a byte, the offset of the next block (eight `ff` in the last), two bytes and `size` bytes; the bytes of a memo's blocks put together are a 19-byte head ending in the content's length, then the content.
+
+Compared with the HFSQL 28 ODBC driver on the measured project's data: 29 files, 24,896 rows, 224,567 values, all equal (text, integers, booleans, dates, times, dates and times, durations, decimals, memos in one or several blocks).
+
+**Refused, with the reason in the manifest**: a file whose records are not the length the analysis gives (the message gives the length the file itself fits, measured the same way for every length). One of the 30 is like that: its records are 17 bytes, 3 more than its two items, because the file was created under an earlier description of one item and never rebuilt; the driver copes by reading the file's own description, which this reader cannot. A compressed or encrypted file fails the same check. With `--fit-integers` such a file is read when exactly one way of storing its integer items in a larger integer gives the measured length and every value still fits the item's size: here one 1-byte item kept in 4 bytes, and the 19 rows equal the driver's — with it, 30 of 30 files, 24,915 rows, 224,605 values. The manifest marks those items as assumed. **Not measured**: reals, currency, signed integers of other sizes, Unicode text, binary memos, passwords, arrays — their bytes are written as `base64:` and the type codes listed in the manifest. The bit per item is read as "has a value" (every bit was set here; a cleared bit gives NULL, unverified).
+
+### What a full survey of one project left unread
+
+Every key of the text sources and every file type of the project folder was listed and checked against what the tools read (243 windows and copies, 83 reports, 16 classes, 4 procedure sets).
+
+- **Text sources: nothing left.** Besides code, names, types and `internal_properties`, the only other keys are identifiers, a `description` per window, `original_name` (the template a window was created from) and `enabled : false` on event slots. No disabled slot holds code here (1,283 code blocks checked), so no code is silently dead; check that count on another project before trusting it there.
+- **`<project>.wdcoverage`** and the 153 per-element `*wdcoverage` files (code coverage of the last test runs) and **`<project>.wdd`** are PCS files whose body is neither packed nor under the cipher of `internal_properties`: not read. The coverage files are not a reused key stream either (67 share their first 28 bytes and nothing after), so they need the routine itself from WINDEV's libraries. The `.wdd` is the compiled analysis; the `.wda` (above) and the `.xdd` give the same description. Coverage would say which lines the authors' tests ran; nothing else holds that.
+- **`<project>.waudit`**, `.wdap`, `.mdf`, `.ref`, `.wtp`, `.wlr`: editor state and build leftovers, a few hundred bytes each.
+- **Inside the decoded chunks**: a table's own options, the tick-mark properties not named above, a report control's alignment and borders, where a file-bound list says "loaded in memory". An exact search over every offset found nothing more for them: in this project they either never vary or always vary together (a table's magnifier mode and its three margins change as one), so no position can be told from another. They need a project that varies them, or one property changed in WINDEV on a copy of a window.
+
+## 5. What stays outside the files
+
+- **Runtime behavior**: what a dialog's Esc does, values set by code at opening, data-dependent states. From the code, and where the code cannot settle it, from the running application.
+- **Predefined button actions** (the encoded event slots of `evidence_report.py`): each slot's `internal_properties` now decodes like any other; the records are small and not yet named. Until they are, the proposed answers stay.
+- **Fields not yet named** (section 1): present in the chunks; each control's differences from the usual values of its kind are listed in `audit.json`.
+
+## 6. How this was established, and its limits
+
+The packing was first measured on the files alone: values with one differing property share long runs of bytes and differ by fixed patterns, which showed a keyed transform over the whole value instead of real encryption. The exact routine and its key were then read from the editor's own text-format reader (`wdfen.dll` of a WINDEV 28 Express installation), which unpacks the same values. No WINDEV code is included or run by the tool.
+
+Decoding your own project's files to migrate it is interoperability; reading a vendor's library to do so is regulated differently by country and by licence terms. Check yours before redistributing the decoder or its key. The dossier and the running application remain the reference when a decoded value and they disagree: record the difference, do not pick silently.

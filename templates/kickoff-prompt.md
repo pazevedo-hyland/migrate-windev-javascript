@@ -26,7 +26,8 @@ continue with the first slice not Done. Otherwise start at step 1.
    manifest.json to legacy/data/. A count mismatch stops the export: report it. For an HFSQL server, ask for a
    backup copy instead. Without Windows or the driver, record it under "Decisions needed" and go on.
    Evidence (06 §4): scripts/prepare_evidence.py, then scripts/data_profile.py on legacy/data/data.sqlite. Read
-   docs/evidence-report.md, docs/evidence/encoded-actions.md (Proposed answers), docs/navigation.md,
+   docs/readiness.md (how far the decoder applies here, and every unit's open points: plan the first slices
+   among the units with none), docs/evidence-report.md, docs/evidence/encoded-actions.md (Proposed answers), docs/navigation.md,
    docs/schema/schema-draft.md and docs/data/profile.md. Port faithfully first; make it idiomatic in the
    roadmap's cleanup slices.
 4. Stage 0, mapping of the whole application: templates/mapping-prompt.md (every window, report, query set and

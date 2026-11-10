@@ -52,12 +52,13 @@ def driver_info(connection):
         return {}
 
 
-def export(connection, out, tables=None):
+def export(connection, out, tables=None, info=None):
+    """Write data.sqlite, one CSV per table and manifest.json; `info` adds source details to the manifest."""
     cursor = connection.cursor()
     names = tables or [row.table_name for row in cursor.tables(tableType='TABLE')]
     manifest = {'exported': datetime.datetime.now().isoformat(timespec='seconds'),
                 'python': f"{platform.python_version()} {struct.calcsize('P') * 8}-bit", **driver_info(connection),
-                'tables': {}}
+                **(info or {}), 'tables': {}}
     copy = sqlite3.connect(out / 'data.sqlite')
     for name in names:
         cursor.execute(f'SELECT COUNT(*) FROM "{name}"')

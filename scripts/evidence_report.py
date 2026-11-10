@@ -88,6 +88,8 @@ def coverage(inspect_dir, dossier_dir, schema_tables):
     windows, reports, queries, tables = dossier_items(dossier_dir)
     index = Path(dossier_dir or '.', 'index.json')
     images = load_json(index).get('images', True) if dossier_dir and index.exists() else True
+    # A dossier was printed (and extracted), or the folder holds only what the decoder read from the sources.
+    printed = bool(dossier_dir) and (not index.exists() or (load_json(index).get('decoded') or {}).get('dossier', True))
     rows, gaps = [], []
     for name, data in sorted(inspected.items(), key=lambda item: item[0].lower()):
         kind = Path(data['path']).suffix.lower()
@@ -109,7 +111,11 @@ def coverage(inspect_dir, dossier_dir, schema_tables):
             gaps.append(f'{name}: {len(missing)} controls without dossier description: {", ".join(missing[:8])}')
         if dossier and not row['image'] and images:  # an extract run with --no-images has none at all
             gaps.append(f'{name}: no image in the dossier')
-        if (dossier or {}).get('data_source') == 'Embedded query':
+        # The decoder reads an embedded query's SQL from the source (`<report>$Query`): then nothing is missing.
+        embedded = (queries.get(f'{name}$Query') or {}).get('sql')
+        if embedded:
+            row['embedded_query_sql'] = True
+        if (dossier or {}).get('data_source') == 'Embedded query' and not embedded:
             gaps.append(f'{name}: embedded query — its SQL is not in the dossier (the items it selects are in '
                         'docs/mapping/event-codes.md from the compile folder; export the conditions and sort from the '
                         'report editor, or derive them from a legacy printout on known data)')
@@ -124,8 +130,13 @@ def coverage(inspect_dir, dossier_dir, schema_tables):
         described = tables.get(name)
         rows.append({'element': name, 'kind': 'table', 'items': len((described or {}).get('items', [])),
                      'typed': bool(described)})
-        if not described:
+        if not described and (tables or printed):
             gaps.append(f'{name}: table without typed items in the dossier analysis')
+    if schema_tables and not tables and not printed:
+        # No dossier describes the analysis: one statement, not one gap per table. The schema draft names the
+        # type codes from its built-in table and lists any it cannot name.
+        gaps.append(f'analysis: no dossier names the item types of the {len(schema_tables)} tables; they come from the '
+                    "schema draft's built-in code table (see its \"Codes nothing names yet\" line, if any)")
     return rows, gaps
 
 
@@ -267,7 +278,9 @@ def runtime_questions(inspect_dir, dossier_dir, language=None, actions=(), skinn
     for name, data in sorted(elements.items()):
         for control, details in windows.get(name, {}).get('controls', {}).items():
             raw = ' '.join(details.get('raw', [])) + ' ' + details.get('row', '')
-            if details.get('kind') != 'Button' or not re.search(r'\bValidate\b', raw):
+            # The dossier prints the button type in the control's row; a decoded entry names it in `button_type`.
+            if details.get('kind') != 'Button' or not (details.get('button_type') == 'Validate'
+                                                      or re.search(r'\bValidate\b', raw)):
                 continue
             short = control.split('.')[-1]
             code = control_code(data, short)
@@ -330,7 +343,7 @@ def encoded_actions(inspect_dir, dossier_dir, language=None):
     return [{'action': action, 'slots': slots} for action, slots in sorted(groups.items(), key=lambda kv: -len(kv[1]))]
 
 
-def propose_actions(actions, inspect_dir, uncalled, preview):
+def propose_actions(actions, inspect_dir, uncalled, preview, decoded=None):
     """The answer the evidence proposes for each action group, strongest rule first, or a labelled default.
     uncalled: {window: [reports no code calls but its compiled code names]}, case-insensitive."""
     elements = CaseInsensitive(elements_from_inspector(inspect_dir))
@@ -340,7 +353,12 @@ def propose_actions(actions, inspect_dir, uncalled, preview):
         named = {answer for s in slots for pattern, answer in TEMPLATE_BUTTONS if re.search(pattern, s['control'], re.I)}
         coded = [control_code(elements.get(s['element'], {'blocks': []}), s['control']) for s in slots if s['has_code']]
         proposal = None
-        if len(named) == 1:
+        # What the decoder read in the action's own record: the element it names. Stronger than any rule below.
+        targets = {(decoded or {}).get((s['element'].lower(), s['control'].lower())) for s in slots}
+        if len(targets) == 1 and None not in targets:
+            proposal = (f'Print {next(iter(targets))}' + (" (preview first, as the app's own print calls do)" if preview else ''),
+                        "the action's record in the source names it (decoded); preview or direct print is not in the record")
+        elif len(named) == 1:
             # Equal encoded values are the same action: the skin template's own button names the whole group.
             example = next(s['control'] for s in slots if any(re.search(p, s['control'], re.I) for p, _ in TEMPLATE_BUTTONS))
             proposal = (next(iter(named)), f'same encoded action as the skin-template button {example}')
@@ -480,7 +498,20 @@ def main():
     first = first_window(args.dossier)
     legend = load_json(args.compiled) if args.compiled else {}
     compiled = legend.get('compiled_references', {})
+    # Predefined actions the decoder read from the source (`predefined_actions` of a window): a button that prints
+    # or opens an element without code is a caller like any other.
+    if args.dossier:
+        for path in sorted(Path(args.dossier, 'windev-window').glob('*.json')):
+            for action in load_json(path).get('predefined_actions', []):
+                target = known.get(action['target'].lower(), action['target'])
+                caller_index[target] = list(caller_index.get(target) or []) + [
+                    f"{path.stem}.{action['control']} (predefined action {action['code']}, read from the source)"]
     uncalled = collections.defaultdict(list)
+    decoded_actions = {}
+    if args.dossier:
+        for path in sorted(Path(args.dossier, 'windev-window').glob('*.json')):
+            for action in load_json(path).get('predefined_actions', []):
+                decoded_actions[path.stem.lower(), action['control'].lower()] = action['target']
     for row in rows:
         if row['kind'] in ('window', 'report') and not caller_index.get(row['element']) and row['element'] != first:
             # The compiled code of another element naming it: a predefined action (e.g. a Print button) or a
@@ -509,7 +540,7 @@ def main():
                 gaps[index] = (f'{gap} — proposed: every record of {file}, no condition, in the order of the table '
                                f'that prints it ({window}{order}); confirm on a legacy printout')
     actions = propose_actions(encoded_actions(args.inspect_dir, args.dossier, args.language), args.inspect_dir,
-                              CaseInsensitive(uncalled), bool(used.get('iPreview')))
+                              CaseInsensitive(uncalled), bool(used.get('iPreview')), decoded_actions)
     questions = runtime_questions(args.inspect_dir, args.dossier, args.language, actions,
                                   legend.get('skinned_dialogs', ()))
     args.out.with_name('navigation.md').write_text(navigation(caller_index, rows, first), encoding='utf-8')

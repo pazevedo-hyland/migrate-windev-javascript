@@ -1,0 +1,1939 @@
+{
+ "format_version": 1,
+ "variants": {
+  "wde/blocks//15.14": {
+   "start": {
+    "field:type_code": {
+     "kind": "position",
+     "position": 41,
+     "width": 2,
+     "samples": 133,
+     "distinct": 7,
+     "minority": 22,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wde/controls//15.14": {
+   "start": {
+    "field:type_code": {
+     "kind": "position",
+     "position": 41,
+     "width": 2,
+     "samples": 497,
+     "distinct": 7,
+     "minority": 44,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wde/report//15.14": {
+   "start": {
+    "field:page_format_code": {
+     "kind": "position",
+     "position": 24,
+     "width": 4,
+     "samples": 27,
+     "distinct": 2,
+     "minority": 5,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/columns/14/0.14": {
+   "start": {
+    "field:width": {
+     "kind": "position",
+     "position": 4,
+     "width": 4,
+     "samples": 6,
+     "distinct": 4,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/columns/2/0.14": {
+   "start": {
+    "field:adjustable_width": {
+     "kind": "position",
+     "position": 46,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 34,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:moveable": {
+     "kind": "position",
+     "position": 25,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 47,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:multiline": {
+     "kind": "position",
+     "position": 58,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 44,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:sortable": {
+     "kind": "position",
+     "position": 21,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 47,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 4,
+     "width": 4,
+     "samples": 277,
+     "distinct": 71,
+     "minority": 22,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:with_search": {
+     "kind": "position",
+     "position": 62,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 58,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/columns/40/0.14": {
+   "start": {
+    "field:adjustable_width": {
+     "kind": "position",
+     "position": 46,
+     "width": 4,
+     "samples": 7,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 4,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:moveable": {
+     "kind": "position",
+     "position": 21,
+     "width": 4,
+     "samples": 7,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 2,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:sortable": {
+     "kind": "position",
+     "position": 21,
+     "width": 4,
+     "samples": 7,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 2,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 4,
+     "width": 4,
+     "samples": 7,
+     "distinct": 5,
+     "minority": 1,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:with_search": {
+     "kind": "position",
+     "position": 21,
+     "width": 4,
+     "samples": 7,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 2,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/columns/5/0.14": {
+   "start": {
+    "field:adjustable_width": {
+     "kind": "position",
+     "position": 46,
+     "width": 4,
+     "samples": 19,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:moveable": {
+     "kind": "position",
+     "position": 25,
+     "width": 4,
+     "samples": 19,
+     "distinct": 2,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:sortable": {
+     "kind": "position",
+     "position": 21,
+     "width": 4,
+     "samples": 19,
+     "distinct": 2,
+     "minority": 4,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 4,
+     "width": 4,
+     "samples": 19,
+     "distinct": 9,
+     "minority": 3,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:with_search": {
+     "kind": "position",
+     "position": 62,
+     "width": 4,
+     "samples": 19,
+     "distinct": 2,
+     "minority": 7,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/content/14/0.14": {
+   "start": {
+    "field:state": {
+     "kind": "position",
+     "position": 2519,
+     "width": 4,
+     "samples": 6,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/content/2/0.14": {
+   "after": {
+    "field:input_size": {
+     "kind": "position",
+     "position": 59,
+     "width": 4,
+     "samples": 276,
+     "distinct": 8,
+     "minority": 22,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "start": {
+    "field:plane": {
+     "kind": "position",
+     "position": 1061,
+     "width": 4,
+     "samples": 277,
+     "distinct": 3,
+     "minority": 11,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:state": {
+     "kind": "position",
+     "position": 1031,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 101,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:x": {
+     "kind": "position",
+     "position": 992,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 4,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 992,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 4,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "end": {
+    "field:value_type": {
+     "kind": "position",
+     "position": -182,
+     "width": 1,
+     "samples": 276,
+     "distinct": 5,
+     "minority": 26,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1376": {
+    "flag:File assisted input": {
+     "kind": "enum",
+     "position": 1203,
+     "width": 4,
+     "samples": 25,
+     "distinct": 2,
+     "minority": 12,
+     "alternatives": 0,
+     "values": {
+      "03000000": "False",
+      "07000000": "True"
+     },
+     "held_out": "65/65",
+     "confidence": "strong"
+    }
+   }
+  },
+  "wdw/content/40/0.14": {
+   "start": {
+    "field:plane": {
+     "kind": "position",
+     "position": 647,
+     "width": 4,
+     "samples": 7,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 35,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/content/5/0.14": {
+   "start": {
+    "field:plane": {
+     "kind": "position",
+     "position": 660,
+     "width": 4,
+     "samples": 19,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 18,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:state": {
+     "kind": "position",
+     "position": 630,
+     "width": 4,
+     "samples": 19,
+     "distinct": 2,
+     "minority": 4,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/14/0.14": {
+   "start": {
+    "field:caption_width": {
+     "kind": "position",
+     "position": 134,
+     "width": 4,
+     "samples": 39,
+     "distinct": 21,
+     "minority": 6,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:height": {
+     "kind": "position",
+     "position": 2565,
+     "width": 4,
+     "samples": 40,
+     "distinct": 3,
+     "minority": 1,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:order": {
+     "kind": "position",
+     "position": 2651,
+     "width": 4,
+     "samples": 40,
+     "distinct": 15,
+     "minority": 6,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:plane": {
+     "kind": "position",
+     "position": 2622,
+     "width": 4,
+     "samples": 40,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 24,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_order": {
+     "kind": "position",
+     "position": 2646,
+     "width": 4,
+     "samples": 40,
+     "distinct": 10,
+     "minority": 8,
+     "alternatives": 0,
+     "add": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_stop": {
+     "kind": "position",
+     "position": 2630,
+     "width": 4,
+     "samples": 40,
+     "distinct": 2,
+     "minority": 6,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:visible": {
+     "kind": "position",
+     "position": 2585,
+     "width": 4,
+     "samples": 40,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 2561,
+     "width": 4,
+     "samples": 40,
+     "distinct": 23,
+     "minority": 5,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:x": {
+     "kind": "position",
+     "position": 2553,
+     "width": 4,
+     "samples": 40,
+     "distinct": 9,
+     "minority": 8,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 2557,
+     "width": 4,
+     "samples": 40,
+     "distinct": 22,
+     "minority": 6,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/16/0.14": {
+   "start": {
+    "field:height": {
+     "kind": "position",
+     "position": 1000,
+     "width": 4,
+     "samples": 6,
+     "distinct": 6,
+     "minority": 1,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:order": {
+     "kind": "position",
+     "position": 996,
+     "width": 4,
+     "samples": 6,
+     "distinct": 5,
+     "minority": 1,
+     "alternatives": 2,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:pane_top": {
+     "kind": "position",
+     "position": 4,
+     "width": 4,
+     "samples": 6,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 199,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_order": {
+     "kind": "position",
+     "position": 1085,
+     "width": 4,
+     "samples": 6,
+     "distinct": 4,
+     "minority": 1,
+     "alternatives": 0,
+     "add": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_stop": {
+     "kind": "position",
+     "position": 4,
+     "width": 4,
+     "samples": 6,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 199,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 1000,
+     "width": 4,
+     "samples": 6,
+     "distinct": 6,
+     "minority": 1,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 996,
+     "width": 4,
+     "samples": 6,
+     "distinct": 5,
+     "minority": 1,
+     "alternatives": 2,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "end": {
+    "field:x": {
+     "kind": "position",
+     "position": -256,
+     "width": 4,
+     "samples": 6,
+     "distinct": 3,
+     "minority": 1,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/2/0.14": {
+   "start": {
+    "field:caption_width": {
+     "kind": "position",
+     "position": 134,
+     "width": 4,
+     "samples": 263,
+     "distinct": 65,
+     "minority": 26,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "block": {
+    "field:height": {
+     "kind": "position",
+     "position": 12,
+     "width": 4,
+     "samples": 270,
+     "distinct": 23,
+     "minority": 75,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:order": {
+     "kind": "position",
+     "position": 98,
+     "width": 4,
+     "samples": 270,
+     "distinct": 51,
+     "minority": 38,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:plane": {
+     "kind": "position",
+     "position": 69,
+     "width": 4,
+     "samples": 270,
+     "distinct": 7,
+     "minority": 15,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:state": {
+     "kind": "position",
+     "position": 39,
+     "width": 4,
+     "samples": 270,
+     "distinct": 3,
+     "minority": 63,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_order": {
+     "kind": "position",
+     "position": 93,
+     "width": 4,
+     "samples": 270,
+     "distinct": 38,
+     "minority": 46,
+     "alternatives": 0,
+     "add": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_stop": {
+     "kind": "position",
+     "position": 77,
+     "width": 4,
+     "samples": 270,
+     "distinct": 2,
+     "minority": 45,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:visible": {
+     "kind": "position",
+     "position": 32,
+     "width": 1,
+     "samples": 270,
+     "distinct": 2,
+     "minority": 12,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:x": {
+     "kind": "position",
+     "position": 0,
+     "width": 4,
+     "samples": 270,
+     "distinct": 50,
+     "minority": 60,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "after": {
+    "field:input_size": {
+     "kind": "position",
+     "position": 59,
+     "width": 4,
+     "samples": 270,
+     "distinct": 12,
+     "minority": 16,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "end": {
+    "field:value_type": {
+     "kind": "position",
+     "position": -182,
+     "width": 1,
+     "samples": 270,
+     "distinct": 5,
+     "minority": 23,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "line:Calendar button": {
+     "kind": "enum",
+     "position": -64,
+     "width": 4,
+     "samples": 270,
+     "distinct": 2,
+     "minority": 33,
+     "alternatives": 0,
+     "values": {
+      "00000000": "No",
+      "01000000": "Yes"
+     },
+     "held_out": "270/270",
+     "confidence": "strong"
+    },
+    "line:Vert. scrollbar": {
+     "kind": "enum",
+     "position": -89,
+     "width": 4,
+     "samples": 270,
+     "distinct": 3,
+     "minority": 37,
+     "alternatives": 0,
+     "values": {
+      "00000000": "Always visible",
+      "01000000": "Automatic",
+      "02000000": "Never"
+     },
+     "held_out": "269/269",
+     "confidence": "strong"
+    }
+   },
+   "=1682": {
+    "field:width": {
+     "kind": "position",
+     "position": 1307,
+     "width": 4,
+     "samples": 48,
+     "distinct": 22,
+     "minority": 6,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1683": {
+    "field:width": {
+     "kind": "position",
+     "position": 1307,
+     "width": 4,
+     "samples": 56,
+     "distinct": 20,
+     "minority": 7,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 1303,
+     "width": 1,
+     "samples": 56,
+     "distinct": 14,
+     "minority": 7,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1685": {
+    "field:width": {
+     "kind": "position",
+     "position": 1307,
+     "width": 4,
+     "samples": 132,
+     "distinct": 49,
+     "minority": 9,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1689": {
+    "field:width": {
+     "kind": "position",
+     "position": 1307,
+     "width": 4,
+     "samples": 22,
+     "distinct": 6,
+     "minority": 5,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 1303,
+     "width": 4,
+     "samples": 22,
+     "distinct": 15,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/20/0.14": {
+   "start": {
+    "field:height": {
+     "kind": "position",
+     "position": 214,
+     "width": 4,
+     "samples": 7,
+     "distinct": 3,
+     "minority": 2,
+     "alternatives": 2,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:order": {
+     "kind": "position",
+     "position": 300,
+     "width": 4,
+     "samples": 7,
+     "distinct": 5,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 210,
+     "width": 4,
+     "samples": 7,
+     "distinct": 3,
+     "minority": 2,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:x": {
+     "kind": "position",
+     "position": 202,
+     "width": 4,
+     "samples": 7,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 206,
+     "width": 4,
+     "samples": 7,
+     "distinct": 4,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/3/0.14": {
+   "block": {
+    "field:height": {
+     "kind": "position",
+     "position": 12,
+     "width": 4,
+     "samples": 74,
+     "distinct": 17,
+     "minority": 15,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:order": {
+     "kind": "position",
+     "position": 98,
+     "width": 4,
+     "samples": 74,
+     "distinct": 29,
+     "minority": 7,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:visible": {
+     "kind": "position",
+     "position": 32,
+     "width": 4,
+     "samples": 74,
+     "distinct": 2,
+     "minority": 7,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 8,
+     "width": 4,
+     "samples": 74,
+     "distinct": 30,
+     "minority": 12,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:x": {
+     "kind": "position",
+     "position": 0,
+     "width": 4,
+     "samples": 74,
+     "distinct": 25,
+     "minority": 17,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "end": {
+    "field:plane": {
+     "kind": "position",
+     "position": -200,
+     "width": 4,
+     "samples": 74,
+     "distinct": 5,
+     "minority": 4,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "start": {
+    "field:state": {
+     "kind": "position",
+     "position": 249,
+     "width": 1,
+     "samples": 74,
+     "distinct": 3,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=479": {
+    "field:y": {
+     "kind": "position",
+     "position": 214,
+     "width": 4,
+     "samples": 9,
+     "distinct": 7,
+     "minority": 1,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/32/0.14": {
+   "start": {
+    "field:height": {
+     "kind": "position",
+     "position": 594,
+     "width": 4,
+     "samples": 6,
+     "distinct": 3,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 590,
+     "width": 4,
+     "samples": 6,
+     "distinct": 5,
+     "minority": 1,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/4/0.14": {
+   "start": {
+    "field:background_states": {
+     "kind": "position",
+     "position": 40,
+     "width": 4,
+     "samples": 589,
+     "distinct": 3,
+     "minority": 116,
+     "alternatives": 4,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:image_states": {
+     "kind": "position",
+     "position": 128,
+     "width": 4,
+     "samples": 589,
+     "distinct": 2,
+     "minority": 291,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "line:Nb. animation steps": {
+     "kind": "enum",
+     "position": 208,
+     "width": 4,
+     "samples": 588,
+     "distinct": 2,
+     "minority": 119,
+     "alternatives": 0,
+     "values": {
+      "00000000": "6",
+      "01000000": "1"
+     },
+     "held_out": "588/588",
+     "confidence": "strong"
+    }
+   },
+   "end": {
+    "field:button_type": {
+     "kind": "position",
+     "position": -50,
+     "width": 4,
+     "samples": 589,
+     "distinct": 3,
+     "minority": 74,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:plane": {
+     "kind": "position",
+     "position": -229,
+     "width": 4,
+     "samples": 589,
+     "distinct": 8,
+     "minority": 18,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "block": {
+    "field:height": {
+     "kind": "position",
+     "position": 12,
+     "width": 4,
+     "samples": 589,
+     "distinct": 14,
+     "minority": 99,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:order": {
+     "kind": "position",
+     "position": 98,
+     "width": 4,
+     "samples": 589,
+     "distinct": 82,
+     "minority": 83,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:state": {
+     "kind": "position",
+     "position": 39,
+     "width": 4,
+     "samples": 589,
+     "distinct": 3,
+     "minority": 26,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_order": {
+     "kind": "position",
+     "position": 93,
+     "width": 4,
+     "samples": 589,
+     "distinct": 73,
+     "minority": 84,
+     "alternatives": 0,
+     "add": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_stop": {
+     "kind": "position",
+     "position": 77,
+     "width": 4,
+     "samples": 589,
+     "distinct": 2,
+     "minority": 79,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:visible": {
+     "kind": "position",
+     "position": 32,
+     "width": 1,
+     "samples": 589,
+     "distinct": 2,
+     "minority": 10,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 8,
+     "width": 4,
+     "samples": 589,
+     "distinct": 33,
+     "minority": 97,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:x": {
+     "kind": "position",
+     "position": 0,
+     "width": 4,
+     "samples": 589,
+     "distinct": 128,
+     "minority": 43,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1063": {
+    "field:y": {
+     "kind": "position",
+     "position": 769,
+     "width": 4,
+     "samples": 38,
+     "distinct": 16,
+     "minority": 8,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1127": {
+    "field:y": {
+     "kind": "position",
+     "position": 837,
+     "width": 4,
+     "samples": 134,
+     "distinct": 23,
+     "minority": 19,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1131": {
+    "field:y": {
+     "kind": "position",
+     "position": 837,
+     "width": 4,
+     "samples": 25,
+     "distinct": 10,
+     "minority": 6,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1743": {
+    "field:y": {
+     "kind": "position",
+     "position": 1453,
+     "width": 4,
+     "samples": 16,
+     "distinct": 6,
+     "minority": 4,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/40/0.14": {
+   "start": {
+    "field:height": {
+     "kind": "position",
+     "position": 809,
+     "width": 4,
+     "samples": 17,
+     "distinct": 11,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:order": {
+     "kind": "position",
+     "position": 895,
+     "width": 4,
+     "samples": 17,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 805,
+     "width": 4,
+     "samples": 17,
+     "distinct": 8,
+     "minority": 5,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/47/0.14": {
+   "start": {
+    "field:order": {
+     "kind": "position",
+     "position": 3327,
+     "width": 4,
+     "samples": 4,
+     "distinct": 3,
+     "minority": 1,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:x": {
+     "kind": "position",
+     "position": 3229,
+     "width": 4,
+     "samples": 4,
+     "distinct": 2,
+     "minority": 2,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 3229,
+     "width": 4,
+     "samples": 4,
+     "distinct": 2,
+     "minority": 2,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/5/0.14": {
+   "start": {
+    "field:height": {
+     "kind": "position",
+     "position": 780,
+     "width": 4,
+     "samples": 26,
+     "distinct": 5,
+     "minority": 3,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:order": {
+     "kind": "position",
+     "position": 866,
+     "width": 4,
+     "samples": 26,
+     "distinct": 17,
+     "minority": 3,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:plane": {
+     "kind": "position",
+     "position": 837,
+     "width": 4,
+     "samples": 26,
+     "distinct": 3,
+     "minority": 1,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:state": {
+     "kind": "position",
+     "position": 800,
+     "width": 4,
+     "samples": 26,
+     "distinct": 2,
+     "minority": 2,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_order": {
+     "kind": "position",
+     "position": 861,
+     "width": 4,
+     "samples": 26,
+     "distinct": 17,
+     "minority": 4,
+     "alternatives": 0,
+     "add": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_stop": {
+     "kind": "position",
+     "position": 845,
+     "width": 4,
+     "samples": 26,
+     "distinct": 2,
+     "minority": 4,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:visible": {
+     "kind": "position",
+     "position": 800,
+     "width": 4,
+     "samples": 26,
+     "distinct": 2,
+     "minority": 2,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 776,
+     "width": 4,
+     "samples": 26,
+     "distinct": 17,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:x": {
+     "kind": "position",
+     "position": 768,
+     "width": 4,
+     "samples": 26,
+     "distinct": 13,
+     "minority": 5,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/6/0.14": {
+   "start": {
+    "field:height": {
+     "kind": "position",
+     "position": 780,
+     "width": 4,
+     "samples": 17,
+     "distinct": 11,
+     "minority": 3,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:order": {
+     "kind": "position",
+     "position": 866,
+     "width": 4,
+     "samples": 17,
+     "distinct": 11,
+     "minority": 3,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:state": {
+     "kind": "position",
+     "position": 807,
+     "width": 4,
+     "samples": 17,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 7,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_order": {
+     "kind": "position",
+     "position": 861,
+     "width": 4,
+     "samples": 17,
+     "distinct": 9,
+     "minority": 2,
+     "alternatives": 0,
+     "add": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_stop": {
+     "kind": "position",
+     "position": 807,
+     "width": 4,
+     "samples": 17,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 7,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:visible": {
+     "kind": "position",
+     "position": 807,
+     "width": 4,
+     "samples": 17,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 7,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 776,
+     "width": 1,
+     "samples": 17,
+     "distinct": 11,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:x": {
+     "kind": "position",
+     "position": 768,
+     "width": 4,
+     "samples": 17,
+     "distinct": 9,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 772,
+     "width": 1,
+     "samples": 17,
+     "distinct": 12,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/7/0.14": {
+   "start": {
+    "field:height": {
+     "kind": "position",
+     "position": 1068,
+     "width": 4,
+     "samples": 4,
+     "distinct": 3,
+     "minority": 1,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:order": {
+     "kind": "position",
+     "position": 1154,
+     "width": 4,
+     "samples": 4,
+     "distinct": 3,
+     "minority": 1,
+     "alternatives": 3,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:plane": {
+     "kind": "position",
+     "position": 1125,
+     "width": 4,
+     "samples": 4,
+     "distinct": 3,
+     "minority": 1,
+     "alternatives": 3,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_order": {
+     "kind": "position",
+     "position": 1149,
+     "width": 4,
+     "samples": 4,
+     "distinct": 3,
+     "minority": 1,
+     "alternatives": 3,
+     "add": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 1064,
+     "width": 4,
+     "samples": 4,
+     "distinct": 3,
+     "minority": 1,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:x": {
+     "kind": "position",
+     "position": 1056,
+     "width": 4,
+     "samples": 4,
+     "distinct": 2,
+     "minority": 2,
+     "alternatives": 40,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 1060,
+     "width": 4,
+     "samples": 4,
+     "distinct": 2,
+     "minority": 2,
+     "alternatives": 40,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/8/0.14": {
+   "start": {
+    "field:height": {
+     "kind": "position",
+     "position": 222,
+     "width": 4,
+     "samples": 9,
+     "distinct": 4,
+     "minority": 3,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:order": {
+     "kind": "position",
+     "position": 308,
+     "width": 4,
+     "samples": 9,
+     "distinct": 9,
+     "minority": 1,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:plane": {
+     "kind": "position",
+     "position": 517,
+     "width": 1,
+     "samples": 9,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 66,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:state": {
+     "kind": "position",
+     "position": 422,
+     "width": 2,
+     "samples": 9,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 2,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 222,
+     "width": 4,
+     "samples": 9,
+     "distinct": 4,
+     "minority": 3,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 422,
+     "width": 4,
+     "samples": 9,
+     "distinct": 5,
+     "minority": 3,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "end": {
+    "field:visible": {
+     "kind": "position",
+     "position": -791,
+     "width": 2,
+     "samples": 9,
+     "distinct": 2,
+     "minority": 4,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "block": {
+    "field:x": {
+     "kind": "position",
+     "position": 0,
+     "width": 4,
+     "samples": 9,
+     "distinct": 7,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/80/0.14": {
+   "start": {
+    "field:x": {
+     "kind": "position",
+     "position": 6413,
+     "width": 4,
+     "samples": 4,
+     "distinct": 2,
+     "minority": 2,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 6413,
+     "width": 4,
+     "samples": 4,
+     "distinct": 2,
+     "minority": 2,
+     "alternatives": 1,
+     "add": -180,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/controls/9/0.14": {
+   "end": {
+    "browsed_item": {
+     "kind": "string",
+     "position": -433,
+     "samples": 35,
+     "held_out": "35/35",
+     "confidence": "strong"
+    },
+    "line:Add/Delete in variable": {
+     "kind": "enum",
+     "position": -4,
+     "width": 4,
+     "samples": 72,
+     "distinct": 2,
+     "minority": 17,
+     "alternatives": 0,
+     "values": {
+      "00000000": "No",
+      "01000000": "Yes"
+     },
+     "held_out": "72/72",
+     "confidence": "strong"
+    },
+    "line:Browsed item": {
+     "kind": "string",
+     "position": -433,
+     "samples": 35,
+     "held_out": "35/35",
+     "confidence": "strong"
+    },
+    "line:Row height (without margin)": {
+     "kind": "number",
+     "position": -24,
+     "width": 4,
+     "samples": 72,
+     "distinct": 11,
+     "minority": 14,
+     "alternatives": 0,
+     "held_out": "72/72",
+     "confidence": "strong"
+    },
+    "line:Touch move": {
+     "kind": "enum",
+     "position": -346,
+     "width": 4,
+     "samples": 72,
+     "distinct": 2,
+     "minority": 11,
+     "alternatives": 0,
+     "values": {
+      "00000000": "No",
+      "01000000": "Yes"
+     },
+     "held_out": "72/72",
+     "confidence": "strong"
+    }
+   },
+   "block": {
+    "field:height": {
+     "kind": "position",
+     "position": 12,
+     "width": 4,
+     "samples": 72,
+     "distinct": 35,
+     "minority": 4,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:order": {
+     "kind": "position",
+     "position": 98,
+     "width": 4,
+     "samples": 72,
+     "distinct": 12,
+     "minority": 5,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:plane": {
+     "kind": "position",
+     "position": 69,
+     "width": 4,
+     "samples": 72,
+     "distinct": 3,
+     "minority": 2,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_order": {
+     "kind": "position",
+     "position": 93,
+     "width": 4,
+     "samples": 72,
+     "distinct": 11,
+     "minority": 15,
+     "alternatives": 0,
+     "add": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:tab_stop": {
+     "kind": "position",
+     "position": 77,
+     "width": 4,
+     "samples": 72,
+     "distinct": 2,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 8,
+     "width": 4,
+     "samples": 72,
+     "distinct": 29,
+     "minority": 8,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:x": {
+     "kind": "position",
+     "position": 0,
+     "width": 4,
+     "samples": 72,
+     "distinct": 4,
+     "minority": 3,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 4,
+     "width": 4,
+     "samples": 72,
+     "distinct": 19,
+     "minority": 9,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "start": {
+    "field:state": {
+     "kind": "position",
+     "position": 9476,
+     "width": 1,
+     "samples": 72,
+     "distinct": 2,
+     "minority": 15,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:visible": {
+     "kind": "position",
+     "position": 97,
+     "width": 4,
+     "samples": 72,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "line:Stored item": {
+     "kind": "string",
+     "position": 9853,
+     "samples": 20,
+     "held_out": "20/20",
+     "confidence": "strong"
+    },
+    "stored_item": {
+     "kind": "string",
+     "position": 9853,
+     "samples": 20,
+     "held_out": "20/20",
+     "confidence": "strong"
+    }
+   }
+  },
+  "wdw/window//0.14": {
+   "start": {
+    "field:height": {
+     "kind": "position",
+     "position": 32,
+     "width": 4,
+     "samples": 112,
+     "distinct": 39,
+     "minority": 9,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:width": {
+     "kind": "position",
+     "position": 28,
+     "width": 4,
+     "samples": 112,
+     "distinct": 37,
+     "minority": 13,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  }
+ }
+}

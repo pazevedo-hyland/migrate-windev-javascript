@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""PostgreSQL / PGlite schema v1 from the playbook's schema draft (scripts/schema_draft.py --out <x>.md writes <x>.json).
+
+Writes:
+  server/migrations/0001_schema_v1.sql   the DDL (a committed migration is immutable: later changes go in 0002+)
+  src/shared/schema.generated.ts         the table/column catalogue for the data layer and the importer
+
+Rules (record them in the database ADR; change them there first):
+  identifiers lower-cased (HFSQL names are case-insensitive)
+  Decimal / Numeric / Currency -> numeric (exact; a string on the wire)     4/8-byte real -> double precision
+  1/2/4-byte integers -> integer (unsigned 4-byte -> bigint)               8-byte integers -> bigint
+  Boolean -> boolean      Date -> date      Time -> time(3)      Date and Time -> timestamp(3)
+  Duration -> bigint milliseconds          Binary / Image memo -> bytea     anything else -> text
+  Automatic identifier -> bigint identity primary key; a file without one gets a technical "rowid_" identity primary key
+  (legacy keys stay as indexes: unique keys -> UNIQUE indexes, keys with duplicates -> plain indexes).
+  HAdd fills every item of a new record with its analysis default, so non-date items are NOT NULL with that default
+  ('' or 0); dates/times stay nullable (an empty HFSQL date is stored as NULL and shown as empty).
+  What the draft read from the analysis file is carried, not acted on: a decimal's digits go to the catalogue
+  (`scale`, `integerDigits`) and to a comment on the column; how a text key compares in HFSQL (ignoring case and
+  accents…) goes to the catalogue (`compares`) and to a comment on its index, with a warning — the index created
+  here compares exactly, and the database ADR decides whether that difference stands.
+
+  py -3.12 tools/pg_schema.py --draft docs/schema/schema-draft.json          (refuses to overwrite an existing migration)
+"""
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+# WINDEV type name (English dossier) -> (PostgreSQL type, catalogue kind). First match wins.
+TYPES = [
+    (r'Automatic identifier', 'bigint', 'id'),
+    (r'Boolean', 'boolean', 'boolean'),
+    (r'Decimal|Numeric|Currency', 'numeric', 'decimal'),
+    (r'(?:4|8)-byte real|Real', 'double precision', 'real'),
+    (r'(?:Unsigned )?8-byte integer|Unsigned 4-byte integer', 'bigint', 'bigint'),
+    (r'(?:Signed |Unsigned )?[124]-byte integer', 'integer', 'integer'),
+    (r'Date and Time', 'timestamp(3)', 'datetime'),
+    (r'Date', 'date', 'date'),
+    (r'Time', 'time(3)', 'time'),
+    (r'Duration', 'bigint', 'duration'),
+    (r'Binary Memo|Image Memo|Binary', 'bytea', 'binary'),
+]
+WARN = {'Password': 'HFSQL password item: the import copies it as text; plan a reset or rehash (chapter 08)'}
+
+
+def pg_type(column):
+    name = column.get('type') or ''
+    for pattern, sql, kind in TYPES:
+        if re.fullmatch(rf'(?:{pattern})(?: \(.*\))?', name):
+            return sql, kind
+    return 'text', 'text'  # String, Text memo, Unicode, Password, unresolved
+
+
+def default_sql(column, kind):
+    raw = column.get('default')
+    if kind in ('date', 'datetime', 'time', 'binary', 'id'):
+        return ''
+    if kind == 'boolean':
+        return ' NOT NULL DEFAULT ' + ('true' if raw in ('1', 'True', 'true') else 'false')
+    if kind in ('decimal', 'real', 'integer', 'bigint', 'duration'):
+        value = raw if raw and re.fullmatch(r'-?\d+(\.\d+)?', raw) else '0'
+        return f' NOT NULL DEFAULT {value}'
+    return " NOT NULL DEFAULT " + ("'" + raw.replace("'", "''") + "'" if raw else "''")
+
+
+# PostgreSQL reserved key words (also reserved as column names): the data layer writes identifiers unquoted.
+RESERVED = set("""all analyse analyze and any array as asc asymmetric authorization binary both case cast check collate
+collation column concurrently constraint create cross current_catalog current_date current_role current_schema
+current_time current_timestamp current_user default deferrable desc distinct do else end except false fetch for foreign
+freeze from full grant group having ilike in initially inner intersect into is isnull join lateral leading left like
+limit localtime localtimestamp natural not notnull null offset on only or order outer overlaps placing primary
+references returning right select session_user similar some symmetric system_user table tablesample then to trailing
+true union unique user using variadic verbose when where window with""".split())
+
+
+def ident(name):
+    lower = name.lower()
+    if not re.fullmatch(r'[^\W\d]\w*', lower) or lower in RESERVED or len(lower.encode('utf-8')) > 63:
+        raise ValueError(f'{name!r} is not usable as an unquoted PostgreSQL name (reserved word, characters or length): '
+                         'decide its target name in the database ADR and rename it in the draft')
+    return lower
+
+
+def build(draft):
+    lines = ['-- Schema v1, generated by tools/pg_schema.py from the WINDEV analysis (schema draft). Immutable once committed.', '']
+    catalogue, warnings, folded = {}, [], 0
+    for table in draft['tables']:
+        name = ident(table['table'])
+        body, columns, primary, notes = [], [], None, []
+        for column in table['columns']:
+            sql, kind = pg_type(column)
+            cname = ident(column['name'])
+            if kind == 'id':
+                if primary is not None:
+                    raise ValueError(f'{name}: two automatic identifiers')
+                primary, kind = cname, 'bigint'
+                body.append(f'  {cname} bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY')
+            else:
+                body.append(f'  {cname} {sql}{default_sql(column, kind)}')
+            for prefix, warning in WARN.items():
+                if (column.get('type') or '').startswith(prefix):
+                    warnings.append(f'{name}.{cname}: {warning}')
+            columns.append({'name': cname, 'legacy': column['name'], 'kind': kind, 'size': int(column.get('size') or 0),
+                            'key': column.get('key'), 'caption': column.get('caption'),
+                            **({'scale': column['scale'], 'integerDigits': column['integer_digits']} if 'scale' in column else {})})
+            if 'scale' in column:
+                notes.append(f"COMMENT ON COLUMN {name}.{cname} IS '{column['integer_digits']} integer digits and "
+                             f"{column['scale']} decimals in the analysis';")
+        if primary is None:
+            primary = 'rowid_'
+            body.insert(0, '  rowid_ bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY')
+        lines += [f'CREATE TABLE {name} (', ',\n'.join(body), ');']
+        keys = []
+        for key in table.get('keys', []):
+            cols = [ident(c) for c in key['columns']]
+            keys.append({'name': ident(key['name']), 'columns': cols, 'unique': key['key'] == 'unique',
+                         **({'compares': key['key_compares']} if key.get('key_compares') else {})})
+            if cols == [primary]:
+                continue
+            unique = 'UNIQUE ' if key['key'] == 'unique' else ''
+            lines.append(f'CREATE {unique}INDEX {name}_{ident(key["name"])} ON {name} ({", ".join(cols)});')
+            if key.get('key_compares'):
+                folded += 1
+                notes.append(f"COMMENT ON INDEX {name}_{ident(key['name'])} IS 'HFSQL {key['key_compares']} on this key; "
+                             "this index compares exactly';")
+        lines += notes + ['']
+        catalogue[name] = {'legacy': table['table'], 'primary': primary, 'columns': columns, 'keys': keys}
+    if folded:
+        warnings.append(f'{folded} text keys ignore case and accents in HFSQL (some also spaces and punctuation): the indexes '
+                        'written here compare exactly, so a lookup in another case and a duplicate differing only by case '
+                        'behave differently. Decide in the database ADR: fold the key (a normalised column or an expression '
+                        'index, and the same folding in lookups) or accept the difference')
+    return '\n'.join(lines), catalogue, warnings
+
+
+def typescript(catalogue):
+    return ('// Generated by tools/pg_schema.py — do not edit.\n'
+            'export const SCHEMA = ' + json.dumps(catalogue, indent=1, ensure_ascii=False) + ' as const;\n'
+            'export type TableName = keyof typeof SCHEMA;\n')
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--draft', type=Path, default=ROOT / 'docs' / 'schema' / 'schema-draft.json',
+                        help='JSON written by scripts/schema_draft.py next to its Markdown output')
+    parser.add_argument('--sql', type=Path, default=ROOT / 'server' / 'migrations' / '0001_schema_v1.sql')
+    parser.add_argument('--ts', type=Path, default=ROOT / 'src' / 'shared' / 'schema.generated.ts')
+    parser.add_argument('--overwrite', action='store_true',
+                        help='replace an existing migration file (only while it is not committed)')
+    args = parser.parse_args(argv)
+    if args.sql.exists() and not args.overwrite:
+        sys.exit(f'{args.sql} exists: committed migrations are immutable (write the next one), or pass --overwrite '
+                 'if it has never been committed')
+    try:
+        sql, catalogue, warnings = build(json.loads(args.draft.read_text(encoding='utf-8')))
+    except ValueError as error:
+        sys.exit(f'error: {error}')
+    args.sql.parent.mkdir(parents=True, exist_ok=True)
+    args.ts.parent.mkdir(parents=True, exist_ok=True)
+    args.sql.write_text(sql, encoding='utf-8', newline='\n')
+    args.ts.write_text(typescript(catalogue), encoding='utf-8', newline='\n')
+    for warning in warnings:
+        print(f'warning: {warning}')
+    print(f'{len(catalogue)} tables, {sum(len(t["columns"]) for t in catalogue.values())} columns')
+
+
+if __name__ == '__main__':
+    main()

@@ -16,13 +16,15 @@ Put the WINDEV project folder (text format, with its `.cpl` folder and the dossi
 
 ## 4. Inspect
 
-One command runs the whole evidence pipeline in order — inspector, dossier extraction, event legend, evidence report and navigation map, schema draft, layout drawings — into fresh dated folders, and records their paths in `analysis-local/latest.json`:
+One command runs the whole evidence pipeline in order — inspector, dossier extraction, source decoding, event legend, evidence report and navigation map, schema draft, layout drawings — into fresh dated folders, and records their paths in `analysis-local/latest.json`:
 
 ```sh
 python3 scripts/prepare_evidence.py
 ```
 
 It finds the `*Documentation*.pdf` and the `<project>.cpl` folder anywhere under `legacy/` itself (`--dossier-pdf`, `--compile-dir` to override) and says what is missing. Pass `--language <code>` (WINDEV's language code of the app's texts, e.g. `pt-PT`, `fr-FR`) when the app is multilingual; otherwise each text's first language is used. Re-run it whenever `legacy/` changes: seed IDs do not change, so mapping rows stay attached. **Updating the tools** from a newer playbook (copy `scripts/`, `skills/`, `templates/ui-kit/`): re-run `prepare_evidence.py`, then `npm run verify` and `parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv --check-files` before committing; fix what they report (renamed seed rows, stricter evidence forms — the playbook's CHANGELOG lists format changes) in the same commit. The steps below explain each part and its options; run one alone only to debug it.
+
+**Check the dossier coverage before building any screen.** `analysis-local/latest.json` → `coverage` counts windows and controls whose check marks were read. `controls_with_flags 0/N` is an extraction bug for that PDF layout, not missing evidence: without it, every control's plane, Visible tick, column sort/search ticks and the window's Title bar tick are unknown, and multi-plane windows get hand-made layouts that look nothing like the running app. Fix `dossier_extract.py` (its page-layout constants and `page_content`) and re-run before stage 1.
 
 ```sh
 python3 scripts/inspect_windev.py legacy --out analysis-local/inspect-$(date +%Y%m%d)
@@ -32,7 +34,15 @@ Add `--fallback-encoding cp1252` for older non-Unicode sources, `--extra-ext .ww
 
 The inspector is deliberately shallow: it extracts code blocks with their window/control path and raw event code, raw XDD metadata, a **parity seed** (one row per block, table and unresolved export), and secret locations. It never guesses meanings. See [scripts/README](scripts/README.md).
 
-## 4a. Extract the dossier (if one exists)
+## 4a. Decode the designer properties and binary files
+
+```sh
+python3 scripts/windev_decode.py legacy/<project folder> --out analysis-local/decoded-<stamp> [--dossier analysis-local/dossier-<stamp>]
+```
+
+Per source file, every element's decoded properties: for window controls position, size, caption, tooltip, initial state, tab order, anchors, linked item, group and button type; for table columns width and caption; for report controls geometry in millimetres; for everything else its strings in file order (images, style names, masks, fonts). Per binary file, its unpacked blocks: `queries.json` holds every `.WDR` query's SQL and `images/` a thumbnail of each window and report. Read `coverage` in `index.json`: `properties_failed` must be 0 and `controls_with_fields` equal to `controls`. With `--dossier`, `calibration` counts, field by field, where the decoded value equals the dossier's — run it on any project that has even a partial dossier, and before trusting the offsets on a WINDEV version not measured yet. `prepare_evidence.py` runs this with `--evidence` and hands the result to every later tool as the dossier: decoded values over the PDF extract when there is one (the PDF stays the fallback for masks, planes, alignment and the other tick-mark properties), decoded values alone otherwise — layouts, the evidence report and unit packs then work with no PDF. The pipeline also writes `docs/code-map.md`: which unit reads, writes and deletes which table, who calls which procedure, and the lines a text search cannot resolve — read it with the project explorer's folders (`project/project.json` of the decoder) when cutting slices → [extraction strategy §6](docs/extraction-strategy.md). With a dossier (even of a few windows) the pipeline also learns where more properties sit (`windev_fieldmap.py`) and always writes `audit.json`: per control, what differs from the usual values of its kind and nothing explains yet. Read `decoded_audit` in `latest.json` before stage 1, and treat a unit's `unexplained_differences` (in its `unit_evidence.py` pack) as open items of that unit → [extraction strategy](docs/extraction-strategy.md). Cite a decoded value as `decoded: WIN_X/BTN_Y/<field>`, a learned one as `learned: …`. The format, the measured results and how to name one more property: [what is inside the project files](docs/windev-file-formats.md).
+
+## 4a-bis. Extract the dossier (if one exists)
 
 ```sh
 python3 scripts/dossier_extract.py legacy/<path to>/<project>_Documentation.pdf --out analysis-local/dossier-<stamp>
@@ -48,9 +58,21 @@ python3 scripts/evidence_report.py analysis-local/inspect-<stamp> --dossier anal
 
 Coverage per element with the list of gaps, the platform functions the code depends on (printing, INI files, external programs, command-line modes), the few runtime questions for someone with the running app, and the **encoded actions**: event slots without code whose predefined action (close, print, open…) WINDEV keeps encoded, grouped by action ID — slots with the same ID hold the same value, so one answer settles the whole group (on the real project: 225 code-less slots, 14 distinct actions). Each group and question comes with a **proposed answer** and its basis — the skin template's own button names (a group holding `BTN_SYST_FERMER` closes the window), button types, code that sets `..ReturnedValue` (the window must close for the caller to get it), a report named only in one window's compiled code, WINDEV's conventions — or a labelled default. The migration does not wait: rows cite `proposed: A-2b6ca2` and say "assumed". Someone with WINDEV (the control's Actions tab) or the running app confirms or corrects the generated answer sheet `docs/evidence/encoded-actions.md` whenever they can — it is written once and never overwritten — and rows then cite `runtime: A-2b6ca2`; a different answer reopens the rows that assumed otherwise. Fix or record every gap before mapping.
 
+## 4b-bis. Read what is still open, before planning
+
+`prepare_evidence.py` ends by writing `docs/readiness.md` and one page per unit in `docs/briefs/`. Both cost nothing to produce and decide where agent time goes:
+
+- **`docs/readiness.md`** first says how far the decoder's reading applies to this project (all properties decoded, controls with a position, agreement with the dossier): if a line there is off, follow [docs/new-windev-version.md](docs/new-windev-version.md) before building on decoded values. Then it ranks every unit by its **open points** — controls without a position, a layout the screen generator refuses, predefined actions nobody named, an embedded query without SQL, names built at run time, data files the analysis does not have, runtime questions — each with what closes it. Plan the first slices among the units with none; settle a unit's points before its slice starts.
+- **`docs/briefs/<unit>.md`** is what the agent taking a unit reads first: what it is, who opens it, what it touches, its events with line ranges, its open points, and where to look next. It replaces reading the whole evidence pack to find out what the unit is.
+
+What each output is for and who reads it: [docs/agent-inputs.md](docs/agent-inputs.md). On the second project: 149 units, 79 with no open point, 103 open points; the same run found 34 table columns that had lost their caption and input type because columns of different tables shared a name — fixed in the decoder.
+
 ## 4c. Export the data
 
-Export every table to CSV through the HFSQL ODBC driver ([data export](scripts/windows/README.md)), from a copy of the data or a backup of the HFSQL server database.
+**Without a driver**: `python3 scripts/prepare_evidence.py --data <copy of the data folder>` reads HFSQL Classic `.fic`/`.mmo` files directly into `analysis-local/data-<stamp>/` and profiles them (`docs/data/profile.md`). A file it refuses is named with the reason; use the ODBC route below for those, and once to cross-check when both are available ([08](08-data-migration.md)).
+
+
+Export every table to CSV through the HFSQL ODBC driver ([data export](scripts/windows/README.md)), from a copy of the data or a backup of the HFSQL server database. If `export_odbc.py` crashes while connecting (exit code 139, HFSQL 28), use the [ANSI exporter](scripts/windows/README.md#when-export_odbcpy-crashes-the-ansi-exporter-hfsql-28) instead.
 
 ## 5. Map the legacy application (before coding)
 
@@ -59,6 +81,8 @@ The first prompt to the implementer is the **mapping** ([templates/mapping-promp
 - **sub-agents in parallel**, one per window/report/procedure set/table group, each using the [map-element skill](templates/agent/skills/map-element/SKILL.md), produce `docs/mapping/*.md` notes: entities, screens and navigation, events, business rules, naming conventions, traps, external dependencies, **hardcoded secrets to revoke**;
 - **other agents review** each note against the sources and the dossier images;
 - consolidated outputs: `docs/legacy-inventory.md`, navigation map, `docs/screens/<WINDOW>.md`, and `docs/parity/parity.csv` imported from the seed plus manual rows (menus, shortcuts, rights, reports, jobs, integrations).
+
+When several agents map or implement units in parallel, each writes `docs/parity/<UNIT>.csv`, and the coordinator runs `python3 scripts/merge_parity.py docs/parity` before the gate.
 
 Gate: `python3 scripts/parity_check.py docs/parity/parity.csv --seed docs/parity/parity-seed.csv --check-files` passes. This is the analysis brief.
 
@@ -91,7 +115,8 @@ The starter's `verify` covers its baseline types/build/unit/browser checks. Duri
   "ui:check": "playwright test -c ui-check/playwright.config.ts"
   ```
   Add a bindings check to `verify` once ts-rs bindings are generated.
-- UI check: `templates/ui-check/ui-check.spec.ts` and `playwright.config.ts` → `ui-check/`; `ui-check.config.json` → the repository root (the spec reads it from there); each slice adds `ui-check/<slice>.flows.spec.ts`.
+- Production-build smoke: `templates/ui-check/prod.config.ts` and `prod.smoke.example.spec.ts` → `ui-check/`, `"smoke:prod": "playwright test -c ui-check/prod.config.ts"` in `verify` after `vite build`, and `build: { assetsInlineLimit: 0 }` in `vite.config.ts` (inlined `data:` images blanked a packaged app).
+- UI check: `templates/ui-check/ui-check.spec.ts`, `playwright.config.ts` and `warmup.ts` (its `globalSetup`) → `ui-check/`, plus `hooks.example.ts` as `ui-check/hooks.ts` when windows open after a login or from a launcher; `ui-check.config.json` → the repository root (the spec reads it from there); each slice adds `ui-check/<slice>.flows.spec.ts`.
 - Skin kit: `templates/ui-kit/` → `src/ui/legacy/`; layouts with `scripts/screen_layout.py <WINDOW> --out src/ui/legacy/<WINDOW>.layout.json`; images with `scripts/skin_assets.py --out public/skin src/ui/legacy/*.layout.json`.
 - Browser preview: in `src/main.tsx`, when `import.meta.env.DEV` and not inside Tauri (`!("__TAURI_INTERNALS__" in window)`), install `mockIPC` from `@tauri-apps/api/mocks` with a fake backend over the golden data, behind a visible banner. `npm run dev` then serves the UI to the browser checks.
 - CI: run `npm run verify` on the target OSes once the repository has a remote.

@@ -46,8 +46,8 @@ class GenerateScreensTests(unittest.TestCase):
             before = source.read_bytes()
             first = generator.generate(source, root / 'app-one/src/generated', 'en')
             second = generator.generate(other, root / 'app-two/src/generated', 'fr')
-            layout = json.loads((root / 'app-one/src/generated' / first['inputs'][0]['layout']).read_text())
-            translated = json.loads((root / 'app-two/src/generated' / second['inputs'][0]['layout']).read_text())
+            layout = json.loads((root / 'app-one/src/generated' / first['inputs'][0]['layout']).read_text(encoding='utf-8'))
+            translated = json.loads((root / 'app-two/src/generated' / second['inputs'][0]['layout']).read_text(encoding='utf-8'))
             self.assertEqual(layout['window']['title'], 'Contacts')
             self.assertEqual(translated['controls'][0]['caption'], 'Nom')
             self.assertEqual(layout['controls'][0]['path'], 'GROUP.EDT_Name')
@@ -76,11 +76,11 @@ class GenerateScreensTests(unittest.TestCase):
             handwritten.write_text('export const myBinding = 7;')
             generator.generate(source.parent, output, 'en')
             self.assertEqual(inventory(output), original)
-            self.assertEqual(handwritten.read_text(), 'export const myBinding = 7;')
+            self.assertEqual(handwritten.read_text(encoding='utf-8'), 'export const myBinding = 7;')
             (output / 'manual.ts').write_text('do not overwrite')
             with self.assertRaisesRegex(ValueError, 'Unexpected'):
                 generator.generate(source, output)
-            self.assertEqual((output / 'manual.ts').read_text(), 'do not overwrite')
+            self.assertEqual((output / 'manual.ts').read_text(encoding='utf-8'), 'do not overwrite')
 
     def test_refuses_handwritten_or_modified_generated_output(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -95,7 +95,7 @@ class GenerateScreensTests(unittest.TestCase):
             (output / 'screens.ts').write_text('handwritten change')
             with self.assertRaisesRegex(ValueError, 'changed'):
                 generator.generate(source, output)
-            self.assertEqual((output / 'screens.ts').read_text(), 'handwritten change')
+            self.assertEqual((output / 'screens.ts').read_text(encoding='utf-8'), 'handwritten change')
 
     def test_hostile_strings_stay_json_data_and_never_become_paths_or_markup(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -106,10 +106,10 @@ class GenerateScreensTests(unittest.TestCase):
             source = write_layout(root / 'input', data)
             output = root / 'generated'
             manifest = generator.generate(source, output)
-            self.assertEqual(json.loads((output / manifest['inputs'][0]['layout']).read_text())['window']['name'], hostile)
+            self.assertEqual(json.loads((output / manifest['inputs'][0]['layout']).read_text(encoding='utf-8'))['window']['name'], hostile)
             self.assertTrue((output / manifest['inputs'][0]['layout']).is_relative_to(output))
-            self.assertNotIn('<img', (output / 'screens.ts').read_text())
-            self.assertIn('\\u2028', (output / 'screens.ts').read_text())
+            self.assertNotIn('<img', (output / 'screens.ts').read_text(encoding='utf-8'))
+            self.assertIn('\\u2028', (output / 'screens.ts').read_text(encoding='utf-8'))
             self.assertEqual(len(list((output / 'layouts').glob('*.json'))), 1)
 
     def test_missing_language_is_diagnostic_and_password_flag_is_not_credentials(self):

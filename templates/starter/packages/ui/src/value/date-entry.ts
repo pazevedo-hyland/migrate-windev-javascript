@@ -13,8 +13,7 @@ function validGregorianDate(yearText: string, monthText: string, dayText: string
 }
 
 function validCompactDate(value: string): boolean {
-  return value.length === 8 && /^[0-9]{8}$/.test(value)
-    && validGregorianDate(value.slice(0, 4), value.slice(4, 6), value.slice(6, 8));
+  return value.length === 8 && /^[0-9]{8}$/.test(value) && validGregorianDate(value.slice(0, 4), value.slice(4, 6), value.slice(6, 8));
 }
 
 export function dateEntryDisplay(value: DatePromptValue): string {
@@ -40,9 +39,7 @@ export function dateEntryResult(draft: DateEntryDraft): DateEntryResult {
   const day = draft.text.slice(0, 2);
   const month = draft.text.slice(3, 5);
   const year = draft.text.slice(6, 10);
-  return validGregorianDate(year, month, day)
-    ? { kind: "valid", value: `${year}${month}${day}` }
-    : { kind: "invalid" };
+  return validGregorianDate(year, month, day) ? { kind: "valid", value: `${year}${month}${day}` } : { kind: "invalid" };
 }
 
 export function dateCalendarValue(value: DatePromptValue): string {

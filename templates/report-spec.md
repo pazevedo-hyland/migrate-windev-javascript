@@ -12,7 +12,7 @@ Destination: <preview (`iPreview`), printer, PDF, file>. Parameters: <…>.
 
 ## Data source
 
-Type: <embedded query / query QRY_x / file / programmed>. SQL: <from the dossier, or "encoded" + what it must return>. Sort: <…>. Filters and parameters: <…>.
+Type: <embedded query / query QRY_x / file / programmed>. SQL: <from `queries.json` of the decoder (embedded queries included) or the dossier; "not stored as text" + the items it selects when the query was built without SQL>. Sort: <…>. Filters and parameters: <…>.
 
 ## Bands
 
@@ -31,7 +31,7 @@ Type: <embedded query / query QRY_x / file / programmed>. SQL: <from the dossier
 | Control | Band | Type | Text / bound item | Text source | x, width (mm) | Alignment | Mask / format | Borders | Overflow |
 |---|---|---|---|---|---|---|---|---|---|
 
-Text source: `dossier` (parsed field), `image` (read from the dossier image: say so) or `code`. Geometry comes from the source layout (`layout` in the inspector output) or the dossier, in millimetres. Adjacent cells often share a border line (one cell's x + width = the next x): draw it once.
+Band types, control kinds, the report's type, data source, page size and margins are decoded from the source (`bands`, `kind`, `report_type`, `page_height_mm`…): where the stored page size and the dossier's format name disagree (RAD reports keep a Letter size under an A4 name), the band widths tell which one the layout was drawn for. Text source: `decoded` (the control's `content`: caption, mask or preset; `linked_item`: the query item it prints), `dossier` (parsed field), `image` (read from the dossier image: say so) or `code`. Geometry comes from the source layout (`layout` in the inspector output) or the dossier, in millimetres. Adjacent cells often share a border line (one cell's x + width = the next x): draw it once.
 
 ## Calculations and presets
 
