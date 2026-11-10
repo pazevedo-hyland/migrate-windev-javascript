@@ -796,6 +796,9 @@ BINARY_UNNAMED = re.compile(rb'(?s)(.\x02\x00\x00)\x00.{8}(.{16})\x00{8}\xff\xff
 BINARY_COLUMN = re.compile(rb'(?s)(\xff\xce\x88\xf1.{4}([^\x00]{1,200})\x00\xfe\xed\x98\xe1)(.\x02\x00\x00)\1.{8}')
 BINARY_PANE = re.compile(rb'\x5a\x02\x00\x00(?=\xff\xce\x88\xf1|\x00)')
 COLUMN_END = b'\xba\xab\xba\xab'
+# A menu option: its name, an identifier, one or two tags, then its caption.
+BINARY_OPTION = re.compile(rb'(?s)\xff\xce\x88\xf1.{4}([A-Za-z_\x80-\xff][\w$\x80-\xff]{0,200})\x00\xfe\xed\x98\xe1.{8}'
+                           rb'(\xc2\x02\x00\x00)?\xc4\x02\x00\x00(?:\xff\xce\x88\xf1.{4}([^\x00]*)\x00\xfe\xed\x98\xe1|\x00)')
 UNNAMED_OWNERS = {7: 'dropdown', 47: 'calendar'}
 
 
@@ -806,7 +809,8 @@ def binary_window(block, encoding='cp1252'):
     other's length. Taking the name out gives the text format's bytes (file paths apart: absolute here), so the
     same readers apply. A table's columns, each with its cell, a combo's list, a tab's panes and the options of
     check boxes and radio buttons sit inside their control's record and are listed after it. The window itself
-    comes first, with its size. Menu options are not listed."""
+    comes first, with its size, then its menu's options in file order (which sub-menu an option is in is not
+    read)."""
     named = list(BINARY_ELEMENT.finditer(block))
     heads = [m.start() for m in BINARY_HEAD.finditer(block)]
     elements = []
@@ -823,6 +827,12 @@ def binary_window(block, encoding='cp1252'):
                              'fields': {'x': x, 'y': y, 'width': width, 'height': height}})
             break
     window = [e['name'] for e in elements]
+    for number, match in enumerate(BINARY_OPTION.finditer(block)):
+        if number == 0:     # the menu itself comes first, under its own name
+            elements.append({'line': None, 'owner': 'menu', 'name': text(match[1], encoding), 'type': '', 'parents': window})
+            continue
+        elements.append({'line': None, 'owner': 'options', 'name': text(match[1], encoding), 'type': '',
+                         'parents': window + ['MENU'], 'fields': {'caption': text(match[3] or b'', encoding)}})
     # Every item with where it starts and ends: (start, order, kind of item, details).
     items = []
     for index, match in enumerate(named):
@@ -967,6 +977,75 @@ def binary_window(block, encoding='cp1252'):
     return place(elements)
 
 
+REPORT_NAME = re.compile(rb'\xff\xce\x88\xf1.{4}([A-Za-z_\x80-\xff][\w$\x80-\xff]{0,200})\x00\xfe\xed\x98\xe1', re.S)
+
+
+def binary_report(block, encoding='cp1252', others=()):
+    """The bands and controls of a report saved in binary format (the first packed block of its `.wde`), in the
+    shape `decode_source` gives. Each is the record a text source keeps in chunk 15 — its name, eight bytes, its
+    geometry as four doubles, its type — with its length just before (zero for a band, whose record holds its
+    controls). A record is taken where the geometry is plausible and the type is a known band or control kind, or
+    where its length is given and fits. The report's own record (type, data source, page) opens the block. The
+    item a control prints is in another packed block (`others`), after the control's name."""
+    elements = []
+    start = block.find(b'\x59\x00\xff\xce\x88\xf1')
+    page = report_page(block[start:], encoding) if start >= 0 else None
+    if page:
+        elements.append({'line': None, 'owner': 'report', 'name': '', 'type': '', 'parents': [], 'fields': page})
+    band = None
+    for match in REPORT_NAME.finditer(block):
+        if match.start() < 4:
+            continue
+        size = struct.unpack_from('<I', block, match.start() - 4)[0]
+        sized = 64 < size <= len(block) - match.start() + 4
+        fields = report_fields(block[match.start():match.start() + (size if sized else 200)], encoding)
+        code = (fields or {}).get('type_code')
+        if not fields or (code not in REPORT_BANDS and code not in REPORT_KINDS and not sized) or fields['width_mm'] < 0 \
+                or fields['height_mm'] < 0 or not 0 < code < 200:
+            continue
+        entry = {'line': None, 'name': text(match[1], encoding), 'type': '', 'fields': fields}
+        if code in REPORT_BANDS:
+            fields['band'] = REPORT_BANDS[code]
+            entry.update(owner='blocks', parents=[])
+            band = entry['name']
+        else:
+            record = block[match.start():match.start() + size - 4] if sized else block[match.start():match.start() + 200]
+            if code in REPORT_KINDS:
+                fields['kind'] = entry['kind'] = REPORT_KINDS[code]
+            used = fonts(record, encoding)[0]
+            if used:
+                entry['fonts'] = used
+            entry['_record'] = record
+            entry.update(owner='controls', parents=[band] if band else [])
+        elements.append(entry)
+    # The item each control prints: the first `<query>.<item>` after the control's name in another block.
+    names = {e['name'] for e in elements if e['owner'] in ('controls', 'blocks')}
+    linked = {}
+    for other in others:
+        current = None
+        for match in FRAMED.finditer(other):
+            value = text(match[2], encoding)
+            if value in names:
+                current = value
+            elif current and '$' in value and LINKED_ITEM.fullmatch(value):
+                linked.setdefault(current, value)
+                current = None
+    for entry in elements:
+        record = entry.pop('_record', None)
+        if record is None:
+            continue
+        fields = entry['fields']
+        if entry['name'] in linked:
+            fields['linked_item'] = linked[entry['name']]
+        faces = {font['face'] for font in entry.get('fonts') or []}
+        item = fields.get('linked_item', '').rsplit('.', 1)[-1]
+        content = [t for t in (text(m[2], encoding) for m in list(FRAMED.finditer(record))[1:] if m[2])
+                   if t not in faces and (not item or t != item)]
+        if content:
+            fields['content'] = content[-1]
+    return elements
+
+
 # In a binary element's code block: the header of one event's code (0x14, a length, the number of lines, the event,
 # then the lines), and the name of the control the following headers belong to (after its code type).
 CODE_HEADER = re.compile(rb'(?s)[\x14-\x1f].{4}(.{4})(.{4})\x00{4,5}\x01\x00\x00\x00(?=\x03)')      # 0x14 in 25, 0x15 in 28
@@ -1002,6 +1081,26 @@ def binary_code(block, encoding='cp1252'):
         else:
             blocks.append({'control': control, **mark})
     return blocks
+
+
+# A predefined action that names an element, in a binary element's code block: the same record a text source keeps
+# in an event slot (a word 4, the action's kind, a word, a word 1, a word, the element's name).
+BINARY_ACTION = re.compile(rb'(?s)\x04\x00\x00\x00(.{4}).{4}\x01\x00\x00\x00.{4}'
+                           rb'\xff\xce\x88\xf1.{4}([A-Za-z_\x80-\xff][\w$\x80-\xff]{0,200})\x00\xfe\xed\x98\xe1')
+
+
+def binary_actions(block, encoding='cp1252'):
+    """Predefined actions that name an element, from a binary element's code block: [{control, action_code,
+    action_target}], the control being the last one named before the record."""
+    owners = [(m.start(), text(m[2], encoding)) for m in CODE_OWNER.finditer(block)
+              if 0 < struct.unpack('<I', m[1])[0] < 0x200]
+    found = []
+    for match in BINARY_ACTION.finditer(block):
+        code = struct.unpack('<I', match[1])[0]
+        control = next((name for start, name in reversed(owners) if start < match.start()), None)
+        if 0 < code < 0x10000 and control and control != text(match[2], encoding):
+            found.append({'control': control, 'action_code': code, 'action_target': text(match[2], encoding)})
+    return found
 
 
 def source_language(source):
@@ -1651,7 +1750,7 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
     output.mkdir(parents=True, exist_ok=False)
     coverage = {'text_sources': 0, 'properties': 0, 'properties_failed': 0, 'controls': 0, 'controls_with_fields': 0,
                 'controls_with_caption': 0, 'report_controls': 0, 'report_controls_with_geometry': 0, 'containers': 0, 'blocks': 0, 'queries_with_sql': 0,
-                'embedded_queries_with_sql': 0, 'elements_with_learned_properties': 0, 'images': 0, 'binary_windows': 0, 'binary_window_controls': 0, 'binary_elements_with_code': 0,
+                'embedded_queries_with_sql': 0, 'elements_with_learned_properties': 0, 'images': 0, 'binary_windows': 0, 'binary_window_controls': 0, 'binary_reports': 0, 'binary_report_controls': 0, 'binary_elements_with_code': 0,
                 'binary_code_blocks': 0, 'binary_code_lines': 0, 'skin_styles': 0,
                 'controls_with_skin_style': 0, 'controls_changed_from_skin_style': 0}
     files, by_name, queries, sources, samples, project, skins = [], {}, {}, {}, [], {}, {}
@@ -1687,21 +1786,30 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                     coverage['skin_styles'] += len(styles)
                     files.append({'path': relative, 'kind': 'skin', 'styles': len(styles)})
                 continue
-            if data[:4] == b'PCS\0' and path.suffix.lower() == '.wdw' and path.stem.lower() not in by_name:
-                # A window in binary format with no text source of the same name: read its controls from it.
+            if data[:4] == b'PCS\0' and path.suffix.lower() in ('.wdw', '.wde') and path.stem.lower() not in by_name:
+                # A window or report in binary format with no text source of the same name: read it from the file.
                 packed = packed_blocks(data)
-                elements = binary_window(packed[0][-1], encoding) if packed else []
+                elements = (binary_window(packed[0][-1], encoding) if path.suffix.lower() == '.wdw'
+                            else binary_report(packed[0][-1], encoding, [b[-1] for b in packed[1:]])) if packed else []
+                if path.suffix.lower() == '.wdw' and elements:
+                    # Its predefined actions, as the event slots of a text source carry them.
+                    top = [e['name'] for e in elements if e['owner'] == 'window']
+                    for other in packed[1:]:
+                        elements += [{'line': None, 'owner': 'p_codes', 'name': '', 'type': '', 'parents': top + [a['control']],
+                                      'fields': {'action_code': a['action_code'], 'action_target': a['action_target']}}
+                                     for a in binary_actions(other[-1], encoding)]
                 if len(elements) > 1:
                     by_name[path.stem.lower()] = elements
-                    sources[path.stem] = {'elements': elements, 'suffix': '.wdw', 'path': relative,
+                    sources[path.stem] = {'elements': elements, 'suffix': path.suffix.lower(), 'path': relative,
                                           'relative': relative + '.json', 'language': None}
                     target = output / 'properties' / (relative + '.json')
                     target.parent.mkdir(parents=True, exist_ok=True)
                     target.write_text(json.dumps({'path': relative, 'format': 'binary', 'elements': elements}, indent=1,
                                                  ensure_ascii=False), encoding='utf-8')
                     files.append({'path': relative, 'kind': 'properties', 'elements': len(elements), 'format': 'binary'})
-                    coverage['binary_windows'] += 1
-                    coverage['binary_window_controls'] += sum(e['owner'] == 'controls' for e in elements)
+                    coverage['binary_windows' if path.suffix.lower() == '.wdw' else 'binary_reports'] += 1
+                    coverage['binary_window_controls' if path.suffix.lower() == '.wdw' else 'binary_report_controls'] += \
+                        sum(e['owner'] == 'controls' for e in elements)
             if data[:4] == b'PCS\0':
                 container = decode_container(data, encoding)
                 if not container['blocks']:

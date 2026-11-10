@@ -704,5 +704,51 @@ class InspectorReadsBinaryElements(unittest.TestCase):
         self.assertEqual(len([r for r in rows if r['element'] == 'Skin_1']), 1)        # the export row only
 
 
+class BinaryReportsMenusAndActions(unittest.TestCase):
+    def test_binary_report_bands_controls_page_and_linked_items(self):
+        page = (b'\x59\0' + framed('RPT_A') + b'\x22' * 8 + b'\0' + struct.pack('<4I', 2, 1, 0, 1) + b'\0' * 7
+                + framed('') + framed('') + framed('') + b'\0' * 21 + struct.pack('<10d', 297, 210, 10, 10, 20, 20, 1, 1, 1, 2) + b'\0' * 30)
+        control = report_element('ITEM_Code', 1, 6, 2, 30, 39) + framed('code') + b'\0' * 8
+        odd = report_element('BAR_Code', 1, 6, 40, 70, 77)                # a kind this table does not name
+        band = report_element('BODY', 0, 32, 0, 190, 4)
+        block = (b'\0' * 8 + page + struct.pack('<I', 0) + band + struct.pack('<I', len(control) + 4) + control
+                 + struct.pack('<I', len(odd) + 4) + odd + struct.pack('<I', 3) + framed('NotAnElement') + b'\0' * 80)
+        other = framed('BODY') + framed('ITEM_Code') + framed('Tahoma') + framed('RPT_A$Query.code') + framed('BAR_Code')
+        elements = module.binary_report(block, others=[other])
+        self.assertEqual([(e['owner'], e['name'], e['parents']) for e in elements],
+                         [('report', '', []), ('blocks', 'BODY', []), ('controls', 'ITEM_Code', ['BODY']),
+                          ('controls', 'BAR_Code', ['BODY'])])
+        self.assertEqual((elements[0]['fields']['report_type'], elements[0]['fields']['margins_mm']['left']), ('table', 20.0))
+        self.assertEqual((elements[1]['fields']['band'], elements[1]['fields']['height_mm']), ('body', 32.0))
+        item = elements[2]
+        self.assertEqual((item['kind'], item['fields']['x_mm'], item['fields']['linked_item'], item['fields'].get('content')),
+                         ('Static', 2.0, 'RPT_A$Query.code', None))
+        self.assertEqual((elements[3].get('kind'), elements[3]['fields']['type_code']), (None, 77))
+
+    def test_menu_options_and_predefined_actions_of_a_binary_window(self):
+        option = lambda name, caption, parent=False: (framed(name) + b'\x44' * 8 + (b'\xc2\x02\0\0' if parent else b'')
+                                                      + b'\xc4\x02\0\0' + framed(caption) + b'\0' * 20)
+        block = BinaryWindows().block()
+        cut = len(struct.pack('<I', 0x25f) + framed('WIN_A')) + 8 + 16 + 40      # right after the window's own record
+        block = block[:cut] + option('_Menu', '') + option('OPT_File', 'File', True) + option('OPT_Quit', 'Quit') + block[cut:]
+        elements = module.binary_window(block)
+        self.assertEqual([(e['owner'], e['name'], (e.get('fields') or {}).get('caption')) for e in elements[:4]],
+                         [('window', 'WIN_A', None), ('menu', '_Menu', None), ('options', 'OPT_File', 'File'),
+                          ('options', 'OPT_Quit', 'Quit')])
+        self.assertEqual([e['name'] for e in elements if e['owner'] == 'controls'], ['SC_Box', 'BTN_Ok', 'EDT_Total'])
+        code = (b'\0' * 30 + struct.pack('<I', 4) + framed('BTN_Print') + b'\0' * 50
+                + struct.pack('<5I', 4, 1100, 61, 1, 31) + framed('RPT_List_Items') + b'\0' * 20)
+        self.assertEqual(module.binary_actions(code),
+                         [{'control': 'BTN_Print', 'action_code': 1100, 'action_target': 'RPT_List_Items'}])
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder, 'project')
+            project.mkdir()
+            (project / 'WIN_A.wdw').write_bytes(b'PCS\0' + b'\x14\0\0\0' + module.pack(block) + b'\0\0' + module.pack(code))
+            module.decode_project(project, Path(folder, 'out'), evidence=True)
+            window = json.loads(Path(folder, 'out/evidence/windev-window/WIN_A.json').read_text(encoding='utf-8'))
+        self.assertEqual(window['predefined_actions'], [{'control': 'BTN_Print', 'target': 'RPT_List_Items', 'code': 1100}])
+        self.assertEqual([m['name'] for m in window['menu']], ['OPT_File', 'OPT_Quit'])
+
+
 if __name__ == '__main__':
     unittest.main()

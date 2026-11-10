@@ -209,7 +209,21 @@ Measured two ways:
 
 On the tutorial project (binary, format 28): 3 windows and 1 procedure set decoded, 52 code blocks seeded, tables read and written per unit in the code map.
 
-**Not there yet**: dialogs and predefined actions of a binary element (no row is seeded for a code-less slot), menu options, report controls, an option with an empty caption.
+**Reports, menus and predefined actions of binary elements**, each compared with the text sources of the measured project:
+
+| Read from the binary file | How it is stored | Binary against text |
+|---|---|---|
+| A report's type, data source, page and margins | the report's own record opens the block, as in chunk `15` of a text source | 27 of 27 reports, every field |
+| Report bands and controls | the text format's chunk `15` verbatim (name, eight bytes, four doubles, type), a control with its length before it, a band's record holding its controls | 133 of 133 bands, 497 of 497 controls: name, band, kind, geometry, fonts |
+| The item a report control prints | in another packed block: the control's name, then `<query>.<item>` | 49 of 49 |
+| A window's menu options | name, identifier, one or two tags (`0x2c2`, `0x2c4`), caption; the menu itself comes first | 54 of 54 names and captions, in order. Which sub-menu an option is in is not read |
+| Predefined actions that name an element | in the code block: the same record as a text source's event slot, after the control's name | 9 of 9, none invented in 112 windows |
+
+On WINDEV 28's tutorial project the same reader lists 11 reports with 152 controls and finds one predefined action — a Print button naming its report, with the same kind number 1100 — but not the report page, the linked items or the menu: those three sit differently in format 28.
+
+**Not there yet**: dialogs of a binary element (the measured project has none to compare with), the sub-menu an option belongs to, an option with an empty caption.
+
+**Controls inside table cells.** Their x in the window is the table's x, plus the widths of the shown columns before theirs, plus their own x, plus 1 (18 of 18 against the dossier). Their y needs the height of the table's header (25 for 16 of them, 2 for the 2 in a table without column titles), which is not located: they are left without a window position.
 
 ## 3. Binary files: the PCS container
 

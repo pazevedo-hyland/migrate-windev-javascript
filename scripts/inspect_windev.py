@@ -258,7 +258,7 @@ def decoded_layout(text, layout):
     return filled
 
 
-def binary_element(data, stem):
+def binary_element(data, stem, suffix='.wdw'):
     """A window, report, class or procedure set saved in WINDEV's binary format, read with `windev_decode.py`:
     its code blocks with the control and event of each, in the shape `extract_blocks` gives, and for a window its
     controls and layout. Line numbers are those of the listing returned with it (a binary file has no lines).
@@ -268,7 +268,10 @@ def binary_element(data, stem):
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         import windev_decode
         packed = windev_decode.packed_blocks(data)
-        elements = windev_decode.binary_window(packed[0][-1]) if packed else []
+        if suffix == '.wde':
+            elements = windev_decode.binary_report(packed[0][-1], others=[b[-1] for b in packed[1:]]) if packed else []
+        else:
+            elements = windev_decode.binary_window(packed[0][-1]) if packed and suffix == '.wdw' else []
         parts = [part for block in packed for part in windev_decode.binary_code(block[-1])
                  if any(line.strip() for line in part['lines'])]
     except Exception:       # an unknown layout: nothing is inferred
@@ -297,7 +300,14 @@ def binary_element(data, stem):
     layout = []
     for element in elements:
         fields = element.get('fields') or {}
-        if element['owner'] == 'controls':
+        if 'x_mm' in fields:        # a report: bands, then their controls, in millimetres
+            item = {'name': element['name'], 'kind': 'band' if element['owner'] == 'blocks' else 'control',
+                    'x': 0 if element['owner'] == 'blocks' else fields['x_mm'], 'y': fields['y_mm'],
+                    'width': fields['width_mm'], 'height': fields['height_mm']}
+            if element['owner'] == 'controls' and element['parents']:
+                item['band'] = element['parents'][-1]
+            layout.append(item)
+        elif element['owner'] == 'controls':
             layout.append({'name': element['name'], 'kind': 'control', 'x': fields.get('window_x'), 'y': fields.get('window_y'),
                            'width': fields.get('width'), 'height': fields.get('height')})
         elif element['owner'] == 'columns':
@@ -500,7 +510,7 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
             except UnicodeError:
                 text = None
             # Skin templates (a `Templates` folder) are WINDEV's own windows, not the application's: left as before.
-            binary = binary_element(data, path.stem) if text is None and data[:4] == b'PCS\0' \
+            binary = binary_element(data, path.stem, suffix) if text is None and data[:4] == b'PCS\0' \
                 and 'templates' not in (part.lower() for part in Path(relative).parts[:-1]) else None
             if binary:
                 # A binary-format element: its code blocks cite a listing written beside the other outputs, since
@@ -511,7 +521,7 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
                 cited = f'{relative} (binary) listing/{relative}.wl'
                 for block in binary['blocks']:
                     block['listing'] = cited
-                controls = [item['name'] for item in binary['layout']]
+                controls = [item['name'] for item in binary['layout'] if item['kind'] != 'band']
                 destination = output / 'code' / (relative + '.json')
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_text(json.dumps({'path': relative, 'name': binary['name'], 'format': 'binary',
