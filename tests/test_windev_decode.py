@@ -246,8 +246,9 @@ class Project(unittest.TestCase):
             self.assertEqual((inside['tab_order'], inside['state']), (-1, 'Active'))
             self.assertIn('Anchor <None>', inside['raw'])
             self.assertEqual(window['controls']['BTN_Ok']['button_type'], 'Validate')
-            self.assertEqual(window['controls']['COL_Name'], {'raw': [], 'kind': 'Table column', 'width': 220,
-                                                              'caption': {'pt-PT': 'Descrição'}, 'decoded': ['width', 'caption']})
+            self.assertEqual(window['controls']['COL_Name'], {'raw': [], 'kind': 'Table column', 'width': 220, 'column_index': 1,
+                                                              'caption': {'pt-PT': 'Descrição'},
+                                                              'decoded': ['width', 'column_index', 'caption']})
             query = json.loads(Path(folder, 'alone/evidence/query/QRY_Customers.json').read_text(encoding='utf-8'))
             self.assertEqual(query['sql'], 'SELECT\n 1')
             # Over a dossier: decoded values replace the PDF's, what only the PDF has stays, its spelling of names too.
@@ -291,6 +292,158 @@ class Project(unittest.TestCase):
         elements = module.decode_source('window :\n name : W\n internal_properties : BQAAAAUAAAAAAAAAAAAAAAAA\n')
         self.assertIn('error', elements[0])
         self.assertNotIn('fields', elements[0])
+
+
+def font_record(face, height=-11, h_align=0, v_align=0, colour=(0x2d, 0x2d, 0x2d)):
+    """A font as a control keeps it: tag, alignment, LOGFONT, face, text colour."""
+    return (struct.pack('<I', 0x25b) + b'\0\0\0\xff' + b'\0' * 4 + struct.pack('<II', h_align, v_align)
+            + struct.pack('<iiiiIBBBB4B', height, 0, 0, 0, 400, 0, 0, 0, 0, 3, 2, 1, 0x22) + framed(face) + bytes(colour) + b'\0')
+
+
+def edit_chunk(caption_width=64, size=30, kind=1, value_type=13, align=2, mask='999,99', returned='', shift=0, **common):
+    """An edit control's chunk 0: style, a frame, the caption's font and width, the common block, the edit record."""
+    head = (b'\x70\x02\0\0' + b'\x13\x07\0\0' + b'\x60\x1b\0\0' + framed('170 AquaBlue.SAI_Simple')
+            + struct.pack('<II', 0x262, 0x18) + bytes([0xfd, 0xfd, 0xfd, 0, 0x0c, 0x3c, 0x60, 0])
+            + font_record('Trebuchet MS', v_align=1) + b'\0' * 20 + struct.pack('<II', 4, caption_width) + b'\0' * 40)
+    block = control_chunk(6, 6, 400, 24, **common)[44:-60]
+    tail = (b'\0' * (26 + shift) + b'\xff\xff\xff\x7f' + b'\0' * 21 + struct.pack('<III', 1, 0x286, size) + b'\0' * 8
+            + struct.pack('<IHB', kind, value_type, align) + b'\0' * 43 + framed(mask) + framed(returned) + b'\0' * 40)
+    return head + block + tail
+
+
+def column_chunk(width, caption, align=2, sortable=1, moveable=0, link='Order.total', adjustable=1, multiline=0, search=1):
+    return (struct.pack('<II', 0x26a, width) + framed(caption) + struct.pack('<5I', align, 1, 0xe, sortable, moveable)
+            + b'\0' * 12 + framed(link) + struct.pack('<6I', 2, adjustable, 1, 1, multiline, search) + b'\0' * 40)
+
+
+def report_element(name, top, bottom, left, right, code):
+    return framed(name) + b'\x11' * 8 + struct.pack('<4d', top, bottom, left, right) + bytes([code]) + b'\0' * 40
+
+
+class KindRecords(unittest.TestCase):
+    def test_edit_record_style_caption_width_and_frames(self):
+        for shift in (0, 4):       # some windows keep four more bytes per control before the record
+            source = '\n'.join(['window :', ' name : WIN_A', ' controls :', '  -', '    name : EDT_Total',
+                                '    internal_properties : ' + value_of(edit_chunk(shift=shift, caption='Total')),
+                                '    type : 2']) + '\n'
+            edit = module.decode_source(source)[0]
+            fields = edit['fields']
+            self.assertEqual((fields['style'], fields['caption'], fields['caption_width']), ('170 AquaBlue.SAI_Simple', 'Total', 64))
+            self.assertEqual((fields['input_size'], fields['input_type'], fields['value_type'], fields['h_align']),
+                             (30, 'numeric', 13, 'right'))
+            self.assertEqual((fields['input_mask'], fields['return_format']), ('999,99', ''))
+            self.assertEqual(edit['frames'], [{'type': 0x18, 'border_colour': '#0c3c60', 'background': '#fdfdfd'}])
+            self.assertEqual((edit['fonts'][0]['h_align'], edit['fonts'][0]['v_align'], edit['fonts'][0]['colour']),
+                             ('left', 'center', '#2d2d2d'))
+        # Another layout after the common block: nothing of the record is read.
+        other = edit_chunk()
+        self.assertIsNone(module.edit_record(other.replace(struct.pack('<II', 1, 0x286), struct.pack('<II', 0, 0x286)),
+                                             module.control_fields(other)['_end']))
+
+    def test_static_alignment_comes_from_its_font(self):
+        chunk = control_chunk(1, 2, 90, 20, caption='Late')
+        chunk = chunk[:4] + font_record('Tahoma', h_align=3, v_align=1, colour=(0xfe, 0, 0)) + chunk[4:]
+        fields = module.describe('controls', '3', [{'id': 0, 'version': 14, 'data': chunk}])
+        self.assertEqual((fields['h_align'], fields['v_align'], fields['caption']), ('justified', 'center', 'Late'))
+        self.assertNotIn('h_align', module.describe('controls', '4', [{'id': 0, 'version': 14, 'data': chunk}]))
+
+    def test_column_options_and_its_cell(self):
+        source = '\n'.join([
+            'window :', ' name : WIN_A', ' controls :', '  -', '    name : TABLE_A', '    columns :', '     -',
+            '       name : COL_Total', '       internal_properties : ' + value_of(column_chunk(80, 'Total')),
+            '       content :', '        internal_properties : ' + value_of(edit_chunk(mask='', returned='')),
+            '        type : 2', '       type : 2', '    type : 9']) + '\n'
+        elements = module.decode_source(source)
+        column = next(e for e in elements if e['owner'] == 'columns')
+        self.assertEqual(column['fields'], {'width': 80, 'caption': 'Total', 'h_align': 'right', 'sortable': True,
+                                            'moveable': False, 'linked_item': 'Order.total', 'adjustable_width': True,
+                                            'multiline': False, 'with_search': True})
+        cell = next(e for e in elements if e['owner'] == 'content')
+        self.assertEqual((cell['kind'], cell['fields']['input_type'], cell['parents'][-1]), ('Edit control', 'numeric', 'COL_Total'))
+        self.assertNotIn('caption_width', cell['fields'])
+        # Options that are not yes/no: only width and caption are kept.
+        odd = module.column_fields(column_chunk(80, 'Total', sortable=7))
+        self.assertEqual(odd, {'width': 80, 'caption': 'Total'})
+
+    def test_report_page_bands_and_control_kinds(self):
+        page = (b'\x59\0' + framed('RPT_A') + b'\x22' * 8 + b'\0' + struct.pack('<4I', 4, 6, 0, 0) + b'\0' * 7
+                + framed('No data.') + framed('Wait.') + b'\0' * 21
+                + struct.pack('<10d', 38, 62, 1, 2, 3, 4, 1, 1, 1, 2) + b'\0' * 30)
+        source = '\n'.join([
+            'report :', ' name : RPT_A', ' internal_properties : ' + value_of(page, 15), ' blocks :', '  -',
+            '    name : BODY', '    internal_properties : ' + value_of(report_element('BODY', 0, 32, 0, 60, 4), 15),
+            '    controls :', '     -', '       name : STC_Code',
+            '       internal_properties : ' + value_of(report_element('STC_Code', 1, 6, 2, 30, 39), 15),
+            '     -', '       name : ITEM_New',
+            '       internal_properties : ' + value_of(report_element('ITEM_New', 1, 6, 32, 50, 99), 15)]) + '\n'
+        elements = {e['name']: e for e in module.decode_source(source, suffix='.wde')}
+        self.assertEqual(elements['RPT_A']['fields'], {
+            'report_type': 'label', 'data_source': 'text file', 'page_format_code': 0, 'page_height_mm': 38.0,
+            'page_width_mm': 62.0, 'margins_mm': {'top': 1.0, 'bottom': 2.0, 'left': 3.0, 'right': 4.0}})
+        self.assertEqual((elements['BODY']['fields']['band'], elements['BODY']['fields']['height_mm']), ('body', 32.0))
+        self.assertEqual((elements['STC_Code']['kind'], elements['STC_Code']['fields']['x_mm']), ('Static', 2.0))
+        # A type this table does not name keeps its code and gets no kind.
+        self.assertEqual((elements['ITEM_New'].get('kind'), elements['ITEM_New']['fields']['type_code']), (None, 99))
+
+    def test_evidence_carries_the_new_fields_in_the_dossier_shape(self):
+        with tempfile.TemporaryDirectory() as folder:
+            project, dossier = Path(folder, 'project'), Path(folder, 'dossier')
+            project.mkdir()
+            (project / 'WIN_A.wdw').write_text('\n'.join([
+                'window :', ' name : WIN_A', ' controls :', '  -', '    name : EDT_Total',
+                '    internal_properties : ' + value_of(edit_chunk(caption='Total', returned='AAAAMMJJ')), '    type : 2',
+                '  -', '    name : TABLE_A', '    internal_properties : ' + value_of(control_chunk(0, 40, 300, 90)),
+                '    columns :', '     -', '       name : COL_Total',
+                '       internal_properties : ' + value_of(column_chunk(80, 'Total')), '       content :',
+                '        internal_properties : ' + value_of(edit_chunk(mask='99', kind=1, value_type=8)),
+                '        type : 2', '       type : 2', '    type : 9', 'languages :', ' - pt-PT']) + '\n', encoding='utf-8')
+            (dossier / 'windev-window').mkdir(parents=True)
+            (dossier / 'windev-window' / 'WIN_A.json').write_text(json.dumps({'controls': {
+                'EDT_Total': {'kind': 'Edit control', 'x': 6, 'y': 6, 'width': 400, 'height': 24, 'input_type': 'High-pre',
+                              'input_size': 30, 'input_mask': {'PT': '999,99'},
+                              'raw': ['Horz. alignment Right', 'Inside X position 70', 'Inside width 336', 'Input size 30',
+                                      'Return format AAAAMMJJ']},
+                'COL_Total': {'kind': 'Table column', 'h_align': 'Right', 'input_type': 'Numeric', 'input_mask': {'PT': '9'},
+                              'flags': {'Sortable column': True, 'Moveable': False, 'Adjustable width': True,
+                                        'Multiline': False, 'With search': False}}}}), encoding='utf-8')
+            index = module.decode_project(project, Path(folder, 'out'), dossier)
+            alone = module.decode_project(project, Path(folder, 'alone'), evidence=True)
+            window = json.loads(Path(folder, 'alone/evidence/windev-window/WIN_A.json').read_text(encoding='utf-8'))
+        calibration = index['calibration']
+        for field in ('input_type', 'input_size', 'input_mask', 'return_format', 'edit_alignment', 'input_area',
+                      'column_alignment', 'column_input_type', 'column_input_mask'):
+            self.assertEqual(calibration[field], {'same': 1, 'different': 0}, field)
+        self.assertEqual(calibration['column_options'], {'same': 4, 'different': 1})        # With search differs
+        self.assertEqual(alone['evidence']['controls'], 3)
+        edit = window['controls']['EDT_Total']
+        self.assertEqual((edit['input_type'], edit['input_size'], edit['input_mask'], edit['h_align'], edit['style']),
+                         ('Numeric', 30, {'pt-PT': '999,99'}, 'Right', '170 AquaBlue.SAI_Simple'))
+        for line in ('Return format AAAAMMJJ', 'Horz. alignment Right', 'Inside X position 70', 'Inside width 336'):
+            self.assertIn(line, edit['raw'])
+        column = window['controls']['COL_Total']
+        self.assertEqual((column['h_align'], column['linked_item'], column['input_type'], column['input_mask']),
+                         ('Right', 'Order.total', 'Numeric', {'pt-PT': '99'}))
+        self.assertEqual(column['flags'], {'Sortable column': True, 'Moveable': False, 'Adjustable width': True,
+                                           'Multiline': False, 'With search': True})
+        self.assertEqual((column['column_index'], calibration.get('column_index')), (1, None))     # the dossier gave no index
+
+
+class Buttons(unittest.TestCase):
+    def test_image_states_and_background_stretch(self):
+        def button(stretch, background='<DIR>\\Btn.png'):
+            fonts = b''.join(font_record('Tahoma', h_align=1, v_align=1) + b'\0' * 12 for _ in range(4))
+            head = b'\x70\x02\0\0' + b'\x31\x04\0\0' + fonts[:-12] + b'\0' * 48 + struct.pack('<I', stretch) + b'\0' * 30
+            tail = (b'\0' * 26 + b'\xff\xff\xff\x7f' + b'\0' * 77 + framed('Save') + framed(background) + struct.pack('<I', 5)
+                    + framed('ok.png') + struct.pack('<I', 3) + b'\0' * 60)
+            return head + control_chunk(1, 2, 80, 24)[44:-60] + tail
+        read = lambda chunk: module.describe('controls', '4', [{'id': 0, 'version': 14, 'data': chunk}])
+        fields = read(button(2))
+        self.assertEqual((fields['caption'], fields['background_states'], fields['image'], fields['image_states']),
+                         ('Save', 5, 'ok.png', 3))
+        self.assertEqual(fields['background_stretch'], 'width and height')
+        self.assertEqual(read(button(0))['background_stretch'], 'custom 9-slice scaling')
+        self.assertNotIn('background_stretch', read(button(7)))                 # a value not measured: not named
+        self.assertNotIn('background_stretch', read(button(0, background='')))   # nothing to stretch
 
 
 if __name__ == '__main__':

@@ -44,6 +44,17 @@ KINDS = {'2': 'Edit control', '3': 'Static', '4': 'Button', '5': 'Check Box', '6
          '8': 'Image', '9': 'Table', '11': 'Spin', '14': 'Combo Box', '16': 'Tab', '20': 'Shape',
          '32': 'Internal Window', '40': 'Supercontrol', '47': 'Calendar', '80': 'Scheduler', '111': 'Dashboard'}
 TAB_PANE_TOP = {0: 26, 2: 2}
+STRETCH = {0: 'custom 9-slice scaling', 2: 'width and height'}     # of a button's background image
+ALIGN_H = {0: 'left', 1: 'center', 2: 'right', 3: 'justified'}
+ALIGN_V = {0: 'top', 1: 'center', 2: 'bottom'}                # bottom: WINDEV's list, not observed
+INPUT_TYPES = {0: 'text', 1: 'numeric', 2: 'date', 3: 'time', 5: 'duration'}
+STYLE_NAME = re.compile(r'\d{2,3} [^.\\]+\.\S+')         # `170 AquaBlue.BTN_Ok`: skin template, then its style
+# A report element's type (chunk 15, 40 bytes after its name): bands, then controls.
+REPORT_BANDS = {1: 'start of document', 2: 'page header', 4: 'body', 6: 'break header', 7: 'break footer',
+                11: 'page footer', 12: 'end of document'}
+REPORT_KINDS = {16: 'Calculation', 17: 'Shape', 18: 'Image', 20: 'Preset', 39: 'Static'}
+REPORT_TYPES = {2: 'table', 4: 'label', 5: 'free'}
+REPORT_SOURCES = {0: 'no data source', 1: 'embedded query', 6: 'text file'}   # the dossier's wording
 
 
 # ---------------------------------------------------------------- cipher
@@ -266,12 +277,34 @@ def fonts(data, encoding='cp1252'):
         if height < 0:
             font['points'] = round(-height * 72 / 96, 1)       # a negative LOGFONT height is pixels at 96 dpi
         font.update({key: True for key, flag in (('italic', italic), ('underline', underline), ('strikeout', strike)) if flag})
+        if start >= 48 and data[start - 48:start - 44] == b'\x5b\x02\0\0':
+            # A font record (tag 0x25b) keeps how its text is aligned just before the LOGFONT.
+            horizontal, vertical = struct.unpack_from('<II', data, start - 36)
+            if horizontal in ALIGN_H and vertical in ALIGN_V:
+                font.update({'h_align': ALIGN_H[horizontal], 'v_align': ALIGN_V[vertical]})
+                spans.append((start - 36, 8))
         colour = data[match.end():match.end() + 4]
         if len(colour) == 4 and colour[3] == 0:
             font['colour'] = '#%02x%02x%02x' % (colour[0], colour[1], colour[2])
         found.append(font)
         spans += [(start - 28, 28), (match.end(), 4)]
     return found, spans
+
+
+FRAME = re.compile(rb'(?s)\x62\x02\0\0(.)\0\0\0(.{3})([\0\xff])(.{3})\0')
+
+
+def frames(data):
+    """Frame records of a chunk (tag 0x262), in file order: a border type, a background colour (absent when the
+    record says none) and a border colour. Read as colours by their shape; the text colours beside them match what
+    the controls are for (a red warning, a yellow message), nothing else was checked against another source."""
+    found = []
+    for match in FRAME.finditer(data):
+        frame = {'type': match[1][0], 'border_colour': '#' + match[4].hex()}
+        if match[3] == b'\0':
+            frame['background'] = '#' + match[2].hex()
+        found.append(frame)
+    return found
 
 
 def anchors(value):
@@ -288,6 +321,10 @@ def control_fields(data, encoding='cp1252'):
     fields = {'x': x, 'y': y, 'width': width, 'height': height, 'layout_version': struct.unpack('<I', match[1])[0]}
     read = lambda offset: framed_string(data, offset, encoding)
     spans = fields['_spans'] = [(start - 4, 20), (start + 24, 8)]    # the bytes read as numbers, for the audit
+    style = next((text(m[2], encoding) for m in FRAMED.finditer(data, 0, start)
+                  if STYLE_NAME.fullmatch(text(m[2], encoding))), None)
+    if style:
+        fields['style'] = style     # the skin template's style the control was created from (none: a custom style)
     try:
         offset = start + 32
         fields['visible'] = bool(struct.unpack_from('<I', data, offset)[0])
@@ -315,7 +352,11 @@ def control_fields(data, encoding='cp1252'):
         right, wide, bottom, high = struct.unpack_from('<4I', data, offset + 12)
         fields['anchor_rates'] = {'right': right, 'bottom': bottom, 'width': wide, 'height': high}
         spans.append((offset + 12, 16))
-        fields['_end'] = offset + 28
+        # The record of the control's own kind starts here. Some windows keep four more bytes per control before
+        # it (118 of the 124 controls of one window measured): the marker that follows says which.
+        marker = (b'\xff\xff\xff\x7f', b'\xff\xff\xff\xff')
+        fields['_end'] = offset + 28 + (4 if data[offset + 58:offset + 62] in marker
+                                        and data[offset + 54:offset + 58] not in marker else 0)
     except (ValueError, IndexError, struct.error) as error:
         fields['partial'] = str(error)
     return fields
@@ -332,13 +373,71 @@ def window_fields(data):
 
 
 def column_fields(data, encoding='cp1252'):
-    """A table column's chunk 0: version tag, width, caption."""
+    """A table column's chunk 0: version tag, width, caption, alignment and options, the item it shows, more
+    options. The options are kept only when every one of them is 0 or 1 (another layout is refused, not misread)."""
     try:
-        caption, _ = framed_string(data, 8, encoding)
+        caption, offset = framed_string(data, 8, encoding)
     except (ValueError, IndexError, struct.error):
         return None
     width = struct.unpack_from('<I', data, 4)[0]
-    return {'width': width, 'caption': caption} if width < 20000 else None
+    if width >= 20000:
+        return None
+    fields = {'width': width, 'caption': caption}
+    try:
+        align, _, _, sortable, moveable = struct.unpack_from('<5I', data, offset)
+        linked, after = framed_string(data, offset + 32, encoding)
+        adjustable, _, _, multiline, search = struct.unpack_from('<5I', data, after + 4)
+    except (ValueError, IndexError, struct.error):
+        return fields
+    if align in ALIGN_H and max(sortable, moveable, adjustable, multiline, search) <= 1:
+        fields.update({'h_align': ALIGN_H[align], 'sortable': bool(sortable), 'moveable': bool(moveable),
+                       'linked_item': linked, 'adjustable_width': bool(adjustable), 'multiline': bool(multiline),
+                       'with_search': bool(search)})
+        # The bytes read, for the audit (removed by `describe` unless asked for).
+        fields['_spans'] = [(4, 4), (offset, 4), (offset + 12, 8), (after + 4, 4), (after + 16, 8)]
+    return fields
+
+
+def edit_record(data, end, encoding='cp1252'):
+    """What follows the common block of an edit control, or of a table column's cell: a version tag, the input
+    size, the input type, the type of the value, the alignment, then the input mask and the format of the value
+    returned. Returns (fields, byte spans) or None when the tag is not where it is expected."""
+    if len(data) < end + 123 or data[end + 51:end + 55] != b'\1\0\0\0' or data[end + 56] not in (2, 3) \
+            or data[end + 57:end + 59] != b'\0\0':
+        return None
+    size, kind = struct.unpack_from('<I', data, end + 59)[0], struct.unpack_from('<I', data, end + 71)[0]
+    fields = {'input_size': size, 'input_type': INPUT_TYPES.get(kind, kind),
+              'value_type': struct.unpack_from('<H', data, end + 75)[0],     # WINDEV's code: 13 is a high-precision number
+              'h_align': ALIGN_H.get(data[end + 77], data[end + 77])}
+    try:
+        fields['input_mask'], offset = framed_string(data, end + 121, encoding)
+        fields['return_format'], _ = framed_string(data, offset, encoding)
+    except (ValueError, IndexError, struct.error):
+        pass
+    return fields, [(end + 55, 8), (end + 71, 4), (end + 75, 3)]
+
+
+def report_page(data, encoding='cp1252'):
+    """A report's own chunk 15: its name, type and data source, then the page as doubles in millimetres (height,
+    width, margins top, bottom, left, right). The doubles are found by their shape: eight plausible lengths in a
+    row, the first two a page size."""
+    try:
+        name, offset = framed_string(data, 2, encoding)
+        kind, source, _, page_format = struct.unpack_from('<4I', data, offset + 9)
+    except (ValueError, IndexError, struct.error):
+        return None
+    fields = {'report_type': REPORT_TYPES.get(kind, kind), 'data_source': REPORT_SOURCES.get(source, source),
+              'page_format_code': page_format}        # 0 custom size, 1 A4 in the reports measured
+    query = next((text(m[2], encoding) for m in FRAMED.finditer(data, offset) if m[2].endswith(b'$Query')), None)
+    if query:
+        fields['embedded_query'] = query
+    for position in range(offset + 32, len(data) - 64):
+        values = struct.unpack_from('<8d', data, position)
+        if all(0 <= v <= 5000 and abs(v * 100 - round(v * 100)) < 1e-6 for v in values) and min(values[:2]) >= 10:
+            fields.update({'page_height_mm': round(values[0], 2), 'page_width_mm': round(values[1], 2),
+                           'margins_mm': dict(zip(('top', 'bottom', 'left', 'right'), (round(v, 2) for v in values[2:6])))})
+            break
+    return fields
 
 
 def report_fields(data, encoding='cp1252'):
@@ -351,27 +450,33 @@ def report_fields(data, encoding='cp1252'):
         return None
     if not name or not all(-1e4 < value < 1e5 for value in (top, bottom, left, right)):
         return None
-    return {'x_mm': round(left, 3), 'y_mm': round(top, 3), 'width_mm': round(right - left, 3),
-            'height_mm': round(bottom - top, 3)}
+    fields = {'x_mm': round(left, 3), 'y_mm': round(top, 3), 'width_mm': round(right - left, 3),
+              'height_mm': round(bottom - top, 3)}
+    if len(data) > offset + 40:
+        fields['type_code'] = data[offset + 40]       # REPORT_BANDS for a band, REPORT_KINDS for a control
+    return fields
 
 
 def button_tail(data, end, encoding='cp1252'):
-    """What follows a button's common block: caption, background image, its number of states, image. The record
-    starts 107 or 111 bytes after the block; a reading is kept only when its strings are exactly the first strings
-    found there, so a shifted layout is refused instead of misread."""
+    """What follows a button's common block: caption, background image, its number of states, image, the image's
+    number of states. The record starts 107 bytes after the block (111 is tried for a layout seen before the block's
+    end was settled); a reading is kept only when its strings are exactly the first strings found there, so a
+    shifted layout is refused instead of misread."""
     found = [m.start() for m in FRAMED.finditer(data, end) if m[2]]
     for start in (end + 107, end + 111):
         try:
             caption, after_caption = framed_string(data, start, encoding)
             background, after_background = framed_string(data, after_caption, encoding)
             states = struct.unpack_from('<I', data, after_background)[0]
-            image, _ = framed_string(data, after_background + 4, encoding)
+            image, after_image = framed_string(data, after_background + 4, encoding)
+            image_states = struct.unpack_from('<I', data, after_image)[0]
         except (ValueError, IndexError, struct.error):
             continue
         used = [offset for offset, value in ((start, caption), (after_caption, background), (after_background + 4, image))
                 if value]
         if used and used == found[:len(used)]:
-            return {'caption': caption, 'background_image': background, 'background_states': states, 'image': image}
+            return {'caption': caption, 'background_image': background, 'background_states': states, 'image': image,
+                    **({'image_states': image_states} if image_states <= 64 else {})}
     return None
 
 
@@ -379,10 +484,25 @@ def describe(owner, kind, chunks, encoding='cp1252', keep_end=False):
     """Named fields for the element kinds whose layout is known; every chunk's strings for all of them."""
     by_id = {c['id']: c['data'] for c in chunks}
     fields = None
-    if owner == 'controls' and 0 in by_id:
+    if owner in ('controls', 'content') and 0 in by_id:
+        # `content` is the cell of a table column: a control of its own (an edit control for a text column).
         fields = control_fields(by_id[0], encoding)
         end = fields.pop('_end', None) if fields else None
         spans = fields.pop('_spans', []) if fields else []
+        used, font_spans = fonts(by_id[0], encoding) if fields is not None else ([], [])
+        face_end = next((offset for offset, width in font_spans if width == 4), 0)     # where the first font's face ends
+        if fields is not None and kind == '2' and end:
+            record = edit_record(by_id[0], end, encoding)
+            if record:
+                fields.update(record[0])
+                spans = spans + record[1]
+        if fields is not None and kind == '3' and used and 'h_align' in used[0]:
+            fields.update({'h_align': used[0]['h_align'], 'v_align': used[0]['v_align']})   # a static's only font
+        if fields is not None and owner == 'controls' and kind in ('2', '14') and used \
+                and len(by_id[0]) >= face_end + 32 and struct.unpack_from('<I', by_id[0], face_end + 24)[0] == 4:
+            # After the caption's font: where the input area starts, from the control's left edge.
+            fields['caption_width'] = struct.unpack_from('<I', by_id[0], face_end + 28)[0]
+            spans = spans + [(face_end + 28, 4)]
         if keep_end and fields is not None:
             # Where the shared block ends (an anchor) and which bytes were read, for windev_fieldmap.py.
             fields['_spans'] = spans + ([(len(by_id[0]) - 50, 1)] if kind == '4' else []) \
@@ -399,6 +519,13 @@ def describe(owner, kind, chunks, encoding='cp1252', keep_end=False):
                 after = [m for m in FRAMED.finditer(by_id[0], end) if m[2]]
                 if after and not IMAGE_FILE.search(after[0][2]):
                     fields['caption'] = text(after[0][2], encoding)
+        faces = [offset for offset, width in font_spans if width == 4]
+        if fields is not None and kind == '4' and len(faces) >= 4 and fields.get('background_image') \
+                and len(by_id[0]) >= faces[3] + 56:
+            # 52 bytes after a button's fourth font: how the background image is stretched.
+            stretch = struct.unpack_from('<I', by_id[0], faces[3] + 52)[0]
+            if stretch in STRETCH:
+                fields['background_stretch'] = STRETCH[stretch]
         if fields is not None and kind == '16' and len(by_id[0]) >= 58:
             # Where a tab's panes start below its top edge, by tab style (two styles measured; others stay unknown).
             style = struct.unpack_from('<I', by_id[0], len(by_id[0]) - 58)[0]
@@ -413,9 +540,15 @@ def describe(owner, kind, chunks, encoding='cp1252', keep_end=False):
         # A menu option or one choice of a radio button or check box: its caption is its first string.
         first = next((m[2] for m in FRAMED.finditer(by_id[0]) if m[2]), None)
         fields = {'caption': text(first, encoding)} if first is not None and FRAMED.search(by_id[0]).start() <= 8 else None
+    elif owner == 'report' and 15 in by_id:
+        fields = report_page(by_id[15], encoding)
     elif owner in ('controls', 'blocks') and 15 in by_id:
         fields = report_fields(by_id[15], encoding)
+        if fields is not None and owner == 'blocks' and fields.get('type_code') in REPORT_BANDS:
+            fields['band'] = REPORT_BANDS[fields['type_code']]
         if fields is not None and owner == 'controls':
+            if fields.get('type_code') in REPORT_KINDS:
+                fields['kind'] = REPORT_KINDS[fields['type_code']]
             # What a report control prints: the item it is linked to (`Query.item`, chunk 1), else its own text,
             # mask or preset (`[PAGENUM]/[NBPAGES]`) - the last string that is neither its name nor a font face.
             faces = {font['face'] for font in fonts(by_id[15], encoding)[0]}
@@ -436,6 +569,8 @@ def describe(owner, kind, chunks, encoding='cp1252', keep_end=False):
             fields['title'] = '' if FILE_PATH.search(title) else text(title, encoding)
     elif owner == 'columns' and 0 in by_id:
         fields = column_fields(by_id[0], encoding)
+        if fields and not keep_end:
+            fields.pop('_spans', None)
     return fields
 
 
@@ -492,7 +627,7 @@ def property_slots(source):
 
 def decode_source(source, encoding='cp1252', raw=False, mapper=None, fieldmap=None, unit='', suffix='.wdw',
                   samples=None):
-    elements, panes = [], {}
+    elements, panes, columns = [], {}, {}
     for slot in property_slots(source):
         entry = {key: slot[key] for key in ('line', 'owner', 'name', 'type', 'parents')}
         try:
@@ -522,14 +657,22 @@ def decode_source(source, encoding='cp1252', raw=False, mapper=None, fieldmap=No
         used = [f for c in chunks if c['id'] in (0, 15) for f in fonts(c['data'], encoding)[0]]
         if used:
             entry['fonts'] = used
+        if slot['owner'] == 'controls' and suffix == '.wdw':
+            boxes = [frame for c in chunks if c['id'] == 0 for frame in frames(c['data'])]
+            if boxes:
+                entry['frames'] = boxes
         for chunk in chunks:
             if chunk['data'][:4] == b'PCS\0':   # an embedded query is a whole container inside the element
                 sql = next((s['sql'] for s, _ in decode_container(chunk['data'], encoding)['blocks'] if s.get('sql')), None)
                 if sql:
                     entry['sql'] = sql
-        if slot['owner'] == 'controls' and slot['type'] in KINDS:
+        if slot['owner'] in ('controls', 'content') and slot['type'] in KINDS:
             entry['kind'] = KINDS[slot['type']]
+        elif slot['owner'] == 'controls' and (fields or {}).get('kind'):
+            entry['kind'] = fields['kind']          # a report control: its type is in the properties only
         # A tab's panes come before their controls: a control directly under a tab is in the last pane seen.
+        if slot['owner'] == 'columns':
+            columns[tuple(slot['parents'])] = entry['index'] = columns.get(tuple(slot['parents']), 0) + 1   # 1..n in its table
         if slot['owner'] == 'tabs':
             panes[tuple(slot['parents'])] = panes.get(tuple(slot['parents']), 0) + 1
             entry['pane'] = panes[tuple(slot['parents'])]
@@ -713,9 +856,33 @@ def file_name(value):
     return re.sub(r'\s+', '', re.split(r'[\\/]', value)[-1]).lower()
 
 
+def raw_line(control, key):
+    """The value of one "Key value" detail line of a dossier control."""
+    return next((line[len(key) + 1:] for line in control.get('raw') or [] if line.startswith(key + ' ')), None)
+
+
+def first_text(value):
+    return next(iter(value.values()), '') if isinstance(value, dict) else value
+
+
+def column_cells(elements):
+    """{column name lower: (column fields with its index, its cell's fields)} for the names used once in the window."""
+    found, seen = {}, collections.Counter(e['name'].lower() for e in elements if e['owner'] == 'columns')
+    for element in elements:
+        if element['owner'] == 'columns' and seen[element['name'].lower()] == 1:
+            found[element['name'].lower()] = [{**(element.get('fields') or {}), 'index': element.get('index')}, {}]
+        elif element['owner'] == 'content' and element['parents'] and element['parents'][-1].lower() in found:
+            found[element['parents'][-1].lower()][1] = element.get('fields') or {}
+    return found
+
+
 def calibrate(decoded, dossier):
     """Compare decoded control fields with the dossier extract (`dossier_extract.py`), field by field."""
     report = {}
+
+    def count(field, same):
+        if same is not None:
+            report.setdefault(field, {'same': 0, 'different': 0})['same' if same else 'different'] += 1
     for path in sorted(Path(dossier, 'windev-window').glob('*.json')):
         controls = json.loads(path.read_text(encoding='utf-8')).get('controls') or {}
         ours = {e['name'].lower(): e for e in decoded.get(path.stem.lower(), []) if e.get('fields') and e['owner'] == 'controls'}
@@ -745,20 +912,70 @@ def calibrate(decoded, dossier):
                       'button_background_image': file_name(theirs.get('background_image')) == file_name(fields['background_image'])
                       if 'background_image' in fields else None,
                       'button_image': file_name(theirs.get('image')) == file_name(fields['image'])
-                      if 'image' in fields else None}
+                      if 'image' in fields else None,
+                      'button_image_states': raw_line(theirs, 'Nb. image states') == str(fields['image_states'])
+                      if 'image_states' in fields and raw_line(theirs, 'Nb. image states') else None,
+                      'button_background_stretch': raw_line(theirs, 'Stretch background image').lower() == fields['background_stretch']
+                      if 'background_stretch' in fields and raw_line(theirs, 'Stretch background image') else None}
+            if 'input_type' in fields:          # an edit control's own record
+                kind = (theirs.get('input_type') or '').lower()
+                mask, align = first_text(theirs.get('input_mask')), raw_line(theirs, 'Horz. alignment')
+                checks.update({
+                    # The dossier's column cuts "High-precision numeric": a number whose value type is 13.
+                    'input_type': (fields['input_type'] == 'numeric' and fields['value_type'] == 13) if kind.startswith('high')
+                    else kind == fields['input_type'] if kind else None,
+                    'input_size': theirs['input_size'] == fields['input_size'] if theirs.get('input_size') is not None else None,
+                    'input_mask': squeeze(str(mask)) == squeeze(fields['input_mask'] or '0')
+                    if mask is not None and 'input_mask' in fields else None,
+                    'return_format': (raw_line(theirs, 'Return format') or '') == fields['return_format']
+                    if 'return_format' in fields and raw_line(theirs, 'Input size') is not None else None,
+                    'edit_alignment': align.lower() == fields['h_align'] if align else None})
+            if 'caption_width' in fields and theirs.get('x') is not None and (raw_line(theirs, 'Inside X position') or '').isdigit():
+                checks['input_area'] = (int(raw_line(theirs, 'Inside X position')) - theirs['x'] == fields['caption_width']
+                                        and raw_line(theirs, 'Inside width') == str(fields['width'] - fields['caption_width']))
+            row = re.search(r'(Left|Center|Right|Justifie)\w* (Top|Center|Bottom)$', theirs.get('row') or '')
+            if row and 'v_align' in fields:
+                # The dossier's column cuts "Justified".
+                checks['static_alignment'] = (fields['h_align'].startswith(row[1].lower())
+                                              and fields['v_align'] == row[2].lower())
             for field, same in checks.items():
-                if same is not None:
-                    counts = report.setdefault(field, {'same': 0, 'different': 0})
-                    counts['same' if same else 'different'] += 1
+                count(field, same)
+        for name, (column, cell) in column_cells(decoded.get(path.stem.lower(), [])).items():
+            theirs = next((c for n, c in controls.items() if n.lower() == name), None)
+            if not theirs or 'h_align' not in column:
+                continue
+            flags = theirs.get('flags') or {}
+            options = {'Sortable column': 'sortable', 'Moveable': 'moveable', 'Adjustable width': 'adjustable_width',
+                       'Multiline': 'multiline', 'With search': 'with_search'}
+            count('column_alignment', theirs['h_align'].lower() == column['h_align'] if theirs.get('h_align') else None)
+            for label, key in options.items():
+                count('column_options', flags[label] == column[key] if label in flags else None)
+            count('column_index', theirs['column_index'] == column['index'] if theirs.get('column_index') else None)
+            if 'input_type' in cell and theirs.get('input_type'):
+                kind = theirs['input_type'].lower()
+                count('column_input_type', cell['value_type'] == 13 if kind.startswith('high') else kind == cell['input_type'])
+            mask = first_text(theirs.get('input_mask'))
+            if 'input_mask' in cell and mask is not None:
+                # The dossier's table cuts a long mask: the start is compared.
+                ours = squeeze(cell['input_mask'] or '0')
+                count('column_input_mask', ours.startswith(squeeze(str(mask))) if squeeze(str(mask)) else None)
     for path in sorted(Path(dossier, 'report').glob('*.json')):
-        controls = json.loads(path.read_text(encoding='utf-8')).get('controls') or {}
+        element = json.loads(path.read_text(encoding='utf-8'))
+        controls = element.get('controls') or {}
         ours = {e['name'].lower(): e for e in decoded.get(path.stem.lower(), []) if e.get('fields') and e['owner'] == 'controls'}
         for name, theirs in controls.items():
             fields = (ours.get(name.lower()) or {}).get('fields')
             if fields and 'x_mm' in fields and theirs.get('width_mm') is not None:
-                same = all(abs(theirs.get(key, 0) - fields[key]) < 0.02 for key in ('x_mm', 'y_mm', 'width_mm', 'height_mm'))
-                counts = report.setdefault('report_geometry_mm', {'same': 0, 'different': 0})
-                counts['same' if same else 'different'] += 1
+                count('report_geometry_mm',
+                      all(abs(theirs.get(key, 0) - fields[key]) < 0.02 for key in ('x_mm', 'y_mm', 'width_mm', 'height_mm')))
+            if fields and theirs.get('kind') and 'type_code' in fields:
+                count('report_control_kind', theirs['kind'] == fields.get('kind'))
+        page = next((e['fields'] for e in decoded.get(path.stem.lower(), []) if e['owner'] == 'report' and e.get('fields')), None)
+        if page:
+            count('report_type', element['report_type'].lower() == page['report_type']
+                  if element.get('report_type') in ('Table', 'Label', 'Free') else None)
+            count('report_data_source', element['data_source'].lower() == page['data_source'] if element.get('data_source') else None)
+            count('report_margins_mm', element['margins_mm'] == page.get('margins_mm') if element.get('margins_mm') else None)
     for path in sorted(Path(dossier, 'windev-window').glob('*.json')):
         title = json.loads(path.read_text(encoding='utf-8')).get('title')
         title = next(iter(title.values()), '') if isinstance(title, dict) else title or ''
@@ -793,10 +1010,46 @@ def merge_control(entry, element, language):
 
     if element.get('fonts') and not entry.get('fonts'):
         put('fonts', element['fonts'])
+    if element.get('frames') and not entry.get('frames'):
+        put('frames', element['frames'])
+    def fill(key, value):
+        if entry.get(key) in (None, '') and value not in (None, ''):
+            put(key, value)
+
+    def cell(source):
+        # An edit control's own record, or a column's cell. The dossier writes 0 for no mask, and wraps a long one.
+        if 'input_type' not in source:
+            return
+        fill('input_type', source['input_type'].capitalize() if isinstance(source['input_type'], str) else None)
+        fill('input_size', source['input_size'])
+        if source.get('input_mask'):
+            old = entry.get('input_mask') if isinstance(entry.get('input_mask'), dict) else {}
+            put('input_mask', {**old, next(iter(old), language): source['input_mask']})
+        elif 'input_mask' in source:
+            fill('input_mask', {language: '0'})
+        if source.get('return_format') and raw_line(entry, 'Return format') is None:
+            entry.setdefault('raw', []).append(f"Return format {source['return_format']}")
+            written.append('return_format')
+
+    if element['owner'] == 'content':
+        cell(fields)
+        return written
     if element['owner'] == 'columns':
         entry.setdefault('kind', 'Table column')
         put('width', fields.get('width'))
+        fill('column_index', element.get('index'))
+        if 'h_align' in fields:
+            fill('h_align', fields['h_align'].capitalize())
+            fill('linked_item', fields['linked_item'])
+            flags = entry.setdefault('flags', {})
+            for label, key in (('Sortable column', 'sortable'), ('Moveable', 'moveable'), ('Adjustable width', 'adjustable_width'),
+                               ('Multiline', 'multiline'), ('With search', 'with_search')):
+                if label not in flags:
+                    flags[label] = fields[key]
+                    written.append(f'flags.{label}')
     elif 'x_mm' in fields:
+        if element.get('kind'):
+            entry.setdefault('kind', element['kind'])
         for key in ('x_mm', 'y_mm', 'width_mm', 'height_mm', 'linked_item', 'content'):
             if entry.get(key) is None and fields.get(key) is not None:
                 put(key, fields[key])
@@ -806,6 +1059,20 @@ def merge_control(entry, element, language):
             entry.setdefault('kind', element['kind'])
         put('width', fields['width'])
         put('height', fields['height'])
+        put('style', fields.get('style'))
+        cell(fields)
+        if isinstance(fields.get('h_align'), str):
+            fill('h_align', fields['h_align'].capitalize())
+            if raw_line(entry, 'Horz. alignment') is None and 'input_type' in fields:
+                entry.setdefault('raw', []).append(f"Horz. alignment {fields['h_align'].capitalize()}")
+        if fields.get('v_align'):
+            fill('v_align', fields['v_align'].capitalize())
+        if 'caption_width' in fields and raw_line(entry, 'Inside width') is None:
+            # The dossier's two lines for where the input area is (its X in the window, its width).
+            if 'window_x' in fields:
+                entry.setdefault('raw', []).append(f"Inside X position {fields['window_x'] + fields['caption_width']}")
+            entry.setdefault('raw', []).append(f"Inside width {fields['width'] - fields['caption_width']}")
+            written.append('input_area')
         if 'window_x' in fields:
             put('x', fields['window_x'])
             put('y', fields['window_y'])
@@ -823,6 +1090,10 @@ def merge_control(entry, element, language):
                     put(key, {**old, next(iter(old), language): fields[key]})
             if fields.get('background_image') and not any(line.startswith('Nb. background states') for line in entry.get('raw', [])):
                 entry.setdefault('raw', []).append(f"Nb. background states {fields['background_states']}")
+            if 'image_states' in fields and raw_line(entry, 'Nb. image states') is None:
+                entry.setdefault('raw', []).append(f"Nb. image states {fields['image_states']}")
+            if 'background_stretch' in fields and raw_line(entry, 'Stretch background image') is None:
+                entry.setdefault('raw', []).append(f"Stretch background image {fields['background_stretch'].capitalize()}")
             for key in ('tooltip', 'linked_item', 'group', 'popup_menu', 'double_click_button'):
                 if fields.get(key):
                     put(key, fields[key])
@@ -894,9 +1165,24 @@ def write_evidence(sources, queries, target, dossier=None):
                 and len(decoded['parents']) >= 2 and decoded['parents'][1].upper().startswith('MENU')]
         if menu:
             element['menu'] = menu
+        bands = []
         for decoded in item['elements']:
             fields = decoded.get('fields')
+            if fields and decoded['owner'] == 'content' and decoded['parents'] and known.get(decoded['parents'][-1].lower()):
+                # A column's cell: its input type, size and mask belong to the column's entry.
+                entry = element['controls'][known[decoded['parents'][-1].lower()]]
+                entry['decoded'] = entry.get('decoded', []) + merge_control(entry, decoded, language)
+                continue
+            if fields and decoded['owner'] == 'report':
+                for key, value in fields.items():      # what the dossier's "General information" says, when it lacks it
+                    if element.get(key) in (None, ''):
+                        element[key] = value.capitalize() if key in ('report_type', 'data_source') and isinstance(value, str) else value
+                continue
             if not fields or not decoded['name']:
+                continue
+            if decoded['owner'] == 'blocks':
+                bands.append({'name': decoded['name'], 'band': fields.get('band'),
+                              **{key: fields[key] for key in ('y_mm', 'height_mm', 'width_mm')}})
                 continue
             if decoded['owner'] == 'window':
                 if not element.get('size'):
@@ -916,6 +1202,8 @@ def write_evidence(sources, queries, target, dossier=None):
             if written:
                 element['controls'][name]['decoded'] = written
             counts['controls'] += 1
+        if bands:
+            element['bands'] = bands
         path.write_text(json.dumps(element, indent=1, ensure_ascii=False), encoding='utf-8')
     for name, sql in sorted(queries.items()):
         folder = target / 'query'

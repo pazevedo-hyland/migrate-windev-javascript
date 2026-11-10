@@ -437,7 +437,10 @@ def layout(unit, latest, language=None):
                  'input_size': details.get('input_size'), 'input_type': details.get('input_type'), 'image': image,
                  'image_states': raw_value(raw, 'Nb. image states'),
                  'background_image': background, 'background_states': raw_value(raw, 'Nb. background states'),
-                 'background_stretch': raw_value(raw, 'Stretch background image')}
+                 'background_stretch': raw_value(raw, 'Stretch background image'),
+                 # Read from the source: the skin style the control was created from (`170 AquaBlue.BTN_Ok`), and
+                 # its frames (border type, background and border colours) in file order.
+                 'style': details.get('style'), 'frames': details.get('frames')}
         if entry['kind'] == 'Caption':
             entry['v_align'] = details.get('v_align') or raw_value(raw, 'Vert. alignment') or caption_alignment.get('v_align')
         entry.update(date_edit_options(details))

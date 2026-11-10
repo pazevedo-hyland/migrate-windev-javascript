@@ -8,10 +8,10 @@ Measured on the second migration's project (file format 25, 112 windows, 27 repo
 
 | Level | Where it comes from | How it is known to be right | Share of the project |
 |---|---|---|---|
-| **Read exactly** | the code (plain text), `internal_properties` decoded by layout, binary containers unpacked | compared with the dossier field by field: every compared value equal (`calibration` in `index.json`) | all code; per control position, size, plane, order among siblings, caption, Visible, state, tab stop and order, anchors and rates, linked item, group, tooltip, button type and images; column width and caption; tab panes; window size and title; report geometry; the menu tree; what each report control prints; all SQL including 19 of 20 embedded queries (the other one stores no SQL text); fonts and text colours (read, not compared: the dossier does not print them) |
-| **Learned, strong** | a position found by `windev_fieldmap.py learn`: its bytes explain a dossier property for every control | predicts windows it was not learned from without one error (at least 8 predictions), is the only position that fits, and a yes/no has several of each | 15 properties here: an edit's input type, calendar button, return format; a table's row height and three options; column options… |
+| **Read exactly** | the code (plain text), `internal_properties` decoded by layout, binary containers unpacked | compared with the dossier field by field: every compared value equal (`calibration` in `index.json`) | all code; per control position, size, plane, order among siblings, caption, Visible, state, tab stop and order, anchors and rates, linked item, group, tooltip, skin style, button type, images, image states and background stretching; an edit's input type, size, mask, returned format, alignment and caption width; a static's alignment; column width, caption, alignment, place, linked item, five options and its cell's input type and mask; tab panes; window size and title; report type, data source, page, margins, band types, control kinds and geometry; the menu tree; what each report control prints; all SQL including 19 of 20 embedded queries (the other one stores no SQL text); fonts and text colours (read, not compared: the dossier does not print them) |
+| **Learned, strong** | a position found by `windev_fieldmap.py learn`: its bytes explain a dossier property for every control | predicts windows it was not learned from without one error (at least 8 predictions), is the only position that fits, and a yes/no has several of each | 12 properties here, once those now read exactly left the list: an edit's calendar button and vertical scrollbar; a table's row height, browsed and stored items and two options; a button's animation steps; a column's assisted input |
 | **Learned, weak** | same, but the project never varies the property enough, or two properties always change together | not known: listed apart, never applied by default | about 80 candidates here |
-| **Unexplained** | `audit.json`: bytes that differ from the usual value of the control's kind and that nothing above explains | nothing is claimed; the difference is shown | 332 of 1,148 window controls have none; the others a median of 2 |
+| **Unexplained** | `audit.json`: bytes that differ from the usual value of the control's kind and that nothing above explains | nothing is claimed; the difference is shown | 376 of 1,148 window controls have none; the others a median of 2 |
 
 Nothing moves up a level by being plausible. A weak entry becomes strong with more variety (another project, more windows printed), or exact when someone changes that one property in WINDEV on a copy of a window and decodes it before and after.
 
@@ -41,7 +41,7 @@ Then per unit: `unit_evidence.py <UNIT>` gives the mapper its code, events, doss
 
 ### What a project without a printable dossier gets
 
-Run with no PDF, the same project produced, for a 77-control window with tabs, tables and a supercontrol, a layout equal to the dossier-validated one on position, size, plane, kind, anchors, tab order, state, Visible, input type, button type and images. Missing: alignment, input mask and size, caption width, image state counts, table options, check-box images. Those are the audit's and the weak list's job (below).
+Run with no PDF, the same project produced, for four windows (287 controls, among them the largest window), layouts equal to those made with the dossier on position, size, plane, kind, anchors, tab order, state, Visible, caption, button type, images, image states and background stretching, an edit's input type, size, mask, alignment and caption width, and a column's alignment, place and linked item (9 caption widths and 2 column input types differ). Missing: the alignment and input type the dossier prints for combos, radio buttons and statics, a table's own options, the tick-mark properties not read yet (a column's assisted input, a check box's three states…), the skin image of check boxes and radio buttons. Those are the audit's and the weak list's job (below).
 
 ## 4. Closing what is left, cheapest first
 
@@ -70,6 +70,7 @@ Record each answer where the next project finds it: a decoder field with its cal
 ## 7. What this does not cover
 
 - **Behavior** is in the code and stays the mapper's and the tests' work: the decoder adds no rule, only what the designer set.
+- **Colours other than text**: frames (border type, background and border colours) are read by their shape and listed per control; no second source confirmed them, so they are a lead for the eye, not a fact.
 - **Predefined actions** of code-less event slots decode to small identical records; their meaning still comes from the proposals of `evidence_report.py`.
 - **Controls inside table cells** have no window position.
 - **Other WINDEV versions**: every offset here was measured on one file format. `coverage`, `calibration` and the audit tell at once whether they hold; a partial dossier re-learns what moved.

@@ -18,13 +18,23 @@ Measured on one project (file format 25: `major_version : 25` in its sources; 11
 | Anchor rates | | 1,130 of 1,130 equal |
 | Captions | 822 controls with one | 819 of 820 equal; accents correct where the PDF lost them |
 | Window size and title | 112 windows | size 111 of 112 equal (the window with a menu bar differs by its height); title 112 of 112 |
+| Edit control: input type, input size, input mask, format of the returned value, alignment | 270 edit controls | 261 of 261 equal; 270 of 270 equal; 270 of 270 equal; 270 of 270 equal; 270 of 270 equal |
+| Where an edit's or combo's input area starts (caption width) | 310 controls | 281 of 294 equal; the others are one pixel off in the dossier, all in two windows |
+| Static text alignment (horizontal, vertical) | 74 statics | 74 of 74 equal |
+| Button: number of image states, how the background image is stretched | | 588 of 588 equal; 580 of 580 equal |
+| Table column: alignment, place in the table, five options (sortable, moveable, adjustable width, multiline, with search) | 310 columns | 250 of 250 equal; 270 of 270 equal; 1,375 of 1,375 equal |
+| Table column cell: input type and mask | | 243 of 243 equal; 240 of 240 equal |
+| Skin style of a control (`170 AquaBlue.BTN_Ok`) | 1,018 controls name one | not printed by the dossier |
 | Report control geometry (mm) | 497 controls | 493 of 493 equal |
+| Report control kind (static, calculation, preset, image, shape) | | 493 of 493 equal |
+| Report type, data source, margins | 27 reports | 26 of 26 equal each |
+| Report band types | 133 bands | equal to the band names WINDEV gave them |
 | Query SQL from binary `.WDR` | 5 of 5 | same text, without the PDF's line wraps |
 | SQL of queries embedded in windows and reports | 19 of 20 | not in the dossier at all |
 | Fonts and text colours | every control | not printed by the dossier: read, not compared |
 | Window and report thumbnails | 219 images | — |
 
-A screen layout generated with no PDF at all (`screen_layout.py` on one 77-control window with tabs, tables and a supercontrol) equals the layout validated earlier from the dossier on every position, size, kind, anchor, tab order, state, Visible tick, button type and button image. What the PDF still adds there: planes, the other tick-mark properties, alignment, masks, input types, caption widths and table options.
+Screen layouts generated with no PDF at all (`screen_layout.py` on four windows, 287 controls, among them the largest window of the project) equal the layouts generated with the dossier on every position (but the 3 controls inside table cells), size, kind, plane, anchor, tab order, state, Visible tick, caption, button type, button images and their state counts, background stretching, edit input type, size, mask and alignment, column alignment, index and linked item, and on all but 9 caption widths and 2 column input types. What the PDF still adds there: a table's own options, the tick-mark properties not named above, the skin image of check boxes and radio buttons, and the default input type the dossier prints for statics and combos.
 
 The offsets below come from that one format. On another WINDEV version, run the tool, read `coverage` in `index.json`, and compare with a dossier of a few windows or with the running app before trusting a field.
 
@@ -54,11 +64,11 @@ Which chunk holds what (id, version):
 | Element | Chunks | Contents |
 |---|---|---|
 | Window control | `1`, then `0` (v14) | `1`: identifiers and links. `0`: type-specific style (fonts, colours, style name such as `170 AquaBlue.BTN_Simple`), the common block, type-specific tail (button caption and image, masks) |
-| Table column | `1`, `0` | `0`: version, width, caption, linked item (`Customer.Name`) |
-| Column `content`, combo `dropdown`, `calendar` | `0` | the embedded edit/combo/calendar control |
+| Table column | `1`, `0` | `0`: version, width, caption, alignment and options, linked item (`Customer.Name`), more options (below) |
+| Column `content`, combo `dropdown`, `calendar` | `0` | the embedded edit/combo/calendar control. A column's `content` is its cell: a whole control with the common block, and for a text column the edit record with its input type and mask |
 | Window | `1`, `6`, `0` | `6`: platform, creator, skin template. `0`: version at 16, then x, y, width, height; title; background image; file name |
 | Menu option | `0` (and `1`) | caption, fonts |
-| Report, band, report control | `15` (v14), `1` | `15`: name, then top, bottom, left, right as doubles in millimetres; font; caption. `1`: the same captions in UTF-16 |
+| Report, band, report control | `15` (v14), `1` | `15`: name, 8 bytes, then top, bottom, left, right as doubles in millimetres, then one byte for the element's type (below); font; caption. `1`: the same captions in UTF-16. The report's own `15`: name, type, data source, messages, page and margins |
 | `code_elements`, `code_parameters`, `string_res`, `rad`, `custom_note` | `5`, `2`, `3`, `9`… | small fixed records; rarely needed |
 
 ### The common block of a window control
@@ -83,18 +93,46 @@ Found in chunk `0` by its signature: a version, four integers, eight zero bytes 
 | order | u16 right after the group | 1..n among the controls of the same parent (per pane inside a tab): the designer's order. Numbering checked on 148 sibling groups; its use as drawing order is inferred |
 | anchor rates | 4 × u32, 12 bytes later | right, width, bottom, height, in thousandths |
 | button type | byte 50 before the end of the chunk | 0 normal, 1 validate, 3 abort (2 and 4 not observed) |
-| button caption, background image, number of background states, image | a record 107 or 111 bytes after the anchor rates | string, string, u32, string. Kept only when these are exactly the first strings found there |
+| button caption, background image, number of background states, image | a record 107 bytes after the block end (below) | string, string, u32, string. Kept only when these are exactly the first strings found there |
 | tab style | u32, 58 bytes before the end of a tab's chunk | 0: panes start 26 px below the tab's top; 2: 2 px. Other values not measured |
+
+**Where the block ends.** The record of the control's own kind starts 28 bytes after the group's order. One window of the project (its largest, 118 of 124 controls) keeps four more bytes per control before that record: the maximum-size marker (`ff ff ff 7f`, or `ff ff ff ff`) that sits 26 bytes into the record says which. Every offset "after the block" below counts from the corrected position; before this was known those controls were read four bytes off.
+
+### Records of one kind of control
+
+| Kind | Field | Where | Checked |
+|---|---|---|---|
+| any | skin style | the first string of the form `<number> <skin>.<style>` before the common block | names are the skin's own (`BTN_Ok`, `BTN_Annuler`, `BTN_Supprimer`, `SAI_Simple`…): a button's role is often readable from it. Absent = a custom style |
+| any | font record | tag `0x25b`, 4 bytes, 4 bytes, horizontal alignment (u32: 0 left, 1 centre, 2 right, 3 justified), vertical alignment (u32: 0 top, 1 centre), `LOGFONT`, face, text colour | a static's only font gives the static's alignment |
+| any | frame record | tag `0x262`, border type (u32), background colour (4th byte `ff` = none), border colour | read by shape, not compared with another source |
+| Edit, Combo | caption width | 24 bytes after the first font's face: u32 `4`, then the width | the input area starts there, from the control's left edge |
+| Edit (and a column's cell) | version tag | block end + 51: u32 `1`, u32 `0x286` | when the tag is not there the record is not read |
+| | input size | + 59, u32 | |
+| | input type | + 71, u32 | 0 text, 1 numeric, 2 date, 3 time, 5 duration |
+| | type of the value | + 75, u16 | WINDEV's code; 13 with a numeric input is the dossier's "high-precision numeric" |
+| | alignment | + 77, u8 | 0 left, 1 centre, 2 right |
+| | input mask, returned format | two strings from + 121 | empty mask = the dossier's `0` |
+| Button | caption, background image, its states, image, its states | a record 107 bytes after the block end: string, string, u32, string, u32 | |
+| | background stretching | u32, 52 bytes after the fourth font's face | 2 width and height, 0 custom 9-slice scaling; only meaningful with a background image |
+| Table column | alignment | u32 right after the caption | 0 left, 1 centre, 2 right |
+| | sortable, moveable | u32 at + 12 and + 16 after the caption | |
+| | linked item | string at + 32 after the caption | a column shown through a link holds `File.Item<TAB>OtherFile.Key.Item` |
+| | adjustable width, multiline, with search | u32 at + 4, + 16, + 20 after the linked item | kept only when all five options are 0 or 1 |
+| Report | type, data source | u32 at + 9 and + 13 after the report's name | 2 table, 4 label, 5 free; 0 none, 1 embedded query, 6 the dossier's "text file" |
+| | page | eight doubles in a row: height, width, margins top, bottom, left, right (mm) | found by shape. Reports created by the RAD keep a Letter size there while the dossier prints A4: the band widths follow the stored size |
+| Report band, report control | type | one byte after the four geometry doubles | bands: 1 start of document, 2 page header, 4 body, 6 break header, 7 break footer, 11 page footer, 12 end of document. Controls: 16 calculation, 17 shape, 18 image, 20 preset, 39 static. A code outside these lists is kept as `type_code` |
 
 **Positions.** Add the parents' x and y to get window coordinates; a **tab** parent also adds where its panes start (its style, above). A tab of an unmeasured style gives its children no window position, and a **table** places controls in cells: those keep parent-relative `x`/`y` only. Each pane of a tab is an element of its own (owner `tabs`, with its caption); a control directly inside a tab carries `pane`, the number of its pane. A pane is not a WINDEV plane: planes are not named yet.
 
 ### Mapping one more field
 
-Everything else a control has (colours, fonts, masks, planes, input type, column options) is in the same chunks, not yet named. To name one:
+Everything else a control has (a table's options, the other tick-mark properties, most of a report control's style) is in the same chunks, not yet named. To name one:
 
 1. Run with `--raw` to keep each chunk as hex.
 2. Take two controls of the same type that differ in that property only (or the dossier's value for a few hundred controls) and compare their chunks from the common block signature, or from the end of the chunk.
-3. Keep an offset only when it explains **every** control of that type, as the table above does; add it to `control_fields` with a test.
+3. Keep an offset only when it explains **every** control of that type, as the tables above do; add it to the decoder with a test and a line in `calibrate`.
+
+The fastest search, used for the records above: for one kind of control, try every offset counted from the block end, from the chunk end and from the end of a string or font before it, and keep those where the bytes and the dossier's values map one-to-one for all controls. An offset that fits all but a few is usually right with the anchor wrong: look at what the exceptions share (here, one window).
 
 A property changed in WINDEV on a copy of one window, saved in text format and decoded before and after, settles an offset in minutes.
 

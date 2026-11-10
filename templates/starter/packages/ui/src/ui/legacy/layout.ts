@@ -14,7 +14,11 @@ export interface LegacyFont {
   italic?: boolean; underline?: boolean; strikeout?: boolean;
   /** Text colour `#rrggbb`, when the source holds an explicit one. */
   colour?: string;
+  /** How the text is aligned, as the font's own record says (`left`, `center`, `right`, `justified`; `top`, `center`, `bottom`). */
+  h_align?: string; v_align?: string;
 }
+/** A frame of a control as the source stores it: border type code, colours `#rrggbb` (no background = none set). */
+export interface LegacyFrame { type: number; border_colour: string; background?: string }
 export interface LegacyControl {
   name: string; path: string; kind: string; x: number; y: number;
   width?: number | null; height?: number | null; caption?: string | null;
@@ -34,6 +38,10 @@ export interface LegacyControl {
   font?: LegacyFont;
   /** Every font of the control in source order (one per button state, caption then input area…). */
   fonts?: LegacyFont[];
+  /** The skin style the control was created from, e.g. `170 AquaBlue.BTN_Ok`; absent = a custom style. */
+  style?: string;
+  /** The control's frames in source order; which part each one draws is not named. */
+  frames?: LegacyFrame[];
 }
 export interface LegacyLayout {
   window: { name: string; title: string | null; size: { width: number; height: number } | null; background_image?: string | null; flags?: Record<string, boolean> };

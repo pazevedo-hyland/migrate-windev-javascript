@@ -15,7 +15,7 @@ What the window needs and leaves behind, including what WINDEV passes implicitly
 
 ## Layout
 
-From the inspector `layout` (pixels, absolute in the window, decoded from the source) and the evidence folder (planes, order among siblings, anchoring, images, skin). Fonts and text colours come from each control's decoded `fonts` (face, pixel height, weight, colour); what a control does not state comes from the skin template: name it.
+From the inspector `layout` (pixels, absolute in the window, decoded from the source) and the evidence folder (planes, order among siblings, anchoring, images, skin). Fonts, text colours and text alignment come from each control's decoded `fonts` (face, pixel height, weight, colour, `h_align`, `v_align`); its `style` names the skin style (`170 AquaBlue.BTN_Ok`) to reproduce; what a control does not state comes from the skin template: name it.
 
 | Legacy name | x | y | width | height | Anchoring (how it moves or grows on resize) | Image / skin |
 |---|---|---|---|---|---|---|

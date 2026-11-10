@@ -1,6 +1,51 @@
 {
  "format_version": 1,
  "variants": {
+  "wde/blocks//15.14": {
+   "start": {
+    "field:type_code": {
+     "kind": "position",
+     "position": 41,
+     "width": 2,
+     "samples": 133,
+     "distinct": 7,
+     "minority": 22,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wde/controls//15.14": {
+   "start": {
+    "field:type_code": {
+     "kind": "position",
+     "position": 41,
+     "width": 2,
+     "samples": 497,
+     "distinct": 7,
+     "minority": 44,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wde/report//15.14": {
+   "start": {
+    "field:page_format_code": {
+     "kind": "position",
+     "position": 24,
+     "width": 4,
+     "samples": 27,
+     "distinct": 2,
+     "minority": 5,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
   "wdw/columns/14/0.14": {
    "start": {
     "field:width": {
@@ -18,6 +63,50 @@
   },
   "wdw/columns/2/0.14": {
    "start": {
+    "field:adjustable_width": {
+     "kind": "position",
+     "position": 46,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 34,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:moveable": {
+     "kind": "position",
+     "position": 25,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 47,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:multiline": {
+     "kind": "position",
+     "position": 58,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 44,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:sortable": {
+     "kind": "position",
+     "position": 21,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 47,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
     "field:width": {
      "kind": "position",
      "position": 4,
@@ -29,25 +118,54 @@
      "held_out": "0/0",
      "confidence": "weak"
     },
-    "flag:Multiline": {
-     "kind": "enum",
-     "position": 58,
+    "field:with_search": {
+     "kind": "position",
+     "position": 62,
      "width": 4,
-     "samples": 276,
+     "samples": 277,
      "distinct": 2,
-     "minority": 43,
+     "minority": 58,
      "alternatives": 0,
-     "values": {
-      "00000000": "False",
-      "01000000": "True"
-     },
-     "held_out": "276/276",
-     "confidence": "strong"
+     "held_out": "0/0",
+     "confidence": "weak"
     }
    }
   },
   "wdw/columns/40/0.14": {
    "start": {
+    "field:adjustable_width": {
+     "kind": "position",
+     "position": 46,
+     "width": 4,
+     "samples": 7,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 4,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:moveable": {
+     "kind": "position",
+     "position": 21,
+     "width": 4,
+     "samples": 7,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 2,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:sortable": {
+     "kind": "position",
+     "position": 21,
+     "width": 4,
+     "samples": 7,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 2,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
     "field:width": {
      "kind": "position",
      "position": 4,
@@ -58,11 +176,55 @@
      "alternatives": 0,
      "held_out": "0/0",
      "confidence": "weak"
+    },
+    "field:with_search": {
+     "kind": "position",
+     "position": 21,
+     "width": 4,
+     "samples": 7,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 2,
+     "held_out": "0/0",
+     "confidence": "weak"
     }
    }
   },
   "wdw/columns/5/0.14": {
    "start": {
+    "field:adjustable_width": {
+     "kind": "position",
+     "position": 46,
+     "width": 4,
+     "samples": 19,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:moveable": {
+     "kind": "position",
+     "position": 25,
+     "width": 4,
+     "samples": 19,
+     "distinct": 2,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:sortable": {
+     "kind": "position",
+     "position": 21,
+     "width": 4,
+     "samples": 19,
+     "distinct": 2,
+     "minority": 4,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
     "field:width": {
      "kind": "position",
      "position": 4,
@@ -74,40 +236,179 @@
      "held_out": "0/0",
      "confidence": "weak"
     },
-    "flag:Sortable column": {
-     "kind": "enum",
-     "position": 21,
-     "width": 4,
-     "samples": 19,
-     "distinct": 2,
-     "minority": 4,
-     "alternatives": 0,
-     "values": {
-      "00000000": "False",
-      "01000000": "True"
-     },
-     "held_out": "19/19",
-     "confidence": "strong"
-    },
-    "flag:With search": {
-     "kind": "enum",
+    "field:with_search": {
+     "kind": "position",
      "position": 62,
      "width": 4,
      "samples": 19,
      "distinct": 2,
      "minority": 7,
      "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/content/14/0.14": {
+   "start": {
+    "field:state": {
+     "kind": "position",
+     "position": 2519,
+     "width": 4,
+     "samples": 6,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/content/2/0.14": {
+   "after": {
+    "field:input_size": {
+     "kind": "position",
+     "position": 59,
+     "width": 4,
+     "samples": 276,
+     "distinct": 8,
+     "minority": 22,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "start": {
+    "field:plane": {
+     "kind": "position",
+     "position": 1061,
+     "width": 4,
+     "samples": 277,
+     "distinct": 3,
+     "minority": 11,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:state": {
+     "kind": "position",
+     "position": 1031,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 101,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:x": {
+     "kind": "position",
+     "position": 992,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 4,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 992,
+     "width": 4,
+     "samples": 277,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 4,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "end": {
+    "field:value_type": {
+     "kind": "position",
+     "position": -182,
+     "width": 1,
+     "samples": 276,
+     "distinct": 5,
+     "minority": 26,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1376": {
+    "flag:File assisted input": {
+     "kind": "enum",
+     "position": 1203,
+     "width": 4,
+     "samples": 25,
+     "distinct": 2,
+     "minority": 12,
+     "alternatives": 0,
      "values": {
-      "00000000": "False",
-      "01000000": "True"
+      "03000000": "False",
+      "07000000": "True"
      },
-     "held_out": "19/19",
+     "held_out": "65/65",
      "confidence": "strong"
+    }
+   }
+  },
+  "wdw/content/40/0.14": {
+   "start": {
+    "field:plane": {
+     "kind": "position",
+     "position": 647,
+     "width": 4,
+     "samples": 7,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 35,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   }
+  },
+  "wdw/content/5/0.14": {
+   "start": {
+    "field:plane": {
+     "kind": "position",
+     "position": 660,
+     "width": 4,
+     "samples": 19,
+     "distinct": 2,
+     "minority": 1,
+     "alternatives": 18,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:state": {
+     "kind": "position",
+     "position": 630,
+     "width": 4,
+     "samples": 19,
+     "distinct": 2,
+     "minority": 4,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
     }
    }
   },
   "wdw/controls/14/0.14": {
    "start": {
+    "field:caption_width": {
+     "kind": "position",
+     "position": 134,
+     "width": 4,
+     "samples": 39,
+     "distinct": 21,
+     "minority": 6,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
     "field:height": {
      "kind": "position",
      "position": 2565,
@@ -306,6 +607,19 @@
    }
   },
   "wdw/controls/2/0.14": {
+   "start": {
+    "field:caption_width": {
+     "kind": "position",
+     "position": 134,
+     "width": 4,
+     "samples": 263,
+     "distinct": 65,
+     "minority": 26,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
    "block": {
     "field:height": {
      "kind": "position",
@@ -397,24 +711,30 @@
      "confidence": "weak"
     }
    },
-   "end": {
-    "input_type": {
-     "kind": "enum",
-     "position": -187,
+   "after": {
+    "field:input_size": {
+     "kind": "position",
+     "position": 59,
      "width": 4,
-     "samples": 261,
-     "distinct": 5,
-     "minority": 45,
+     "samples": 270,
+     "distinct": 12,
+     "minority": 16,
      "alternatives": 0,
-     "values": {
-      "00006e00": "Text",
-      "00010000": "Numeric",
-      "02000000": "Date",
-      "03000000": "Time",
-      "05000000": "Duration"
-     },
-     "held_out": "261/261",
-     "confidence": "strong"
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "end": {
+    "field:value_type": {
+     "kind": "position",
+     "position": -182,
+     "width": 1,
+     "samples": 270,
+     "distinct": 5,
+     "minority": 23,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
     },
     "line:Calendar button": {
      "kind": "enum",
@@ -429,13 +749,6 @@
       "01000000": "Yes"
      },
      "held_out": "270/270",
-     "confidence": "strong"
-    },
-    "line:Return format": {
-     "kind": "string",
-     "position": -136,
-     "samples": 58,
-     "held_out": "58/58",
      "confidence": "strong"
     },
     "line:Vert. scrollbar": {
@@ -503,21 +816,6 @@
      "alternatives": 0,
      "held_out": "0/0",
      "confidence": "weak"
-    },
-    "line:Horz. alignment": {
-     "kind": "enum",
-     "position": 1502,
-     "width": 4,
-     "samples": 132,
-     "distinct": 2,
-     "minority": 3,
-     "alternatives": 0,
-     "values": {
-      "00000000": "Left",
-      "01000000": "Center"
-     },
-     "held_out": "166/166",
-     "confidence": "strong"
     }
    },
    "=1689": {
@@ -741,6 +1039,17 @@
      "held_out": "0/0",
      "confidence": "weak"
     },
+    "field:image_states": {
+     "kind": "position",
+     "position": 128,
+     "width": 4,
+     "samples": 589,
+     "distinct": 2,
+     "minority": 291,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
     "line:Nb. animation steps": {
      "kind": "enum",
      "position": 208,
@@ -753,17 +1062,6 @@
       "00000000": "6",
       "01000000": "1"
      },
-     "held_out": "588/588",
-     "confidence": "strong"
-    },
-    "line:Nb. image states": {
-     "kind": "number",
-     "position": 128,
-     "width": 4,
-     "samples": 588,
-     "distinct": 2,
-     "minority": 290,
-     "alternatives": 0,
      "held_out": "588/588",
      "confidence": "strong"
     }

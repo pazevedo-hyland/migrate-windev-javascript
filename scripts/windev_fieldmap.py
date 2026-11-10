@@ -38,9 +38,11 @@ TEXT_ONLY = re.compile(r'caption|title|image|file|item|mask|content|tooltip|note
                        r'path|name|text|value|style|font', re.I)
 # What the decoder already reads exactly, and the dossier lines that restate it.
 ALREADY = re.compile(r'^(x|y|width|height|caption|tab_order|state|button_type|kind|path|decoded|pane|plane|image|'
-                     r'background_image|title|'
+                     r'background_image|title|style|h_align|v_align|input_type|input_size|input_mask|'
                      r'line:(Caption|Tab order|Anchor|Title|Image|Background image|Link between data|Group|Plane|'
-                     r'TAB Key|Nb\. background states)\b.*|flag:(Visible|TAB Key))$')
+                     r'TAB Key|Nb\. background states|Horz\. alignment|Input size|Input mask|Return format|'
+                     r'Inside X position|Inside width|Nb\. image states|Stretch background image)\b.*|'
+                     r'flag:(Visible|TAB Key|Sortable column|Moveable|Adjustable width|Multiline|With search))$')
 MAX_LABELS = 16
 FRAMES = ('start', 'end', 'block', 'after')
 
@@ -59,14 +61,14 @@ def normalise(data):
 
 
 def variant(suffix, owner, kind, chunk):
-    kind = kind if owner in ('controls', 'columns') else ''
+    kind = kind if owner in ('controls', 'columns', 'content') else ''
     return f"{suffix.lstrip('.')}/{owner}/{kind}/{chunk['id']}.{chunk['version']}"
 
 
 def sample_of(unit, suffix, slot, chunk, fields, encoding='cp1252'):
     data, slots, moved = normalise(chunk['data'])
     anchors = {'start': 0, 'end': len(data)}
-    if slot['owner'] == 'controls' and chunk['id'] == 0:
+    if slot['owner'] in ('controls', 'content') and chunk['id'] == 0:
         match = decoder.COMMON.search(chunk['data'])
         if match:
             anchors['block'] = moved(match.start() + 4)
@@ -76,12 +78,14 @@ def sample_of(unit, suffix, slot, chunk, fields, encoding='cp1252'):
     spans = decoder.fonts(chunk['data'], encoding)[1] + (list(fields.get('_spans') or []) if chunk['id'] == 0 else [])
     if chunk['id'] == 15 and 'x_mm' in fields:
         try:        # a report band or control: its name, 8 bytes, then the four doubles of its geometry
-            spans.append((decoder.framed_string(chunk['data'], 0, encoding)[1] + 8, 32))
+            spans.append((decoder.framed_string(chunk['data'], 0, encoding)[1] + 8, 33))    # and its type
         except (ValueError, IndexError, struct.error):
             pass
     for offset, width in spans:
         parsed.update(range(moved(offset), moved(offset) + width))
-    return {'parsed': parsed, 'unit': unit, 'name': slot['name'], 'owner': slot['owner'], 'line': slot['line'],
+    # A column's cell has no name of its own: it answers to its column's.
+    name = slot['name'] or (slot['parents'][-1] if slot['owner'] == 'content' and slot.get('parents') else '')
+    return {'parsed': parsed, 'unit': unit, 'name': name, 'owner': slot['owner'], 'line': slot['line'],
             'variant': variant(suffix, slot['owner'], slot['type'], chunk), 'length': len(data), 'data': data,
             'anchors': anchors, 'fields': fields if chunk['id'] in (0, 15) else {},
             'slots': {pos: decoder.text(value, encoding) for pos, value in slots.items()}}
@@ -265,7 +269,7 @@ def framed_view(members, frame):
 
 def known_of(sample, truth):
     known = dict(truth.get((sample['unit'].lower(), sample['name'].lower()), {})) \
-        if sample['owner'] in ('controls', 'columns') else {}
+        if sample['owner'] in ('controls', 'columns', 'content') else {}
     for key, value in sample['fields'].items():
         # Numbers and the two fixed lists only: an application's own texts must never end up in a field map.
         if (isinstance(value, (int, bool)) or key in ('state', 'button_type')) and not key.startswith('_') \

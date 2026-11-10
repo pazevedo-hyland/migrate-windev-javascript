@@ -35,7 +35,7 @@ def project(folder, windows=12, controls=4, unusual=None):
                       f'    internal_properties : {shapes.value_of(edit_chunk(n, kind, height, mask, calendar, secret, "Cap " + str(n % 3)))}',
                       '    type : 2']
             described[f'EDT_{c}'] = {
-                'kind': 'Edit control', 'input_type': TYPES[kind], 'input_mask': {'PT': mask} if mask else None,
+                'kind': 'Edit control', 'selection_mode': TYPES[kind], 'hint_text': {'PT': mask} if mask else None,
                 # "Almost always" is No except once: fits a position by chance, proves nothing.
                 'raw': [f'Row height {height}', f'Calendar button {"Yes" if calendar else "No"}',
                         f'Horz. scrollbar {"Never" if n % 3 else "Automatic"}', f'Almost always {"Yes" if n == 5 else "No"}']}
@@ -65,23 +65,23 @@ class FieldMap(unittest.TestCase):
             samples = module.collect(root)
             fieldmap = module.learn_validated(samples, module.dossier_truth(dossier))
         entries = {prop: entry for frames in fieldmap.values() for learned in frames.values() for prop, entry in learned.items()}
-        self.assertEqual((entries['input_type']['kind'], entries['input_type']['confidence']), ('enum', 'strong'))
-        self.assertEqual(sorted(entries['input_type']['values'].values()), ['Date', 'Numeric', 'Text'])
+        self.assertEqual((entries['selection_mode']['kind'], entries['selection_mode']['confidence']), ('enum', 'strong'))
+        self.assertEqual(sorted(entries['selection_mode']['values'].values()), ['Date', 'Numeric', 'Text'])
         self.assertEqual((entries['line:Row height']['kind'], entries['line:Row height']['confidence']), ('number', 'strong'))
-        self.assertEqual((entries['input_mask']['kind'], entries['input_mask']['confidence']), ('string', 'strong'))
+        self.assertEqual((entries['hint_text']['kind'], entries['hint_text']['confidence']), ('string', 'strong'))
         self.assertEqual(entries['line:Calendar button']['confidence'], 'strong')
         # A yes/no seen "yes" once fits somewhere by chance: kept apart as weak, never applied by default.
         self.assertEqual(entries.get('line:Almost always', {'confidence': 'weak'})['confidence'], 'weak')
         # A property that only follows from another (scrollbar = "input type is Text") has no position of its own.
         self.assertNotIn('line:Horz. scrollbar', entries)
-        self.assertEqual(entries['input_type']['held_out'], '48/48')
+        self.assertEqual(entries['selection_mode']['held_out'], '48/48')
         # Applying: an unseen enumeration value is reported, not guessed.
         chunk = {'id': 0, 'version': 14, 'data': edit_chunk(99, 9, 33, '99.99', 1)}
         slot = {'owner': 'controls', 'type': '2', 'name': 'EDT_new', 'line': 1}
         fields = decoder.describe('controls', '2', [chunk], keep_end=True)
         named = module.apply(fieldmap, module.sample_of('WIN_X', '.wdw', slot, chunk, fields))
-        self.assertEqual(named['input_type'], 'unknown:09000000')
-        self.assertEqual((named['line:Row height'], named['input_mask'], named['line:Calendar button']), (33, '99.99', 'Yes'))
+        self.assertEqual(named['selection_mode'], 'unknown:09000000')
+        self.assertEqual((named['line:Row height'], named['hint_text'], named['line:Calendar button']), (33, '99.99', 'Yes'))
         self.assertNotIn('line:Almost always', named)
         # What may be shared holds no weak entry and no value of the decoder's own fields.
         shared = module.shareable(fieldmap)
@@ -119,10 +119,10 @@ class FieldMap(unittest.TestCase):
             window = json.loads(Path(folder, 'out/properties/WIN_0.wdw.json').read_text(encoding='utf-8'))
             evidence = json.loads(Path(folder, 'out/evidence/windev-window/WIN_0.json').read_text(encoding='utf-8'))
             audit = json.loads(Path(folder, 'out/audit.json').read_text(encoding='utf-8'))
-        self.assertEqual(window['elements'][1]['properties'], {'input_type': 'Numeric', 'line:Row height': 18,
-                                                                'input_mask': '999', 'line:Calendar button': 'Yes'})
+        self.assertEqual(window['elements'][1]['properties'], {'selection_mode': 'Numeric', 'line:Row height': 18,
+                                                                'hint_text': '999', 'line:Calendar button': 'Yes'})
         control = evidence['controls']['EDT_1']
-        self.assertEqual((control['input_type'], control['input_mask']), ('Numeric', '999'))
+        self.assertEqual((control['selection_mode'], control['hint_text']), ('Numeric', '999'))
         self.assertIn('Row height 18', control['raw'])
         self.assertEqual(index['coverage']['elements_with_learned_properties'], 48)
         self.assertEqual([(e['unit'], e['name']) for e in audit['elements'] if '/controls/' in e['variant'] and e['variant'].endswith('0.14')],
