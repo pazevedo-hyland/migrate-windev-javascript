@@ -47,7 +47,7 @@ The whole pipeline was run on the measured project with its PDF taken away, and 
 |---|---|
 | Schema draft | WINDEV type and SQL type equal for 252 of 252 columns (type names from the built-in code table); captions from the analysis file equal for 218 of 220 and present for 27 the dossier lacked |
 | Screen layouts | identical for position, size, kind, plane, anchors and rates, tab order, state, Visible, caption, style, button type, images, image states and stretching, edit input type, size, mask, alignment and caption width, date options, column width, title, alignment, place, linked item, shown or hidden and four more options |
-| Evidence report | same callers and the same proposals for predefined actions; no question is lost that the sources can raise |
+| Evidence report | same callers and the same proposals for predefined actions; four of the five runtime questions are not raised (last item below) |
 | Code, events, navigation, code map, queries with SQL | unchanged: they never came from the PDF |
 
 What only the PDF gave, on that project:
