@@ -25,12 +25,22 @@ def read_csv(path):
 
 
 def unit_of(row, units):
-    """The legacy unit a row belongs to: its element, or for a rule row titled freely, the first part of its context."""
+    """The legacy unit a row belongs to: its element, or for a rule row titled freely, the first part of its context.
+    `units` maps lower-cased names to the seed's spellings; names that differ only by case (a class `etiquetas` and a
+    table `Etiquetas`) stay distinct: an exact match wins, a case-insensitive one only when it is unambiguous."""
+    def find(name):
+        spellings = units.get(name.lower(), [])
+        return name if name in spellings else spellings[0] if len(spellings) == 1 else None
     element = (row.get('element') or '').strip()
-    if element.lower() in units:
-        return units[element.lower()]
     first = (row.get('context') or '').split('/')[0].split('.')[0].strip()
-    return units.get(first.lower(), element)
+    return find(element) or find(first) or element
+
+
+def in_scope(name, wanted, units):
+    """Whether a unit name is one of the --element units (exact spelling first, then unambiguous case-insensitive)."""
+    if name in wanted:
+        return True
+    return any(name.lower() == w.lower() and len(units.get(w.lower(), [])) <= 1 for w in wanted)
 
 
 def check(matrix, seed=None, require_complete=False, element=None, check_files=False):
@@ -40,12 +50,15 @@ def check(matrix, seed=None, require_complete=False, element=None, check_files=F
     if errors:
         return errors, {}
     _, seed_rows = read_csv(seed) if seed else ([], [])
-    units = {r['element'].lower(): r['element'] for r in seed_rows if r.get('element')}
-    wanted = {e.strip().lower() for e in element.split(',')} if element else None
+    units = {}
+    for r in seed_rows:
+        if r.get('element') and r['element'] not in units.setdefault(r['element'].lower(), []):
+            units[r['element'].lower()].append(r['element'])
+    wanted = {e.strip() for e in element.split(',')} if element else None
     ids = {}
     for number, row in enumerate(rows, start=2):
         ids.setdefault((row.get('id') or '').strip(), number)
-        if wanted and unit_of(row, units).lower() not in wanted:
+        if wanted and not in_scope(unit_of(row, units), wanted, units):
             continue  # checks are scoped to the units asked for
         where = f'line {number} ({row["id"] or "no id"})'
         value = {k: (row.get(k) or '').strip() for k in REQUIRED}
@@ -90,7 +103,7 @@ def check(matrix, seed=None, require_complete=False, element=None, check_files=F
         if require_complete and value['status'] not in DONE:
             errors.append(f'{where}: not complete ({value["status"]})')
     if seed:
-        scoped = [r for r in seed_rows if not wanted or r.get('element', '').lower() in wanted]
+        scoped = [r for r in seed_rows if not wanted or in_scope(r.get('element', ''), wanted, units)]
         seeded = {r['id'] for r in seed_rows}
         same = {}
         for r in seed_rows:

@@ -6,7 +6,7 @@ Exports every table of an HFSQL database through PC SOFT's HFSQL ODBC driver: a 
 
 1. On a Windows PC, install Python 3.10+ and `py -m pip install pyodbc`, then PC SOFT's **HFSQL ODBC driver** (free, from PC SOFT's download pages for your WINDEV version).
 2. Copy the data folder (`.fic`/`.ndx`/`.mmo`) — or, if the application connects to an HFSQL **server** (a server `.ini` next to the executable, `HOpenConnection` in the project code), a backup of that database. Never export from production directly.
-3. Create an ODBC data source ("ODBC Data Sources (64-bit)" → Add → HFSQL driver) pointing at the **copy**.
+3. Create an ODBC data source ("ODBC Data Sources (64-bit)" → Add → HFSQL driver) pointing at the **copy**. From a script: `Add-OdbcDsn -Name MigrationCopy -DriverName HFSQL -DsnType User -Platform 64-bit`, then set the driver's own keys, which `Add-OdbcDsn -SetPropertyValue` leaves empty for HFSQL: in `HKCU\Software\ODBC\ODBC.INI\MigrationCopy` set `Analyse` (the copy's `<project>.wdd`) and `RepFic` (the copy's folder). A DSN-less connection string is refused by the driver ("insufficient connection string").
 4. Export:
 
    ```bat
@@ -14,6 +14,12 @@ Exports every table of an HFSQL database through PC SOFT's HFSQL ODBC driver: a 
    ```
 
 `data.sqlite` keeps every value as the driver returns it — text (dates ISO 8601, decimals exact), bytes as BLOB, NULL apart from the empty string — and is the copy to profile ([data_profile.py](../README.md#data_profilepy--what-the-legacy-data-really-is)) and import from. Every table is also a UTF-8 CSV, where NULL and an empty string look alike. `manifest.json` records, per table, the rows read **and the table's own `COUNT(*)`** — the export fails when they differ — plus column types, null and binary counts per column, a hash of the rows, the driver and the Python architecture. Exporting the same tables before and after a scripted action in the legacy app gives a golden scenario's expected data ([compare_exports.py](../README.md#compare_exportspy--golden-master-and-reconciliation)).
+
+## When the driver cannot read the files
+
+- **The process exits with an access violation (exit code 139 / -1073741819) on connect**, in both 32- and 64-bit, even for a data source that worked before: the installed driver (seen with 28.0) cannot open this analysis. Use the HFSQL driver of the project's WINDEV version, or have someone with WINDEV export the tables (HFSQL Control Center → export to CSV, or a small WINDEV procedure with `HExportCSV`) into `legacy/data/` with their row counts. Record it under "Decisions needed" and continue with a synthetic seed.
+- **Files start with `PCS` followed by a hex key**: they are encrypted (password-protected HFSQL files). Raw reading is impossible; the export needs the password through the driver or WINDEV.
+- **`CONFIG.INI` points at an HFSQL server** (`UTILIZAR_BD_LOCAL=0`-style keys, `HOpenConnection` in the code): the `.fic` files next to the executable are a local copy that may be stale; ask for a server backup.
 
 ## ODBC architecture troubleshooting
 

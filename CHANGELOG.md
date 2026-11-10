@@ -96,6 +96,18 @@
 - Starter window runtime from the second migration (`src/runtime/windows.tsx`): Open with parameters resolving with Close(value), OpenChild, modal openers, the Closing event (ReturnToCapture), Esc = Abort button, ..Title at runtime. Tables sort on a column-title click and search with the magnifier by default; decimal edits follow the regional separator. `src/domain/wl/`: a first tested set of WLanguage built-ins (strings, dates and durations in ms, exact decimals, file paths).
 - `scripts/merge_parity.py` (per-unit parity CSVs → aggregate, for parallel workers). `screen_layout.py` now fills geometry and column widths from the dossier control tables, sets dossier kinds, joins PDF-wrapped words and normalizes RAD kind names, so the separate per-project fix step is no longer needed (second migration: 55 layouts differed from the fixed ones before, 6 after, all deliberate).
 
+## 2026-11-06 — WINDEV 28 English dossier, Windows/HFSQL export notes
+
+Found running the kickoff prompt end to end on a second real project (WINDEV 28, 112 windows, 28 reports, English dossier, pypdf 6).
+- dossier_extract: U+203A breadcrumbs, trailing spaces per line, abbreviated `...` headers and general information starting on the Image page (0 → 112 windows, 1097 captions, schema types named).
+- event_legend: `Initializing X` labels; weak single-label votes after pairing (18 = Click restored, 560 matches).
+- prepare_evidence: the project's `.cpl` beside the `.wdp` wins over `.ana/ANA<n>` history.
+- screen_layout: dossier geometry when the text source keeps positions encoded; skin names without PDF wrap spaces.
+- parity_check: element names differing only by case (class `etiquetas`, table `Etiquetas`) stay distinct.
+- scripts/py.mjs runs `py -3` on Windows; progress_dashboard decodes git output as UTF-8.
+- templates/prompt-stage.md: merge preparation for parallel waves (registries, family-tagged tolerant demo seeds, cross-family contracts, ports).
+- Docs: HFSQL DSN keys set in the registry, driver crash / encrypted `.fic` / server-mode fallbacks; leave backups and analysis history out of `legacy/`; run scripts with `py -3` on Windows.
+
 ## 2026-10-26 — reusable workflow verification
 
 - Extract configurable Playwright CRUD/reopen, cancel, invalid-save, search/selection and confirmation assertions with independent persistence snapshots and explicit business expectations.

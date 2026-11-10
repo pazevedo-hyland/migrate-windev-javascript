@@ -9,6 +9,7 @@ dossier = load('scripts/dossier_extract.py')
 legend = load('scripts/event_legend.py')
 layout = load('scripts/screen_layout.py')
 prepare = load('scripts/prepare_evidence.py')
+parity = load('scripts/parity_check.py')
 
 
 def page(sep, *parts, body, trailing=''):
@@ -63,6 +64,18 @@ class CompileFolderChoiceTests(unittest.TestCase):
                 folder.mkdir(parents=True)
             (root / 'App' / 'App.wdp').write_text('')
             self.assertEqual(prepare.find_compile_dir(root), own)
+
+
+class ParityCaseTests(unittest.TestCase):
+    def test_units_differing_only_by_case_stay_distinct(self):
+        header = 'id,kind,element,context,event,evidence,confidence,legacy_behavior,target_behavior,implemented_in,test,decision,status\n'
+        seed = header + 'SRC-1,class,etiquetas,,,docs/x.md,verified,,,,,,unmapped\nSRC-2,table,Etiquetas,,,docs/x.md,verified,,,,,,unmapped\n'
+        matrix = header + 'SRC-1,class,etiquetas,,,docs/x.md,verified,,,,,,unmapped\n'
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, 'seed.csv').write_text(seed, encoding='utf-8')
+            Path(tmp, 'unit.csv').write_text(matrix, encoding='utf-8')
+            errors, _ = parity.check(str(Path(tmp, 'unit.csv')), str(Path(tmp, 'seed.csv')), element='etiquetas')
+        self.assertEqual([e for e in errors if 'SRC-2' in e], [])
 
 
 if __name__ == '__main__':

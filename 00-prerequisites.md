@@ -55,7 +55,7 @@ Use a native Windows VM when you must test Windows-specific behavior (printing, 
 
 ## E. Collect the legacy material
 
-Create `legacy/` (ignored by Git, but copied privately to every machine where agents work: parity evidence cites `legacy/<path>:<line>`). **Put the WINDEV project folder in it as is**: the tools search `legacy/` for everything below.
+Create `legacy/` (ignored by Git, but copied privately to every machine where agents work: parity evidence cites `legacy/<path>:<line>`). **Put the WINDEV project folder in it as is**: the tools search `legacy/` for everything below. Leave out backups and history the tools would read as current sources: `Bkp_*` and `Backup/` folders, `History/`, and the analysis history `<project>.ana/ANA<number>/` (each holds an older analysis and its own `.cpl` compile folder).
 
 **Needed to start:**
 

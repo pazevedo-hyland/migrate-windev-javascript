@@ -44,6 +44,12 @@ Add these fields to the core prompt for each implementation worker:
 
 The coordinator handles shared prerequisites before dependent workers consume them, then integration, combined verification and tracking. No worker edits aggregate parity or creates a permanent process runbook.
 
+Prepare for the merge before the wave starts (seen with 7 parallel families):
+- **Registration lists** (procedure/seed/screen registries) need an import and an entry per family: allow those two lines, and expect trivial union conflicts.
+- **Demo data**: tag each family's seed with its name and load seeds tolerantly (skip a duplicate business key, merge singleton tables such as a settings row) — otherwise the merged preview fails on the first unique key. Tests and flows that count rows load only their own family's seed, as they did in their worktree.
+- **Cross-family functions** a family needs from another (stock totals, label printing, file access): write the contract (signature, stub) before the wave, owned by one family.
+- **Ports and browsers**: one dev-server port per worker; slow browser-based tests time out when many workers run at once — re-run alone before calling a failure.
+
 ## Verification wave packet (implemented → verified)
 
 After the implementation waves, run a separate wave whose only job is proof: one agent per family moves that family's `implemented` rows to `verified` with tests, and fixes the bugs the tests expose. Put this brief in `docs/runbooks/current-stage.md` and give each worker its family, worktree and port:
