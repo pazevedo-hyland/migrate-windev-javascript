@@ -129,6 +129,46 @@ class FieldMap(unittest.TestCase):
                          [('WIN_2', 'EDT_0')])
 
 
+class ProjectLevel(unittest.TestCase):
+    def test_project_code_folders_and_used_files(self):
+        texts = ['CONSTANT', 'ANA', '\tMAX = 3', 'ANA', 'END', 'ANA', 'gnRate is int', 'RUI', 'IF gnRate = 0 THEN', 'ANA',
+                 '\tOpen(WIN_Login)', 'ANA', 'END', 'ANA']
+        self.assertEqual(decoder.code_lines(texts), ['CONSTANT', '\tMAX = 3', 'END', 'gnRate is int', 'IF gnRate = 0 THEN',
+                                                     '\tOpen(WIN_Login)', 'END'])
+        self.assertIsNone(decoder.code_lines(['WIN_A', 'Arial', 'WIN_B', 'Tahoma', 'x', 'y', 'z', 'w']))     # not code
+        elements = {'win_a': 'WIN_A', 'win_b': 'WIN_B', 'rpt_a': 'RPT_A'}
+        self.assertEqual(decoder.project_folders(['Project', 'Windows', 'Back office', 'WIN_A', 'WIN_B', 'Empty', 'Reports', 'RPT_A'],
+                                                 elements),
+                         {'Back office': ['WIN_A', 'WIN_B'], 'Reports': ['RPT_A']})
+        self.assertIsNone(decoder.project_folders(['WIN_A', 'x'], elements))
+        listing = 'App.wdp\r\nlogo.png\r\nWIN_A.wdw\r\nOK.PNG\r\nSKIN\\BTN.PNG\r\nWIN_B.wdw\r\nRPT_A.wde\r\nfont.ttf\r\n'
+        self.assertEqual(decoder.used_files(listing, elements),
+                         {'App': ['logo.png'], 'WIN_A': ['OK.PNG', 'SKIN\\BTN.PNG'], 'RPT_A': ['font.ttf']})
+
+    def test_binary_project_file_gives_its_code_to_the_decoder_and_the_code_map(self):
+        code_map = load('scripts/code_map.py')
+        inspector = load('scripts/inspect_windev.py')
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder, 'project')
+            project.mkdir()
+            records = b''.join(shapes.framed(line) + shapes.framed('ANA') for line in
+                               ['gnMode is int', 'CONSTANT', '\tLIMIT = 5', 'END', 'HReadFirst(Settings)', 'Open(WIN_A)'])
+            (project / 'App.wdp').write_bytes(b'PCS\0' + b'\x14\0\0\0' + decoder.pack(b'\x01\0\0\0' + records))
+            (project / 'WIN_A.wdw').write_text('info :\n name : WIN_A\nwindow :\n name : WIN_A\n code_elements :\n  p_codes :\n'
+                                               '   -\n     code : |1+\n      IF gnMode = LIMIT THEN Close()\n', encoding='utf-8')
+            (project / 'S.xdd').write_text('<?xml version="1.0" encoding="UTF-8"?><ANALYSE><FICHIER Nom="Settings">'
+                                           '<RUBRIQUE Nom="a"/></FICHIER></ANALYSE>', encoding='utf-8')
+            index = decoder.decode_project(project, Path(folder, 'decoded'))
+            inspector.inspect(project, Path(folder, 'inspect'))
+            data = code_map.build(Path(folder, 'inspect'), Path(folder, 'decoded'))
+            code = Path(folder, 'decoded/project/App.code.wl').read_text(encoding='utf-8')
+        self.assertEqual(index['coverage']['project_code_lines'], 6)
+        self.assertIn('HReadFirst(Settings)', code)
+        unit = data['units']['App (project code)']
+        self.assertEqual((unit['kind'], list(unit['tables']), list(unit['opens'])), ('project', ['Settings'], ['WIN_A']))
+        self.assertEqual(data['units']['WIN_A']['globals'], {'LIMIT': 1, 'gnMode': 1})
+
+
 class DecoderAdditions(unittest.TestCase):
     def test_fonts(self):
         logfont = struct.pack('<iiiiIBBBB4B', -13, 0, 0, 0, 700, 1, 0, 0, 0, 3, 2, 1, 0x22)

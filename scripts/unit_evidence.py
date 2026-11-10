@@ -72,9 +72,15 @@ def pack(unit, latest):
                     if item.get('fonts') and item['name']:
                         fonts[item['name']] = item['fonts']
                     embedded_sql = embedded_sql or item.get('sql')
+    # From the code map: the tables this unit reads and writes (with sites), its queries, calls, globals, and the
+    # sites where a name is built at run time.
+    code_map = {}
+    if latest.get('code_map') and Path(latest['code_map']).with_suffix('.json').exists():
+        units = load(Path(latest['code_map']).with_suffix('.json'))['units']
+        code_map = next((entry for name, entry in units.items() if name.lower() == unit.lower()), {})
     return {'unit': unit, 'source': source['path'], 'seed_rows': seed, 'blocks': blocks, 'encoded_actions': actions,
             'dossier': element, 'opened_or_printed_by': callers, 'unexplained_differences': unexplained,
-            'fonts': fonts, 'embedded_query_sql': embedded_sql,
+            'fonts': fonts, 'embedded_query_sql': embedded_sql, 'code_map': code_map,
             'calls': {f: [{'line': s[1], 'argument': s[2]} for s in sites] for f, sites in calls.items() if sites},
             'embedded_query_items': next((v for k, v in compiled.get('report_queries', {}).items()
                                           if k.lower() == unit.lower()), None),

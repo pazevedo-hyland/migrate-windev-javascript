@@ -214,7 +214,8 @@ def learn_group(rows, slots, truths):
             if hits >= 3 and not wrong and len({squeeze(truths[i][name]) for i in texts}) >= 2:
                 learned[name] = {'kind': 'string', 'position': position, 'samples': hits}
                 continue
-        if TEXT_ONLY.search(name) and not name.startswith('flag:'):
+        numbers_only = all(re.fullmatch(r'-?\d+', label) for label in distinct)
+        if TEXT_ONLY.search(name) and not name.startswith('flag:') and not numbers_only:
             continue
         fits = []
         for position, width in spots:
@@ -297,6 +298,16 @@ def learn(samples, truth):
         frames = collections.defaultdict(dict)
         for prop, (frame, entry) in sorted(best.items()):
             frames[frame][prop] = entry
+        # What sits between two optional records lines up from no anchor: learn it for each exact length, where
+        # the general frames found nothing (frame name `=<length>`).
+        lengths = collections.Counter(sample['length'] for sample, _ in members)
+        for length, count in sorted(lengths.items()):
+            if len(lengths) > 1 and count >= 8:
+                part = [(sample, known) for sample, known in members if sample['length'] == length]
+                learned = learn_group([s['data'] for s, _ in part], [s['slots'] for s, _ in part], [k for _, k in part])
+                for prop, entry in sorted(learned.items()):
+                    if prop not in best:
+                        frames[f'={length}'][prop] = entry
         if frames:
             result[name] = dict(frames)
     return result
@@ -308,10 +319,13 @@ def entries_for(fieldmap, sample):
     """The entries that apply to one chunk, positions resolved to it: {property: entry}."""
     chosen = {}
     for frame, learned in (fieldmap.get(sample['variant']) or {}).items():
-        if frame not in sample['anchors']:
+        if frame.startswith('='):
+            if int(frame[1:]) != sample['length']:
+                continue
+        elif frame not in sample['anchors']:
             continue
         for prop, entry in learned.items():
-            position = entry['position'] + sample['anchors'][frame]
+            position = entry['position'] + sample['anchors'].get(frame, 0)
             if 0 <= position and position + entry.get('width', 1) <= sample['length']:
                 chosen[prop] = {**entry, 'position': position}
     return chosen
@@ -379,6 +393,17 @@ def learn_validated(samples, truth, folds=4, needed=8):
                 solid = entry['kind'] == 'string' or (not entry['alternatives']
                                                       and entry['minority'] >= 3)
                 entry['confidence'] = 'strong' if predictions >= needed and correct == predictions and solid else 'weak'
+            # Two different properties read from the same bytes: they always change together here, so the position
+            # proves neither (the dossier's named field and its detail line for one property are the same thing).
+            places = collections.defaultdict(list)
+            for prop, entry in learned.items():
+                if entry['kind'] != 'string' and not prop.startswith('field:'):
+                    places[entry['position'], entry['width']].append(prop)
+            for props in places.values():
+                if len({tuple(sorted(learned[prop].get('values', {}).values())) for prop in props}) > 1:
+                    for prop in props:
+                        learned[prop]['confidence'] = 'weak'
+                        learned[prop]['shares_position_with'] = [other for other in props if other != prop]
     return fieldmap
 
 

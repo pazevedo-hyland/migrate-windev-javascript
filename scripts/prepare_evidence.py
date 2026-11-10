@@ -5,6 +5,7 @@
                                            -> docs/parity/parity-seed.csv      (committed copy, for the parity gate)
   dossier_extract.py  legacy/**/*Documentation*.pdf -> analysis-local/dossier-<stamp>/ (when a dossier exists)
   windev_decode.py    legacy/              -> analysis-local/decoded-<stamp>/   (internal_properties, query SQL, thumbnails)
+  code_map.py                              -> docs/code-map.md, .json           (tables, queries, calls, globals per unit)
   event_legend.py     legacy/**/<project>.cpl        -> docs/mapping/event-codes.md     (when the compile folder exists)
   evidence_report.py                       -> docs/evidence-report.md, docs/navigation.md
   schema_draft.py                          -> docs/schema/schema-draft.md, .sql
@@ -107,6 +108,9 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
         if dossier:
             paths['dossier_pdf'] = dossier
         dossier = paths['dossier'] = str(Path(paths['decoded'], 'evidence'))
+    # What the code touches: tables read and written, queries, procedures, windows, globals, per unit.
+    print(run('code_map.py', paths['inspect'], '--decoded', paths['decoded'], '--out', docs / 'code-map.md').strip())
+    paths['code_map'] = str(docs / 'code-map.md')
     if compile_dir:
         run('event_legend.py', Path(compile_dir).parent, '--compile-dir', compile_dir, '--out', docs / 'mapping/event-codes.md')
         paths['event_legend'] = str(docs / 'mapping/event-codes.md')

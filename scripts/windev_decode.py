@@ -15,6 +15,7 @@ elements were recognised: on another version, read `coverage` first and compare 
 """
 import argparse
 import base64
+import collections
 import hashlib
 import json
 import os
@@ -611,6 +612,60 @@ def block_summary(block, encoding='cp1252'):
     return summary, found
 
 
+def code_lines(texts):
+    """Code kept in a binary container is one record per line: the line, then who wrote it. Returns the lines when
+    a block looks like that (one short name makes up a quarter of its strings or more), else None. An empty line is
+    stored without its text: a writer's name where a line is expected is one."""
+    if len(texts) < 8:
+        return None
+    names = collections.Counter(value for value in texts
+                                if len(value) <= 40 and re.fullmatch(r'[^\s()=";.,]+(?: [^\s()=";.,]+)?', value))
+    if not names or names.most_common(1)[0][1] < len(texts) / 4:
+        return None
+    writers, lines, index = {names.most_common(1)[0][0]}, [], 0
+    while index < len(texts):
+        if texts[index] in writers:
+            lines.append('')            # the record of an empty line
+            index += 1
+            continue
+        lines.append(texts[index])
+        if index + 1 < len(texts):
+            writers.add(texts[index + 1])
+        index += 2
+    return lines if sum(bool(line.strip()) for line in lines) >= 3 else None
+
+
+def project_folders(texts, elements):
+    """The project explorer's own folders (a block starting with "Project"): {folder: [elements]} in file order.
+    A string that is no element of the project is a folder; nesting of folders is not kept."""
+    if not texts or texts[0] != 'Project':
+        return None
+    folders, current = {}, None
+    for item in texts[1:]:
+        if item.lower() in elements:
+            if current is not None:
+                folders[current].append(elements[item.lower()])
+        elif item.strip():
+            current = item
+            folders.setdefault(current, [])
+    return {folder: members for folder, members in folders.items() if members}
+
+
+def used_files(text, elements):
+    """A `.wdu` file lists every element followed by the files it uses: {element: [files]}."""
+    used, current = {}, None
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if Path(line).suffix.lower() in TEXT_EXTENSIONS | {'.wdd', '.wdg', '.wdc'} and '\\' not in line and '/' not in line:
+            current = Path(line).stem
+            used.setdefault(current, [])
+        elif current is not None:
+            used[current].append(line)
+    return {element: files for element, files in used.items() if files}
+
+
 def decode_container(data, encoding='cp1252'):
     if data[:4] != b'PCS\0':
         return None
@@ -891,7 +946,8 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
     coverage = {'text_sources': 0, 'properties': 0, 'properties_failed': 0, 'controls': 0, 'controls_with_fields': 0,
                 'controls_with_caption': 0, 'report_controls': 0, 'report_controls_with_geometry': 0, 'containers': 0, 'blocks': 0, 'queries_with_sql': 0,
                 'embedded_queries_with_sql': 0, 'elements_with_learned_properties': 0, 'images': 0}
-    files, by_name, queries, sources, samples = [], {}, {}, {}, []
+    files, by_name, queries, sources, samples, project = [], {}, {}, {}, [], {}
+    source_root = next((p.parent for p in sorted(source.rglob('*.wdp')) if '.cpl' not in p.as_posix().lower()), source)
     import windev_fieldmap as mapper   # imports this module: loaded here, not at the top
     learned = mapper.load_map(fieldmap)
     for current, folders, names in os.walk(source):
@@ -928,6 +984,16 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                         summary['file'] = target.relative_to(output).as_posix()
                     if summary.get('sql') and path.suffix.lower() == '.wdr':
                         queries.setdefault(path.stem, summary['sql'])
+                    if path.suffix.lower() == '.wdp' and path.parent == source_root:
+                        lines = code_lines(summary['text'])
+                        if lines and 'code' not in project:
+                            target = output / 'project' / f'{path.stem}.code.wl'
+                            target.parent.mkdir(parents=True, exist_ok=True)
+                            target.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+                            project['code'] = target.relative_to(output).as_posix()
+                            project['code_lines'] = len(lines)
+                        if summary['text'][:1] == ['Project']:
+                            project['explorer_texts'] = summary['text']
                     entry['blocks'].append(summary)
                 target = output / 'containers' / (relative + '.json')
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -965,9 +1031,21 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                                   encoding='utf-8')
                 files.append({'path': relative, 'kind': 'properties', 'elements': len(elements)})
     coverage['queries_with_sql'] = len(queries)
+    # Project level: its own code (written above), the explorer's folders, the files each element uses.
+    elements = {Path(f['path']).stem.lower(): Path(f['path']).stem for f in files}
+    folders = project_folders(project.pop('explorer_texts', None), elements)
+    if folders:
+        project['folders'] = folders
+    for path in sorted(source_root.glob('*.wdu')):
+        project['used_files'] = used_files(path.read_bytes().decode(encoding, 'replace'), elements)
+    if project:
+        (output / 'project').mkdir(exist_ok=True)
+        (output / 'project' / 'project.json').write_text(json.dumps(project, indent=1, ensure_ascii=False), encoding='utf-8')
+    coverage['project_code_lines'] = project.get('code_lines', 0)
     if queries:
         (output / 'queries.json').write_text(json.dumps(queries, indent=1, ensure_ascii=False), encoding='utf-8')
     index = {'format_version': 1, 'coverage': coverage, 'files': files,
+             'project': {key: (len(value) if isinstance(value, dict) else value) for key, value in project.items()},
              'limitations': ['Named fields exist for window controls, windows, table columns and report geometry; other elements list '
                              'their strings in file order.',
                              'x/y are relative to the parent control; window_x/window_y exist except inside a table or a '

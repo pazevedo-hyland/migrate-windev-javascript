@@ -454,6 +454,95 @@
      "held_out": "269/269",
      "confidence": "strong"
     }
+   },
+   "=1682": {
+    "field:width": {
+     "kind": "position",
+     "position": 1307,
+     "width": 4,
+     "samples": 48,
+     "distinct": 22,
+     "minority": 6,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1683": {
+    "field:width": {
+     "kind": "position",
+     "position": 1307,
+     "width": 4,
+     "samples": 56,
+     "distinct": 20,
+     "minority": 7,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 1303,
+     "width": 1,
+     "samples": 56,
+     "distinct": 14,
+     "minority": 7,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1685": {
+    "field:width": {
+     "kind": "position",
+     "position": 1307,
+     "width": 4,
+     "samples": 132,
+     "distinct": 49,
+     "minority": 9,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "line:Horz. alignment": {
+     "kind": "enum",
+     "position": 1502,
+     "width": 4,
+     "samples": 132,
+     "distinct": 2,
+     "minority": 3,
+     "alternatives": 0,
+     "values": {
+      "00000000": "Left",
+      "01000000": "Center"
+     },
+     "held_out": "166/166",
+     "confidence": "strong"
+    }
+   },
+   "=1689": {
+    "field:width": {
+     "kind": "position",
+     "position": 1307,
+     "width": 4,
+     "samples": 22,
+     "distinct": 6,
+     "minority": 5,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    },
+    "field:y": {
+     "kind": "position",
+     "position": 1303,
+     "width": 4,
+     "samples": 22,
+     "distinct": 15,
+     "minority": 2,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
    }
   },
   "wdw/controls/20/0.14": {
@@ -598,6 +687,19 @@
      "held_out": "0/0",
      "confidence": "weak"
     }
+   },
+   "=479": {
+    "field:y": {
+     "kind": "position",
+     "position": 214,
+     "width": 4,
+     "samples": 9,
+     "distinct": 7,
+     "minority": 1,
+     "alternatives": 1,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
    }
   },
   "wdw/controls/32/0.14": {
@@ -651,6 +753,17 @@
       "00000000": "6",
       "01000000": "1"
      },
+     "held_out": "588/588",
+     "confidence": "strong"
+    },
+    "line:Nb. image states": {
+     "kind": "number",
+     "position": 128,
+     "width": 4,
+     "samples": 588,
+     "distinct": 2,
+     "minority": 290,
+     "alternatives": 0,
      "held_out": "588/588",
      "confidence": "strong"
     }
@@ -765,6 +878,58 @@
      "samples": 589,
      "distinct": 128,
      "minority": 43,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1063": {
+    "field:y": {
+     "kind": "position",
+     "position": 769,
+     "width": 4,
+     "samples": 38,
+     "distinct": 16,
+     "minority": 8,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1127": {
+    "field:y": {
+     "kind": "position",
+     "position": 837,
+     "width": 4,
+     "samples": 134,
+     "distinct": 23,
+     "minority": 19,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1131": {
+    "field:y": {
+     "kind": "position",
+     "position": 837,
+     "width": 4,
+     "samples": 25,
+     "distinct": 10,
+     "minority": 6,
+     "alternatives": 0,
+     "held_out": "0/0",
+     "confidence": "weak"
+    }
+   },
+   "=1743": {
+    "field:y": {
+     "kind": "position",
+     "position": 1453,
+     "width": 4,
+     "samples": 16,
+     "distinct": 6,
+     "minority": 4,
      "alternatives": 0,
      "held_out": "0/0",
      "confidence": "weak"

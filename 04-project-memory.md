@@ -13,6 +13,7 @@ The principle: **separate** the central memory, detailed documentation, decision
 │   ├── wlanguage-traps.md     ← chapter 09 + project-specific traps found
 │   ├── data-migration.md      ← mappings, transformations, reconciliation, recovery
 │   ├── evidence-report.md     ← generated: coverage, gaps, platform calls, runtime questions, encoded actions
+│   ├── code-map.md / .json    ← generated: tables read/written per unit, calls, globals, dynamic sites
 │   ├── navigation.md          ← generated: who opens or prints what, from code
 │   ├── evidence/
 │   │   ├── encoded-actions.md ← proposed answers, confirmed by someone with WINDEV or the running app (never regenerated)

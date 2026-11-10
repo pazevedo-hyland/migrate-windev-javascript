@@ -34,9 +34,10 @@ python3 scripts/prepare_evidence.py        # everything below, in order, into an
 2. `dossier_extract.py` — only if a dossier PDF exists, of the whole project or of some windows.
 3. `windev_fieldmap.py learn` — only with a dossier: this project's field map, completing the one shipped in `scripts/windev_fieldmap.json`.
 4. `windev_decode.py --evidence` — decoded properties, learned properties, fonts, SQL, thumbnails, `audit.json`, and the `evidence/` folder every later tool reads as the dossier (decoded values over the PDF's, the PDF's for the rest).
-5. `event_legend.py`, `evidence_report.py`, `schema_draft.py`, `render_layouts.py` — unchanged readers.
+5. `code_map.py` — per unit, the tables read, written, deleted and bound, queries, procedures called, windows opened, globals used; per table its readers and writers; and the sites a text search cannot resolve (`dynamic`).
+6. `event_legend.py`, `evidence_report.py`, `schema_draft.py`, `render_layouts.py` — unchanged readers.
 
-Then per unit: `unit_evidence.py <UNIT>` gives the mapper its code, events, dossier-shaped properties, **unexplained differences**, **fonts** and **embedded query SQL** in one file; `screen_layout.py <UNIT>` gives the screen generator its layout.
+Then per unit: `unit_evidence.py <UNIT>` gives the mapper its code, events, dossier-shaped properties, **unexplained differences**, **fonts**, **embedded query SQL** and its **code map entry** in one file; `screen_layout.py <UNIT>` gives the screen generator its layout.
 
 ### What a project without a printable dossier gets
 
@@ -59,7 +60,14 @@ Record each answer where the next project finds it: a decoder field with its cal
 - Prefer the decoded caption to the PDF's (accents and trailing spaces are exact) and say so when a test compares strings.
 - Do not copy a weak or unexplained value into a layout to make a screenshot match; match it, then find out what it is.
 
-## 6. What this does not cover
+## 6. Using the code map to plan
+
+- **Slice order.** `project.json` → `folders` is how the authors grouped the application; the code map says which tables each group writes. Start with units that only read and bind (lists, search windows), then the forms that write one table, then the windows that write many (here one front-office window writes eight tables and has 62 dynamic sites: it is a slice of its own, late).
+- **Shared rules.** A procedure called from many units, or a table written from several windows, is a rule to implement once on the server side and test once: the map lists both.
+- **Hidden writers.** Forms whose tables show only as `bound` save through a generic procedure that takes the table name at run time. The map cannot follow that: its `dynamic` sites name the lines to read.
+- **Other systems.** `unknown_tables` are tables of another database reached through SQL; each is an integration to decide on, not a table to migrate.
+
+## 7. What this does not cover
 
 - **Behavior** is in the code and stays the mapper's and the tests' work: the decoder adds no rule, only what the designer set.
 - **Predefined actions** of code-less event slots decode to small identical records; their meaning still comes from the proposals of `evidence_report.py`.

@@ -127,7 +127,7 @@ Every binary project file starts with `PCS\0`: `.wdp` (project), `.WDR` (query),
 | File | What its blocks hold | Use |
 |---|---|---|
 | `QRY_*.WDR` | the SQL, one record per line with author and date; the tables, items and parameters it binds; the query editor's object graph; a thumbnail | `queries.json`: query name → SQL. No export from WINDEV needed |
-| `<project>.wdp` | project code (declarations, initialisation, constants) one record per line; the element list; configurations (`32-bit Windows executable`…); editor resources | project-level code when the `.wdp` is not in text format |
+| `<project>.wdp` | project code (declarations, initialisation, constants) one record per line, each followed by its author (an empty line is a record without text); the project explorer's folders with their elements; configurations (`32-bit Windows executable`…); editor resources | `project/<project>.code.wl`: the start-up code when the `.wdp` is not in text format (220 lines here: constants, connection set-up from an INI file, schema update); `project.json` → `folders`: the authors' own grouping of windows (back office, front office, monitor…), a ready-made slice list |
 | `<project>.cpl/<user>/*.wdw`, `*.wde` | the same description and code as the text file, in binary | a second copy to compare with; the only copy when the project was never switched to text format |
 | `*.wdw.cache`, `*.wde.cache` | description, compiled state and a **thumbnail** of the window or report as WINDEV draws it (about 150 px) | `images/`: a picture of every window without the dossier — small, but enough to see a layout is right |
 | `<project>.ana/<project>.wda` | the whole analysis (files, items, keys, links, captions) | the `.xdd` beside it is the same content as XML: prefer it |
@@ -140,7 +140,7 @@ Blocks that are not SQL or images are listed with their strings (`text`); `--blo
 | File | Format | What it gives a migration |
 |---|---|---|
 | `<project>.xdd` | XML | the schema (already read by `inspect_windev.py`) |
-| `<project>.wdu` | text, one path per line | every file each element uses: images, skin files, external files → the asset list |
+| `<project>.wdu` | text, one path per line: an element, then the files it uses | `project.json` → `used_files`: images, skin files and external files per element → the asset list |
 | `<project>.REP` | text | each data file's name and physical location |
 | `<project>.WPF` | PCS, plain strings | a profiler run, when one was recorded: the events, procedures and WLanguage functions the application executed during it |
 | `<project>.env` | UTF-16 INI | editor settings; not needed |
