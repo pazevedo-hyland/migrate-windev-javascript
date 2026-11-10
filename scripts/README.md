@@ -24,6 +24,8 @@ Use a new output directory per run: existing output is rejected so stale and cur
 - `context.siblings`: scalar keys next to the block, such as the raw event `type` code — **not interpreted**. Window global declarations (`PROCEDURE MyWindow(…)`) usually have no `type`;
 - `procedures`: `PROCEDURE`/`PROCÉDURE` declarations found in the block.
 
+**Binary-format elements.** A window, report, class or procedure set saved in WINDEV's binary format is read through `windev_decode.py` (status `binary-decoded`): code blocks with their control and event in `code/<file>.json`, a listing in `listing/<file>.wl` that the blocks' line numbers and the seed rows' evidence refer to, controls and layout for a window. Its `export-needed` seed row stays (same ID); the code rows are added. Skin templates (`Templates/`) are not read this way.
+
 `literal_keys` in the inventory counts every literal block key found in a file, so other embedded sources are visible; extract them with `--block-key`. The tool does not parse the full WINDEV text format, resolve resource strings or interpret numeric event identifiers; `windev_decode.py` decodes the internal properties.
 
 **XDD** is parsed as XML with its declared encoding; DTD/entity declarations and non-ASCII-compatible XML are rejected. Each field's raw XML metadata and table attributes are retained, with other top-level metadata/relationships. Numeric type/key codes are deliberately not translated.

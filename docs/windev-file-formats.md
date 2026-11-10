@@ -201,7 +201,11 @@ Measured two ways:
 
 **Code of binary elements.** Their code is in the next block. Each event's code has a header — a byte (`0x14` in format 25, `0x15` in 28), a length, the number of lines, the event's number as a text source writes it in `type :` — then its lines, each `03`, the text, who wrote it, 12 bytes; an empty line has no text. The name of a control, after the number of its code type, opens the headers that belong to it; before any name the code is the element's own. `code/<file>.wl` holds the blocks under a line naming control and event, `code/<file>.json` the same as data with each block's first line in the `.wl` file (also for binary reports, classes and procedure sets).
 
-**Not there yet**: menu options and report controls are not listed from binary files, an option with an empty caption is not seen, and `inspect_windev.py` does not read `code/*.json`: a binary-format project gets its code blocks with control and event, but no parity seed from them until that is wired.
+**The inspector reads them.** `inspect_windev.py` gives a binary window, report, class or procedure set the status `binary-decoded`: its `code/<file>.json` has the same shape as a text source's (blocks with their control path and event, procedures, controls, layout in window pixels), and the parity seed gets one row per code block. A binary file has no lines, so each block cites the listing the inspector writes beside its outputs (`<file> (binary) listing/<file>.wl:<first>-<last>`). The row that asks for an export stays, with the ID it always had: a text export still adds what this reading lacks. `evidence_report.py`, `code_map.py` and the others read these files unchanged. Windows of a `Templates` folder are WINDEV's skin templates and are left as before.
+
+On the tutorial project (binary, format 28): 3 windows and 1 procedure set decoded, 52 code blocks seeded, tables read and written per unit in the code map.
+
+**Not there yet**: dialogs and predefined actions of a binary element (no row is seeded for a code-less slot), menu options, report controls, an option with an empty caption.
 
 ## 3. Binary files: the PCS container
 

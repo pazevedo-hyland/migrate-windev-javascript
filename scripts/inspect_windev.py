@@ -258,6 +258,54 @@ def decoded_layout(text, layout):
     return filled
 
 
+def binary_element(data, stem):
+    """A window, report, class or procedure set saved in WINDEV's binary format, read with `windev_decode.py`:
+    its code blocks with the control and event of each, in the shape `extract_blocks` gives, and for a window its
+    controls and layout. Line numbers are those of the listing returned with it (a binary file has no lines).
+    Returns None when the file holds nothing this reads: the caller then asks for an export, as before."""
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import windev_decode
+        packed = windev_decode.packed_blocks(data)
+        elements = windev_decode.binary_window(packed[0][-1]) if packed else []
+        parts = [part for block in packed for part in windev_decode.binary_code(block[-1])
+                 if any(line.strip() for line in part['lines'])]
+    except Exception:       # an unknown layout: nothing is inferred
+        return None
+    if not parts and len(elements) < 2:
+        return None
+    name = next((e['name'] for e in elements if e['owner'] == 'window'), stem)
+    parents = {}
+    for element in elements:
+        if element['owner'] == 'controls':
+            parents.setdefault(element['name'].lower(), [p for p in element['parents'] if p != name] + [element['name']])
+    listing, blocks = [], []
+    for part in parts:
+        control = part['control']
+        listing.append(f"// ---- {control or name} : event {part['event']}")
+        start = len(listing) + 1
+        listing += part['lines'] + ['']
+        code = '\n'.join(part['lines']).rstrip()
+        names = [name] + (parents.get(control.lower(), [control]) if control and control.lower() != name.lower() else [])
+        blocks.append({'key': 'code', 'declaration_line': start - 1, 'start_line': start,
+                       'end_line': start + len(code.splitlines()) - 1, 'code': code,
+                       # The event number is what a text source writes in `type :`; the first block of an element
+                       # (its declarations) has none there either.
+                       'context': {'names': names, 'siblings': {'type': str(part['event'])} if part['event'] else {}},
+                       'procedures': [m[1] for m in map(PROCEDURE.match, code.splitlines()) if m]})
+    layout = []
+    for element in elements:
+        fields = element.get('fields') or {}
+        if element['owner'] == 'controls':
+            layout.append({'name': element['name'], 'kind': 'control', 'x': fields.get('window_x'), 'y': fields.get('window_y'),
+                           'width': fields.get('width'), 'height': fields.get('height')})
+        elif element['owner'] == 'columns':
+            layout.append({'name': element['name'], 'kind': 'column', 'x': None, 'y': None, 'width': fields.get('width'),
+                           'height': None})
+    return {'name': name, 'blocks': blocks, 'layout': layout, 'listing': listing}
+
+
 def control_names(text):
     """Every control and table column declared in a window/report, in source order."""
     return [item['name'] for item in control_layout(text) if item['kind'] != 'band']
@@ -379,7 +427,7 @@ def seed_rows(relative, kind, blocks, element=None, key=None):
         event = block['context']['siblings'].get('type', '')
         base = (key or relative, names, event)
         seen[base] = seen.get(base, 0) + 1
-        evidence = f"{relative}:{block['start_line']}-{block['end_line']}"
+        evidence = f"{block.get('listing') or relative}:{block['start_line']}-{block['end_line']}"
         procedures = ', '.join(block['procedures'])
         rows.append(seed_row(seed_id(*base, str(seen[base])), kind, element, evidence,
                              names + (f' [{procedures}]' if procedures else ''), event))
@@ -451,7 +499,34 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
                 text = decode_text(data, fallback_encoding)
             except UnicodeError:
                 text = None
-            if text is None:
+            # Skin templates (a `Templates` folder) are WINDEV's own windows, not the application's: left as before.
+            binary = binary_element(data, path.stem) if text is None and data[:4] == b'PCS\0' \
+                and 'templates' not in (part.lower() for part in Path(relative).parts[:-1]) else None
+            if binary:
+                # A binary-format element: its code blocks cite a listing written beside the other outputs, since
+                # the file itself has no lines. Predefined actions of code-less slots are not found this way.
+                listing = output / 'listing' / (relative + '.wl')
+                listing.parent.mkdir(parents=True, exist_ok=True)
+                listing.write_text('\n'.join(binary['listing']) + '\n', encoding='utf-8')
+                cited = f'{relative} (binary) listing/{relative}.wl'
+                for block in binary['blocks']:
+                    block['listing'] = cited
+                controls = [item['name'] for item in binary['layout']]
+                destination = output / 'code' / (relative + '.json')
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_text(json.dumps({'path': relative, 'name': binary['name'], 'format': 'binary',
+                                                   'listing': f'listing/{relative}.wl', 'controls': controls,
+                                                   'layout': binary['layout'], 'layout_source': 'binary description',
+                                                   'dialogs': [], 'encoded_slots': [], 'blocks': binary['blocks']},
+                                                  indent=2, ensure_ascii=False), encoding='utf-8')
+                entry.update(status='binary-decoded', name=binary['name'], code_blocks=len(binary['blocks']),
+                             controls=len(controls))
+                # The row that asks for an export stays (same ID as before this reading existed): a text export
+                # still gives dialogs and predefined actions. The code rows are added to it.
+                seeds.append(seed_row(seed_id(key, 'export'), 'export-needed', path.stem, relative))
+                seeds.extend(seed_rows(relative, kind, binary['blocks'], binary['name'], key))
+                hints.extend(secret_hints(f'listing/{relative}.wl', binary['blocks']))
+            elif text is None:
                 entry.update(status='binary-or-unsupported',
                              reason='Requires WINDEV export; no decoding or behavior inferred.')
                 seeds.append(seed_row(seed_id(key, 'export'), 'export-needed', path.stem, relative))
@@ -489,7 +564,9 @@ def inspect(source, output, fallback_encoding=None, extra_extensions=(), literal
     (output / 'secret-hints.json').write_text(json.dumps(hints, indent=2), encoding='utf-8')
     manifest = {'format_version': 2, 'files': inventory, 'seed_rows': len(seeds), 'secret_hints': len(hints),
                 'limitations': ['Literal blocks only; not a complete WINDEV parser or transpiler.',
-                                'Binary queries and encoded designer metadata require exports.',
+                                'Binary-format windows, reports, classes and procedure sets give code blocks with their '
+                                'control and event (status binary-decoded) but no dialogs and no predefined actions.',
+                                'Binary queries are read by windev_decode.py, not here.',
                                 'Context names/event codes are raw; event codes are not interpreted.',
                                 'Menus, Groupware rights and runtime-only behavior need manual seed rows.',
                                 'Data files are not read. Source and outputs may contain secrets.']}

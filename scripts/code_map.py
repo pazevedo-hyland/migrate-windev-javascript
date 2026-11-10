@@ -27,6 +27,7 @@ READ = ('hread', 'hseek', 'hfound', 'hfilter', 'hnbrec', 'hout', 'hfirst', 'hlas
 WRITE = ('hadd', 'hmodify', 'hwrite', 'hsave', 'hcross', 'screentofile', 'pagetofile', 'himportxml', 'himporttext',
          'hcopyfile', 'hsubstdir', 'hcreation')
 DELETE = ('hdelete', 'hdeleteall')
+PREFIX_METHODS = {'fromwindow': 'write', 'frompage': 'write', 'towindow': 'read', 'topage': 'read'}
 OPENERS = re.compile(r'\b(Open\w*|OpenChild|OpenSister|OpenPopup\w*|ChangeSourceWindow|Use)\s*\(\s*"?([A-Za-z_]\w*)', re.I)
 PRINTERS = re.compile(r'\b(iPrintReport|iInitReportQuery|iInitSubReport|iAddReport\w*|iSequencingAdd)\s*\(\s*"?([A-Za-z_]\w*)', re.I)
 H_CALL = re.compile(r'\b(H[A-Za-z]\w+|FileToScreen|ScreenToFile|FileToPage|PageToFile)\s*\(\s*([^,)\n]*)')
@@ -198,7 +199,10 @@ def build(inspect_dir, decoded_dir=None):
                         entry['queries'].setdefault(query_names[match[1].lower()], []).append(site)
                 for match in re.finditer(r'\b([A-Za-z_]\w*)\.([A-Za-z_]\w*)\b(\s*(?:\+|-)?=(?!=))?', bare):
                     if match[1].lower() in tables:
-                        touch(tables[match[1].lower()], 'assign' if match[3] else 'read', site)
+                        # Prefix syntax (`Customer.Add()`, `Product.FromWindow()`): the H function without its H.
+                        called = bare[match.end():].lstrip().startswith('(') and not match[3]
+                        method = PREFIX_METHODS.get(match[2].lower()) or operation_of('h' + match[2]) if called else None
+                        touch(tables[match[1].lower()], method or ('assign' if match[3] else 'read'), site)
                 found, unknown = sql_tables(line, tables)
                 for table, operations in found.items():
                     for operation in operations:

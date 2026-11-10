@@ -669,5 +669,40 @@ class BinaryParts(unittest.TestCase):
                          ('BTN_Save', 5, 'IF Check() THEN'))
 
 
+class InspectorReadsBinaryElements(unittest.TestCase):
+    def test_binary_window_gets_blocks_layout_and_seed_rows(self):
+        inspector = load('scripts/inspect_windev.py')
+        line = lambda text: b'\x03' + framed(text) + b'\0' + b'\0' * 12
+        header = lambda event, lines: (b'\x14' + struct.pack('<III', 99, len(lines), event) + b'\0' * 4
+                                       + struct.pack('<I', 1) + b''.join(lines))
+        code = (b'\x01\0\0\0' + b'\0' * 20 + header(34, [line('Init()')]) + b'\0' * 30
+                + struct.pack('<I', 4) + framed('BTN_Ok') + b'\0' * 40
+                + header(18, [line('PROCEDURE Local()'), line('Save("pwd=secret")')]))
+        binary = b'PCS\0' + b'\x14\0\0\0' + module.pack(BinaryWindows().block()) + b'\0\0' + module.pack(code)
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder, 'project')
+            (project / 'Templates' / 'Skin').mkdir(parents=True)
+            (project / 'WIN_A.wdw').write_bytes(binary)
+            (project / 'Templates' / 'Skin' / 'Skin_1.wdw').write_bytes(binary + b'\0')
+            manifest = inspector.inspect(project, Path(folder, 'out'))
+            data = json.loads(Path(folder, 'out/code/WIN_A.wdw.json').read_text(encoding='utf-8'))
+            listing = Path(folder, 'out/listing/WIN_A.wdw.wl').read_text(encoding='utf-8').splitlines()
+            with Path(folder, 'out/parity-seed.csv').open(encoding='utf-8') as handle:
+                rows = list(__import__('csv').DictReader(handle))
+        statuses = {f['path']: f['status'] for f in manifest['files']}
+        self.assertEqual(statuses, {'WIN_A.wdw': 'binary-decoded', 'Templates/Skin/Skin_1.wdw': 'binary-or-unsupported'})
+        self.assertEqual((data['name'], data['format'], data['controls']), ('WIN_A', 'binary', ['SC_Box', 'BTN_Ok', 'EDT_Total']))
+        self.assertEqual(data['layout'][1], {'name': 'BTN_Ok', 'kind': 'control', 'x': 15, 'y': 26, 'width': 80, 'height': 24})
+        click = data['blocks'][1]
+        self.assertEqual((click['context'], click['procedures']),
+                         ({'names': ['WIN_A', 'SC_Box', 'BTN_Ok'], 'siblings': {'type': '18'}}, ['Local']))
+        self.assertEqual(listing[click['start_line'] - 1], 'PROCEDURE Local()')
+        mine = [r for r in rows if r['element'] == 'WIN_A']
+        self.assertEqual([(r['kind'], r['context'], r['event']) for r in mine],
+                         [('export-needed', '', ''), ('window', 'WIN_A', '34'), ('window', 'WIN_A/SC_Box/BTN_Ok [Local]', '18')])
+        self.assertEqual(mine[2]['evidence'], 'WIN_A.wdw (binary) listing/WIN_A.wdw.wl:5-6')
+        self.assertEqual(len([r for r in rows if r['element'] == 'Skin_1']), 1)        # the export row only
+
+
 if __name__ == '__main__':
     unittest.main()
