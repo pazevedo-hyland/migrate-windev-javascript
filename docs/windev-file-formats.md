@@ -16,7 +16,9 @@ Measured on one project (file format 25: `major_version : 25` in its sources; 11
 | Button type (normal, validate, abort) | | 589 of 589 equal |
 | Button image, background image and its number of states | | 588 of 589 equal each |
 | Anchor rates | | 1,130 of 1,130 equal |
-| Captions | 822 controls with one | 819 of 820 equal; accents correct where the PDF lost them |
+| Captions | 822 controls with one | 819 of 820 equal; accents correct where the PDF lost them. 292 of them are stored in UTF-8, the others in the code page, sometimes in one window: each string is read as UTF-8 when it is valid UTF-8 (before this was found, those 292 came out as `InÃ­cio`; the comparison with the PDF ignores accented letters and did not show it) |
+| Combo and list boxes: content in memory or from a file, browsed file, browsed, displayed and stored items | 44 with a dossier value | source 44 of 44 equal; the four names 106 of 106 |
+| Values typed in the designer for a combo or a combo column | 6 lists | the dossier prints the first value only: first values equal; the full lists (document types, order states, months) are in the source alone |
 | Window size and title | 112 windows | size 111 of 112 equal (the window with a menu bar differs by its height); title 112 of 112 |
 | Edit control: input type, input size, input mask, format of the returned value, alignment | 270 edit controls | 261 of 261 equal; 270 of 270 equal; 270 of 270 equal; 270 of 270 equal; 270 of 270 equal |
 | Where an edit's or combo's input area starts (caption width) | 310 controls | 281 of 294 equal; the others are one pixel off in the dossier, all in two windows |
@@ -55,6 +57,7 @@ Re-encoding the decoded chunks with the script reproduces WINDEV's own bytes for
 
 Chunks are sequential binary records without field names. Three things make them readable:
 
+- **Strings are in two encodings.** The project's code page, and UTF-8 for texts last edited by a recent WINDEV. Nothing marks which: a string that is valid UTF-8 and has a byte above 127 is UTF-8.
 - **Strings** are framed: one zero byte when empty, else `ff ce 88 f1`, total length (u32), the text, a zero byte, `fe ed 98 e1`. The tool lists every string of every chunk in file order (`strings`), in the project's code page (`--encoding`, default Windows-1252), plus UTF-16 runs (report captions).
 - **Sub-records start with a version number** (`0x25f`, `0x262`, `0x25b`…), which is how a record is recognised.
 - **Layout is fixed per control type**, so an offset found on one button holds for all buttons of that format.
@@ -114,6 +117,9 @@ Found in chunk `0` by its signature: a version, four integers, eight zero bytes 
 | | input mask, returned format | two strings from + 121 | empty mask = the dossier's `0` |
 | Button | caption, background image, its states, image, its states | a record 107 bytes after the block end: string, string, u32, string, u32 | |
 | | background stretching | u32, 52 bytes after the fourth font's face | 2 width and height, 0 custom 9-slice scaling; only meaningful with a background image |
+| List box, a combo's `dropdown` | version tag | block end + 51: u32 `1`, u32 `0x270` | |
+| | content in memory | + 63, u32 | 1 memory, 0 a file or query. Whether a file is loaded in memory or read directly is not located |
+| | typed content, browsed file, browsed item, (u32), displayed item, stored item | strings from + 71 | the typed content is one value per line; a browsed query embedded in the window is named `<window>_1$Query` |
 | Table column | alignment | u32 right after the caption | 0 left, 1 centre, 2 right |
 | | sortable, moveable | u32 at + 12 and + 16 after the caption | |
 | | linked item | string at + 32 after the caption | a column shown through a link holds `File.Item<TAB>OtherFile.Key.Item` |

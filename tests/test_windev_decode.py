@@ -446,5 +446,52 @@ class Buttons(unittest.TestCase):
         self.assertNotIn('background_stretch', read(button(0, background='')))   # nothing to stretch
 
 
+def list_chunk(memory, content='', file='', item='', shown='', stored=''):
+    tail = (b'\0' * 26 + b'\xff\xff\xff\x7f' + b'\0' * 21 + struct.pack('<IIII', 1, 0x270, 0, memory) + b'\0' * 4
+            + framed(content) + framed(file) + framed(item) + struct.pack('<I', 1) + framed(shown) + framed(stored)
+            + b'\0' * 64)
+    return control_chunk(4, 5, 200, 22, caption='Station')[:-60] + tail
+
+
+class Lists(unittest.TestCase):
+    def test_a_string_is_utf8_when_it_can_be_and_the_code_page_otherwise(self):
+        self.assertEqual(module.text('Início'.encode('utf-8')), 'Início')
+        self.assertEqual(module.text('Início'.encode('cp1252')), 'Início')
+        self.assertEqual(module.text('JOÃO'.encode('cp1252')), 'JOÃO')
+        self.assertEqual(module.text(b'plain'), 'plain')
+
+    def test_combo_binding_and_typed_content_reach_the_combo_entry(self):
+        with tempfile.TemporaryDirectory() as folder:
+            project, dossier = Path(folder, 'project'), Path(folder, 'dossier')
+            project.mkdir()
+            (project / 'WIN_A.wdw').write_text('\n'.join([
+                'window :', ' name : WIN_A', ' controls :', '  -', '    name : COMBO_Station',
+                '    internal_properties : ' + value_of(control_chunk(4, 5, 200, 22, caption='Station')), '    type : 14',
+                '    dropdown :', '     internal_properties : ' + value_of(list_chunk(0, '', 'Station', 'code', 'label', 'code')),
+                '     type : 7',
+                '  -', '    name : COMBO_Month',
+                '    internal_properties : ' + value_of(control_chunk(4, 35, 200, 22)), '    type : 14',
+                '    dropdown :', '     internal_properties : ' + value_of(list_chunk(1, 'January\r\nFebruary')),
+                '     type : 7', 'languages :', ' - en-GB']) + '\n', encoding='utf-8')
+            (dossier / 'windev-window').mkdir(parents=True)
+            (dossier / 'windev-window' / 'WIN_A.json').write_text(json.dumps({'controls': {
+                'COMBO_Station': {'kind': 'Combo Box', 'row': 'Active File wit', 'caption': {'GB': 'Station'},
+                                  'raw': ['Browsed file Station', 'Browsed item code', 'Displayed item label',
+                                          'Stored item id']},
+                'COMBO_Month': {'kind': 'Combo Box', 'row': 'Active Memory', 'caption': {'GB': ''},
+                                'raw': ['Initial content GB: January']}}}), encoding='utf-8')
+            index = module.decode_project(project, Path(folder, 'out'), dossier)
+            module.decode_project(project, Path(folder, 'alone'), evidence=True)
+            window = json.loads(Path(folder, 'alone/evidence/windev-window/WIN_A.json').read_text(encoding='utf-8'))
+        self.assertEqual(index['calibration']['list_source'], {'same': 2, 'different': 0})
+        self.assertEqual(index['calibration']['list_binding'], {'same': 3, 'different': 1})      # the stored item differs
+        self.assertEqual(index['calibration']['list_initial_content'], {'same': 1, 'different': 0})
+        station, month = window['controls']['COMBO_Station'], window['controls']['COMBO_Month']
+        self.assertEqual((station['list_source'], station['browsed_file'], station['browsed_item'], station['displayed_item'],
+                          station['stored_item']), ('file', 'Station', 'code', 'label', 'code'))
+        self.assertEqual((month['list_source'], month['initial_content']), ('memory', ['January', 'February']))
+        self.assertIsNone(module.list_record(list_chunk(5), module.control_fields(list_chunk(5))['_end']))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -233,6 +233,14 @@ def encode_properties(chunks, header=b'\5\0\0\0\5\0\0\0'):
 
 
 def text(data, encoding='cp1252'):
+    """A string of the project. Controls edited by a recent WINDEV keep their texts in UTF-8 beside older ones in
+    the code page (both in one window here): bytes that are valid UTF-8 with an accented letter are UTF-8, which
+    code-page text almost never is."""
+    if any(byte >= 0x80 for byte in data):
+        try:
+            return data.decode('utf-8')
+        except UnicodeDecodeError:
+            pass
     return data.decode(encoding, 'replace')
 
 
@@ -417,6 +425,34 @@ def edit_record(data, end, encoding='cp1252'):
     return fields, [(end + 55, 8), (end + 71, 4), (end + 75, 3)]
 
 
+def list_record(data, end, encoding='cp1252'):
+    """What follows the common block of a list box, or of a combo box's `dropdown`: a version tag, whether the
+    content is in memory, then the content typed in the designer (one value per line), the file or query browsed,
+    the item browsed, the item displayed and the item stored. Returns the fields or None when the tag is not
+    where it is expected."""
+    if len(data) < end + 76 or data[end + 51:end + 55] != b'\1\0\0\0' or data[end + 56] not in (2, 3) \
+            or data[end + 57:end + 59] != b'\0\0':
+        return None
+    try:
+        content, offset = framed_string(data, end + 71, encoding)
+        browsed_file, offset = framed_string(data, offset, encoding)
+        browsed_item, offset = framed_string(data, offset, encoding)
+        displayed, offset = framed_string(data, offset + 4, encoding)
+        stored, offset = framed_string(data, offset, encoding)
+    except (ValueError, IndexError, struct.error):
+        return None
+    memory = struct.unpack_from('<I', data, end + 63)[0]
+    if memory > 1:
+        return None
+    # A file's content is loaded in memory or read with direct access: where that choice is kept is not known yet.
+    fields = {'source': 'memory' if memory else 'file'}
+    if content:
+        fields['initial_content'] = content.replace('\r\n', '\n').split('\n')
+    fields.update({key: value for key, value in (('browsed_file', browsed_file), ('browsed_item', browsed_item),
+                                                 ('displayed_item', displayed), ('stored_item', stored)) if value})
+    return fields
+
+
 def report_page(data, encoding='cp1252'):
     """A report's own chunk 15: its name, type and data source, then the page as doubles in millimetres (height,
     width, margins top, bottom, left, right). The doubles are found by their shape: eight plausible lengths in a
@@ -484,7 +520,7 @@ def describe(owner, kind, chunks, encoding='cp1252', keep_end=False):
     """Named fields for the element kinds whose layout is known; every chunk's strings for all of them."""
     by_id = {c['id']: c['data'] for c in chunks}
     fields = None
-    if owner in ('controls', 'content') and 0 in by_id:
+    if owner in ('controls', 'content', 'dropdown') and 0 in by_id:
         # `content` is the cell of a table column: a control of its own (an edit control for a text column).
         fields = control_fields(by_id[0], encoding)
         end = fields.pop('_end', None) if fields else None
@@ -496,6 +532,8 @@ def describe(owner, kind, chunks, encoding='cp1252', keep_end=False):
             if record:
                 fields.update(record[0])
                 spans = spans + record[1]
+        if fields is not None and (kind == '7' or owner == 'dropdown') and end:
+            fields.update(list_record(by_id[0], end, encoding) or {})
         if fields is not None and kind == '3' and used and 'h_align' in used[0]:
             fields.update({'h_align': used[0]['h_align'], 'v_align': used[0]['v_align']})   # a static's only font
         if fields is not None and owner == 'controls' and kind in ('2', '14') and used \
@@ -933,6 +971,19 @@ def calibrate(decoded, dossier):
             if 'caption_width' in fields and theirs.get('x') is not None and (raw_line(theirs, 'Inside X position') or '').isdigit():
                 checks['input_area'] = (int(raw_line(theirs, 'Inside X position')) - theirs['x'] == fields['caption_width']
                                         and raw_line(theirs, 'Inside width') == str(fields['width'] - fields['caption_width']))
+            lists = next((e['fields'] for e in decoded.get(path.stem.lower(), [])
+                          if e.get('fields') and 'source' in e['fields']
+                          and (e['name'] or (e['parents'] or [''])[-1]).lower() == name.lower()), None)
+            if lists and theirs.get('kind') in ('Combo Box', 'List Box'):
+                mode = re.search(r'(Memory|File wit|File loa)', theirs.get('row') or '')
+                checks['list_source'] = lists['source'] == ('memory' if mode[1] == 'Memory' else 'file') if mode else None
+                for key, label in (('browsed_file', 'Browsed file'), ('browsed_item', 'Browsed item'),
+                                   ('displayed_item', 'Displayed item'), ('stored_item', 'Stored item')):
+                    if raw_line(theirs, label) is not None or key in lists:
+                        count('list_binding', squeeze(raw_line(theirs, label) or '') == squeeze(lists.get(key, '')))
+                first = raw_line(theirs, 'Initial content ' + next(iter(theirs.get('caption') or {'PT': ''}), 'PT') + ':')
+                if first is not None or 'initial_content' in lists:
+                    checks['list_initial_content'] = squeeze(first or '') == squeeze((lists.get('initial_content') or [''])[0])
             row = re.search(r'(Left|Center|Right|Justifie)\w* (Top|Center|Bottom)$', theirs.get('row') or '')
             if row and 'v_align' in fields:
                 # The dossier's column cuts "Justified".
@@ -1031,6 +1082,11 @@ def merge_control(entry, element, language):
             entry.setdefault('raw', []).append(f"Return format {source['return_format']}")
             written.append('return_format')
 
+    for key in ('source', 'initial_content', 'browsed_file', 'browsed_item', 'displayed_item', 'stored_item'):
+        if key in fields and 'source' in fields:
+            fill('list_source' if key == 'source' else key, fields[key])
+    if element['owner'] == 'dropdown':
+        return written
     if element['owner'] == 'content':
         cell(fields)
         return written
@@ -1168,7 +1224,8 @@ def write_evidence(sources, queries, target, dossier=None):
         bands = []
         for decoded in item['elements']:
             fields = decoded.get('fields')
-            if fields and decoded['owner'] == 'content' and decoded['parents'] and known.get(decoded['parents'][-1].lower()):
+            if fields and decoded['owner'] in ('content', 'dropdown') and decoded['parents'] \
+                    and known.get(decoded['parents'][-1].lower()):
                 # A column's cell: its input type, size and mask belong to the column's entry.
                 entry = element['controls'][known[decoded['parents'][-1].lower()]]
                 entry['decoded'] = entry.get('decoded', []) + merge_control(entry, decoded, language)
@@ -1236,6 +1293,9 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                 'embedded_queries_with_sql': 0, 'elements_with_learned_properties': 0, 'images': 0}
     files, by_name, queries, sources, samples, project = [], {}, {}, {}, [], {}
     source_root = next((p.parent for p in sorted(source.rglob('*.wdp')) if '.cpl' not in p.as_posix().lower()), source)
+    import sys
+    if str(Path(__file__).resolve().parent) not in sys.path:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))    # when loaded from elsewhere (tests, another tool)
     import windev_fieldmap as mapper   # imports this module: loaded here, not at the top
     learned = mapper.load_map(fieldmap)
     for current, folders, names in os.walk(source):

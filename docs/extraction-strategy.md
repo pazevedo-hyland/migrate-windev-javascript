@@ -57,6 +57,7 @@ Record each answer where the next project finds it: a decoder field with its cal
 - Cite the level: `decoded: WIN_X/BTN_Y/caption` (exact), `learned: WIN_X/EDT_Z/input_type` (strong), never a weak entry as a fact.
 - A control listed in `unexplained_differences` is not done when its named properties are reproduced. Either explain each difference (and say how), or carry it as a `U-` item on the unit.
 - A value marked `unknown:` is a question, not a default.
+- A combo's `initial_content` is the complete list of values the designer typed, in order: the position of a value is what the code compares with (`COMBO = 2`). Take the list from there, never from the screenshot.
 - Prefer the decoded caption to the PDF's (accents and trailing spaces are exact) and say so when a test compares strings.
 - Do not copy a weak or unexplained value into a layout to make a screenshot match; match it, then find out what it is.
 
