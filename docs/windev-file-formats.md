@@ -206,6 +206,15 @@ That turns "match the screenshot" into two smaller jobs: reproduce each skin sty
 | `Exe/*.ini`, `CONFIG.INI` | text | deployment configuration the code reads |
 | `Templates/`, `*.sty`, `*.wdy` | images, PCS | the skin: images are usable as is (`skin_assets.py`); the `.sty` holds every style's fonts, colours, frames and images (`skin/<skin>.json`, above) |
 
+### What a full survey of one project left unread
+
+Every key of the text sources and every file type of the project folder was listed and checked against what the tools read (243 windows and copies, 83 reports, 16 classes, 4 procedure sets).
+
+- **Text sources: nothing left.** Besides code, names, types and `internal_properties`, the only other keys are identifiers, a `description` per window, `original_name` (the template a window was created from) and `enabled : false` on event slots. No disabled slot holds code here (1,283 code blocks checked), so no code is silently dead; check that count on another project before trusting it there.
+- **`<project>.wdcoverage`** (code coverage of the last test runs) and **`<project>.wdd`** are PCS files whose body is neither packed nor under the cipher of `internal_properties`: not read. The `.wdd` is the analysis, which the `.xdd` gives in XML. Coverage would say which lines the authors' tests ran; nothing else holds that.
+- **`<project>.waudit`**, `.wdap`, `.mdf`, `.ref`, `.wtp`, `.wlr`: editor state and build leftovers, a few hundred bytes each.
+- **Inside the decoded chunks**: a table's own options, the tick-mark properties not named above, a report control's alignment and borders, where a file-bound list says "loaded in memory", and the records of predefined button actions. The audit lists each control they touch.
+
 ## 4. What stays outside the files
 
 - **Runtime behavior**: what a dialog's Esc does, values set by code at opening, data-dependent states. From the code, and where the code cannot settle it, from the running application.
