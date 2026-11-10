@@ -109,6 +109,14 @@ python3 scripts/readiness_report.py --out docs/readiness.md --briefs docs/briefs
 
 For every window, report, class and set of procedures: the points an implementer would have to guess (controls without a position, a layout `generate_screens.py` refuses — it is run in memory on every window —, predefined actions with no code and no named element, an embedded query without SQL, names built at run time, data files not in the analysis, the gaps and runtime questions that name the unit), each with what closes it; units ranked by open points and sized by parity rows and code lines. The report opens with how far the decoder applies to the project. `--briefs` writes one page per unit for the agent that takes it. No code is copied into either: names, counts and line ranges only. On the second project: 149 units, 79 with no open point, 103 open points, 19 seconds.
 
+## `refresh_layouts.py` — new evidence into existing layouts
+
+```sh
+python3 scripts/refresh_layouts.py layouts --fields font style --column-fields title input_type --fill [--check]
+```
+
+A project keeps its layout files as the screen generator's input, often repaired by hand. When the tools learn to read something new, this copies only the named fields into them, control by control (by `path`), from what `screen_layout.py` gives today; everything else stays. `--fill` never replaces a value, `--check` only reports. On the second project it added the font of 1,148 controls and the missing title and input type of 36 columns to 112 layouts without touching a repaired position or caption.
+
 ## `field_use.py` — which extracted fields does anything read?
 
 ```sh

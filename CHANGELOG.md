@@ -8,6 +8,7 @@
 - **`scripts/field_use.py`**: every field the pipeline writes, and who reads it. 176 fields, 22 with no reader in code. `docs/agent-inputs.md` lists what is extracted and applied by no tool, as the adapter's job.
 - The server template's `tools/pg_schema.py` carries what the schema draft read from the analysis file: decimal digits and how text keys compare go to the catalogue and to comments on columns and indexes, with a warning that the indexes it writes compare exactly.
 - `prepare_evidence.py --data <folder>` reads the data files without a driver and profiles them.
+- `scripts/refresh_layouts.py` copies named fields from today's evidence into a project's existing layout files and leaves the rest (hand repairs included). Used on the second project to bring the fonts of 1,148 controls into its 112 layouts; its UI kit then applied them as the starter's already did.
 - `screen_layout.py` no longer tells every reader that fonts and colours are "not extracted" when the layout holds them.
 - New: `docs/agent-inputs.md` (every output, who writes and reads it, and the reading order for one unit) and `docs/new-windev-version.md` (the ten-minute procedure for a project of another WINDEV version).
 
