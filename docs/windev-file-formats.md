@@ -27,6 +27,9 @@ Measured on one project (file format 25: `major_version : 25` in its sources; 11
 | Table column: alignment, place in the table, five options (sortable, moveable, adjustable width, multiline, with search) | 310 columns | 250 of 250 equal; 270 of 270 equal; 1,375 of 1,375 equal |
 | Table column cell: input type and mask | | 243 of 243 equal; 240 of 240 equal |
 | Skin style of a control (`170 AquaBlue.BTN_Ok`) | 1,018 controls name one | not printed by the dossier |
+| Window: opening mode, title bar, system menu, minimize and maximize icons, own HFSQL context, background image | 112 windows | opening mode 112 of 112 equal; the five options 498 of 498 (the PDF extract mixes the names of neighbouring tick marks for some windows: those are not compared) |
+| Skin styles (`Templates/<skin>/<skin>.sty`) | 1,203 styles in 3 skins | not in the dossier. 1,015 controls name a style found there; 291 of them changed a font, a colour or a frame from it |
+| Query parameters | 13 of 24 queries have some | names read from the SQL (`{pOrder}`); the dossier extract had none |
 | Report control geometry (mm) | 497 controls | 493 of 493 equal |
 | Report control kind (static, calculation, preset, image, shape) | | 493 of 493 equal |
 | Report type, data source, margins | 27 reports | 26 of 26 equal each |
@@ -124,6 +127,10 @@ Found in chunk `0` by its signature: a version, four integers, eight zero bytes 
 | | sortable, moveable | u32 at + 12 and + 16 after the caption | |
 | | linked item | string at + 32 after the caption | a column shown through a link holds `File.Item<TAB>OtherFile.Key.Item` |
 | | adjustable width, multiline, with search | u32 at + 4, + 16, + 20 after the linked item | kept only when all five options are 0 or 1 |
+| Window | opening mode | one byte, 312 bytes after the face of the window's font | 2 centred in the screen, 3 centred in the parent window |
+| | title, background image | two strings, 316 bytes after that face | |
+| | title bar, system menu, minimize icon, maximize icon | 4 × u32, 5 bytes after the background image | maximize was never off where the dossier names it clearly: its place is the one left |
+| | own HFSQL context | u32, 46 bytes after the background image | |
 | Report | type, data source | u32 at + 9 and + 13 after the report's name | 2 table, 4 label, 5 free; 0 none, 1 embedded query, 6 the dossier's "text file" |
 | | page | eight doubles in a row: height, width, margins top, bottom, left, right (mm) | found by shape. Reports created by the RAD keep a Letter size there while the dossier prints A4: the band widths follow the stored size |
 | Report band, report control | type | one byte after the four geometry doubles | bands: 1 start of document, 2 page header, 4 body, 6 break header, 7 break footer, 11 page footer, 12 end of document. Controls: 16 calculation, 17 shape, 18 image, 20 preset, 39 static. A code outside these lists is kept as `type_code` |
@@ -179,6 +186,12 @@ Every binary project file starts with `PCS\0`: `.wdp` (project), `.WDR` (query),
 
 Blocks that are not SQL or images are listed with their strings (`text`); `--blocks` saves each one for closer reading. `<project>.wdd` has no such block in this project (it is stored another way): use the `.xdd`.
 
+### The skin: what a style name stands for
+
+`Templates/WD/<skin>/<skin>.sty` is a PCS container that is **not packed**: its strings are readable in place. Each style is one record in the layout a control uses — fonts with their alignment and text colour, frames, image files — opened by the WINDEV version that wrote it (`25.0.225.3`) and closed by the style's name (`BTN_Ok`, `SAI_Simple`). The decoder writes `skin/<skin>.json` (402 styles per skin here) and compares each control with the style it names: `differs_from_style` lists what the control changed, one line per value (`fonts[0].colour: #fe0000 (style #2d2d2d)`).
+
+That turns "match the screenshot" into two smaller jobs: reproduce each skin style once (its fonts, colours and images are listed), then apply per control only the listed changes. A control with a style and no `differs_from_style` needs nothing of its own.
+
 ## 3. Other files worth reading
 
 | File | Format | What it gives a migration |
@@ -191,7 +204,7 @@ Blocks that are not SQL or images are listed with their strings (`text`); `--blo
 | `HstDuree.log` | UTF-16 CSV | who worked on the project and when; not needed |
 | `Exe/*.fic`, `.ndx`, `.mmo` | HFSQL | the data: export through the ODBC driver ([data export](../scripts/windows/README.md)), never by hand |
 | `Exe/*.ini`, `CONFIG.INI` | text | deployment configuration the code reads |
-| `Templates/`, `*.sty`, `*.wdy` | images, PCS | the skin: images are usable as is (`skin_assets.py`) |
+| `Templates/`, `*.sty`, `*.wdy` | images, PCS | the skin: images are usable as is (`skin_assets.py`); the `.sty` holds every style's fonts, colours, frames and images (`skin/<skin>.json`, above) |
 
 ## 4. What stays outside the files
 

@@ -380,6 +380,32 @@ def window_fields(data):
     return {'x': x, 'y': y, 'width': width, 'height': height, 'layout_version': struct.unpack_from('<I', data, 16)[0]}
 
 
+OPENING = {2: 'Centered in the screen', 3: 'Centered in the parent window'}      # the dossier's wording
+
+
+def window_record(data, encoding='cp1252'):
+    """A window's title and options, 316 bytes after the face of its font: opening mode (one byte, 4 before),
+    title, background image, then 5 bytes later four yes/no values (title bar, system menu, minimize icon,
+    maximize icon) and, 46 bytes after the image, whether it has its own HFSQL context. Kept only when the two
+    strings are there and every yes/no is 0 or 1."""
+    faces = [offset for offset, width in fonts(data, encoding)[1] if width == 4]
+    if not faces:
+        return None
+    try:
+        title, offset = framed_string(data, faces[0] + 316, encoding)
+        image, offset = framed_string(data, offset, encoding)
+        bar, menu, minimize, maximize = struct.unpack_from('<4I', data, offset + 5)
+        context = struct.unpack_from('<I', data, offset + 46)[0]
+    except (ValueError, IndexError, struct.error):
+        return None
+    if max(bar, menu, minimize, maximize, context) > 1 or (image and not IMAGE_FILE.search(image.encode(encoding, 'replace'))):
+        return None
+    opening = data[faces[0] + 312]
+    return {'title': title, 'background_image': image, 'opening_mode': OPENING.get(opening, opening),
+            'title_bar': bool(bar), 'system_menu': bool(menu), 'minimize_icon': bool(minimize),
+            'maximize_icon': bool(maximize), 'independent_hfsql_context': bool(context)}
+
+
 def column_fields(data, encoding='cp1252'):
     """A table column's chunk 0: version tag, width, caption, alignment and options, the item it shows, more
     options. The options are kept only when every one of them is 0 or 1 (another layout is refused, not misread)."""
@@ -605,6 +631,7 @@ def describe(owner, kind, chunks, encoding='cp1252', keep_end=False):
             texts = [m[2] for m in FRAMED.finditer(by_id[0]) if m[2] and not m[2].startswith(b'<')]
             title = texts[1] if len(texts) > 1 else b''
             fields['title'] = '' if FILE_PATH.search(title) else text(title, encoding)
+            fields.update(window_record(by_id[0], encoding) or {})     # by position, when the record is where expected
     elif owner == 'columns' and 0 in by_id:
         fields = column_fields(by_id[0], encoding)
         if fields and not keep_end:
@@ -861,6 +888,47 @@ def decode_container(data, encoding='cp1252'):
 
 # ---------------------------------------------------------------- command
 
+SKIN_VERSION = re.compile(rb'\d+\.\d+\.\d+\.\d+')
+SKIN_STYLE = re.compile(r'[A-Za-z]+_\S.*')
+
+
+def skin_styles(data, encoding='cp1252'):
+    """The styles of a skin template's `.sty` file: {style name: fonts, frames, images}. The file is a PCS container
+    that is not packed; each style is a record in the layout a control uses, opened by the WINDEV version that
+    wrote it (`25.0.225.3`) and closed by the style's name (`BTN_Ok`)."""
+    found = [m for m in FRAMED.finditer(data) if m[2]]
+    starts = [index for index, match in enumerate(found) if SKIN_VERSION.fullmatch(match[2])]
+    styles = {}
+    for first, following in zip(starts, starts[1:] + [len(found)]):
+        strings = found[first + 1:following]
+        name = text(strings[-1][2], encoding) if strings else ''
+        if not SKIN_STYLE.fullmatch(name) or IMAGE_FILE.search(strings[-1][2]):
+            continue
+        record = data[found[first].end():strings[-1].start()]
+        faces = {text(m[2], encoding) for m in strings[:-1]}
+        style = {'fonts': fonts(record, encoding)[0], 'frames': frames(record),
+                 'images': [text(m[2], encoding).rsplit('\\', 1)[-1] for m in strings[:-1] if IMAGE_FILE.search(m[2])]}
+        if style['fonts'] or style['frames'] or style['images'] or faces:
+            styles.setdefault(name, style)
+    return styles
+
+
+def style_differences(element, style, limit=12):
+    """What a control changed from the skin style it names, one line per value: `fonts[0].colour: #fe0000 (style
+    #2d2d2d)`. Records are compared by their place; a different number of records is said as such."""
+    lines = []
+    for key in ('fonts', 'frames'):
+        ours, theirs = element.get(key) or [], style.get(key) or []
+        if len(ours) != len(theirs):
+            lines.append(f'{key}: {len(ours)} records (style {len(theirs)})')
+            continue
+        for index, (mine, base) in enumerate(zip(ours, theirs)):
+            for name in sorted(set(mine) | set(base)):
+                if mine.get(name) != base.get(name):
+                    lines.append(f'{key}[{index}].{name}: {mine.get(name)} (style {base.get(name)})')
+    return lines[:limit]
+
+
 def read_text(data):
     if data.startswith((b'\xff\xfe', b'\xfe\xff')):
         return data.decode('utf-16')
@@ -892,6 +960,10 @@ def file_name(value):
     """An image's file name whatever the folder; the PDF wraps long names, so white space is dropped."""
     value = next(iter(value.values()), '') if isinstance(value, dict) else value or ''
     return re.sub(r'\s+', '', re.split(r'[\\/]', value)[-1]).lower()
+
+
+WINDOW_FLAGS = (('Title bar', 'title_bar'), ('System menu', 'system_menu'), ('Minimize icon', 'minimize_icon'),
+                ('Maximize icon', 'maximize_icon'), ('Indep. HFSQL ctx.', 'independent_hfsql_context'))
 
 
 def raw_line(control, key):
@@ -1035,6 +1107,12 @@ def calibrate(decoded, dossier):
             same = squeeze(re.sub(r'^[A-Z]{2}:$', '', title.strip())) == squeeze(window['fields'].get('title'))
             counts = report.setdefault('window_title', {'same': 0, 'different': 0})
             counts['same' if same else 'different'] += 1
+            theirs, fields = json.loads(path.read_text(encoding='utf-8')), window['fields']
+            if 'title_bar' in fields:
+                flags = theirs.get('flags') or {}
+                count('window_opening_mode', theirs['opening_mode'] == fields['opening_mode'] if theirs.get('opening_mode') else None)
+                for label, key in WINDOW_FLAGS:
+                    count('window_options', flags[label] == fields[key] if label in flags else None)
     return report
 
 
@@ -1063,6 +1141,8 @@ def merge_control(entry, element, language):
         put('fonts', element['fonts'])
     if element.get('frames') and not entry.get('frames'):
         put('frames', element['frames'])
+    if element.get('differs_from_style'):
+        put('differs_from_style', element['differs_from_style'])    # what the control changed from its skin style
     def fill(key, value):
         if entry.get(key) in (None, '') and value not in (None, ''):
             put(key, value)
@@ -1247,6 +1327,14 @@ def write_evidence(sources, queries, target, dossier=None):
                 if fields.get('title'):
                     old = element.get('title') if isinstance(element.get('title'), dict) else {}
                     element['title'] = {**old, next(iter(old), language): fields['title']}
+                if 'title_bar' in fields:
+                    # The PDF prints these as tick marks in a grid and its extract mixes neighbours: the source wins.
+                    flags = element.setdefault('flags', {})
+                    flags.update({label: fields[key] for label, key in WINDOW_FLAGS})
+                    if isinstance(fields['opening_mode'], str) and not element.get('opening_mode'):
+                        element['opening_mode'] = fields['opening_mode']
+                    if fields['background_image'] and not element.get('background_image'):
+                        element['background_image'] = {language: fields['background_image']}
                 continue
             if decoded['owner'] not in ('controls', 'columns'):
                 continue
@@ -1271,6 +1359,10 @@ def write_evidence(sources, queries, target, dossier=None):
             query['sql_pdf'] = query['sql']    # the PDF's text: wrapped and re-spaced
         query['sql'] = sql
         query['decoded'] = ['sql']
+        # WINDEV writes a query's parameters in its SQL as {name}: their names in order of first use.
+        names = list(dict.fromkeys(re.findall(r'\{(\w+)\}', sql)))
+        if names:
+            query['parameter_names'] = names
         path.write_text(json.dumps(query, indent=1, ensure_ascii=False), encoding='utf-8')
         counts['queries'] += 1
     index_path = target / 'index.json'
@@ -1290,8 +1382,9 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
     output.mkdir(parents=True, exist_ok=False)
     coverage = {'text_sources': 0, 'properties': 0, 'properties_failed': 0, 'controls': 0, 'controls_with_fields': 0,
                 'controls_with_caption': 0, 'report_controls': 0, 'report_controls_with_geometry': 0, 'containers': 0, 'blocks': 0, 'queries_with_sql': 0,
-                'embedded_queries_with_sql': 0, 'elements_with_learned_properties': 0, 'images': 0}
-    files, by_name, queries, sources, samples, project = [], {}, {}, {}, [], {}
+                'embedded_queries_with_sql': 0, 'elements_with_learned_properties': 0, 'images': 0, 'skin_styles': 0,
+                'controls_with_skin_style': 0, 'controls_changed_from_skin_style': 0}
+    files, by_name, queries, sources, samples, project, skins = [], {}, {}, {}, [], {}, {}
     source_root = next((p.parent for p in sorted(source.rglob('*.wdp')) if '.cpl' not in p.as_posix().lower()), source)
     import sys
     if str(Path(__file__).resolve().parent) not in sys.path:
@@ -1311,6 +1404,18 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
             if magic != b'PCS\0' and path.suffix.lower() not in TEXT_EXTENSIONS:
                 continue
             data = path.read_bytes()
+            if data[:4] == b'PCS\0' and path.suffix.lower() == '.sty':
+                # A skin template's styles: what a control's `style` (`<template>.<style>`) refers to.
+                styles = skin_styles(data, encoding)
+                if styles:
+                    skins.setdefault(path.parent.name, styles)
+                    target = output / 'skin' / f'{path.parent.name}.json'
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(json.dumps({'path': relative, 'template': path.parent.name, 'styles': styles},
+                                                 indent=1, ensure_ascii=False), encoding='utf-8')
+                    coverage['skin_styles'] += len(styles)
+                    files.append({'path': relative, 'kind': 'skin', 'styles': len(styles)})
+                continue
             if data[:4] == b'PCS\0':
                 container = decode_container(data, encoding)
                 if not container['blocks']:
@@ -1371,14 +1476,32 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                 # A project element wins over a same-named file deeper in the tree (templates, copies).
                 if path.stem.lower() not in by_name:
                     by_name[path.stem.lower()] = elements
-                    sources[path.stem] = {'elements': elements, 'suffix': path.suffix.lower(),
-                                          'language': source_language(source_text)}
+                    sources[path.stem] = {'elements': elements, 'suffix': path.suffix.lower(), 'path': relative,
+                                          'relative': relative + '.json', 'language': source_language(source_text)}
                 target = output / 'properties' / (relative + '.json')
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(json.dumps({'path': relative, 'elements': elements}, indent=1, ensure_ascii=False),
                                   encoding='utf-8')
                 files.append({'path': relative, 'kind': 'properties', 'elements': len(elements)})
     coverage['queries_with_sql'] = len(queries)
+    # What each control changed from the style it was created from: its own fonts or frames differ from the skin's.
+    # (Skin files can come after the windows in the tree: compared here, written back into the properties files.)
+    for stem, item in sources.items():
+        changed = False
+        for element in item['elements']:
+            template, _, style = ((element.get('fields') or {}).get('style') or '').partition('.')
+            known = skins.get(template, {}).get(style)
+            if element['owner'] != 'controls' or not known:
+                continue
+            coverage['controls_with_skin_style'] += 1
+            differs = style_differences(element, known)
+            if differs:
+                element['differs_from_style'] = differs
+                coverage['controls_changed_from_skin_style'] += 1
+                changed = True
+        if changed:
+            (output / 'properties' / item['relative']).write_text(
+                json.dumps({'path': item['path'], 'elements': item['elements']}, indent=1, ensure_ascii=False), encoding='utf-8')
     # Project level: its own code (written above), the explorer's folders, the files each element uses.
     elements = {Path(f['path']).stem.lower(): Path(f['path']).stem for f in files}
     folders = project_folders(project.pop('explorer_texts', None), elements)

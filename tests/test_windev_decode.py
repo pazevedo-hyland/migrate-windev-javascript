@@ -493,5 +493,50 @@ class Lists(unittest.TestCase):
         self.assertIsNone(module.list_record(list_chunk(5), module.control_fields(list_chunk(5))['_end']))
 
 
+class WindowsAndSkins(unittest.TestCase):
+    def test_window_options(self):
+        def window(bar, menu, minimize, maximize, context, opening=3, image='<DIR>\\bg.png'):
+            return (b'\x02\0\0\0\x07\0\x06\0' + b'\0' * 8 + struct.pack('<I4i', 0x25f, 0, 0, 640, 480) + b'\0' * 8
+                    + font_record('MS Shell Dlg') + b'\0' * 308 + bytes([opening]) + b'\0' * 3 + framed('Orders') + framed(image)
+                    + b'\0' * 5 + struct.pack('<4I', bar, menu, minimize, maximize) + b'\0' * 25 + struct.pack('<I', context)
+                    + b'\0' * 30)
+        fields = module.describe('window', '', [{'id': 0, 'version': 14, 'data': window(1, 1, 0, 1, 1, opening=2)}])
+        self.assertEqual((fields['width'], fields['title'], fields['background_image'], fields['opening_mode']),
+                         (640, 'Orders', '<DIR>\\bg.png', 'Centered in the screen'))
+        self.assertEqual((fields['title_bar'], fields['system_menu'], fields['minimize_icon'], fields['maximize_icon'],
+                          fields['independent_hfsql_context']), (True, True, False, True, True))
+        # Something else where the yes/no values should be: the options are not read, size and title still are.
+        odd = module.describe('window', '', [{'id': 0, 'version': 14, 'data': window(9, 1, 0, 1, 1)}])
+        self.assertEqual((odd['width'], 'title_bar' in odd), (640, False))
+
+    def test_skin_styles_and_what_a_control_changed(self):
+        style = lambda name, colour: (framed('25.0.225.3') + b'\0' * 30 + font_record('Tahoma', colour=colour) + b'\0' * 20
+                                      + struct.pack('<II', 0x262, 1) + b'\0\0\0\xff' + bytes([0x0c, 0x3c, 0x60, 0])
+                                      + framed('D:\\Skins\\Std.png') + b'\0' * 12 + framed(name) + b'\0' * 9)
+        sty = b'PCS\0' + b'\0' * 40 + style('LIB_Simple', (0x2d, 0x2d, 0x2d)) + style('LIB_Title', (0, 0, 0x80))
+        styles = module.skin_styles(sty)
+        self.assertEqual(list(styles), ['LIB_Simple', 'LIB_Title'])
+        self.assertEqual((styles['LIB_Title']['fonts'][0]['colour'], styles['LIB_Simple']['images'],
+                          styles['LIB_Simple']['frames']), ('#000080', ['Std.png'], [{'type': 1, 'border_colour': '#0c3c60'}]))
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder, 'project')
+            (project / 'Templates' / '170 Blue').mkdir(parents=True)
+            (project / 'Templates' / '170 Blue' / 'Blue.sty').write_bytes(sty)
+            chunk = control_chunk(1, 2, 90, 20, caption='Late')
+            head = (b'\x70\x02\0\0' + b'\0' * 8 + b'\x60\x1b\0\0' + framed('170 Blue.LIB_Simple')
+                    + font_record('Tahoma', colour=(0xfe, 0, 0)) + b'\0' * 20
+                    + struct.pack('<II', 0x262, 1) + b'\0\0\0\xff' + bytes([0x0c, 0x3c, 0x60, 0]) + b'\0' * 20)
+            (project / 'WIN_A.wdw').write_text('\n'.join(['window :', ' name : WIN_A', ' controls :', '  -', '    name : STC_Late',
+                                                          '    internal_properties : ' + value_of(head + chunk[44:]),
+                                                          '    type : 3']) + '\n', encoding='utf-8')
+            index = module.decode_project(project, Path(folder, 'out'))
+            saved = json.loads(Path(folder, 'out/properties/WIN_A.wdw.json').read_text(encoding='utf-8'))
+            skin = json.loads(Path(folder, 'out/skin/170 Blue.json').read_text(encoding='utf-8'))
+        self.assertEqual((index['coverage']['skin_styles'], index['coverage']['controls_with_skin_style'],
+                          index['coverage']['controls_changed_from_skin_style']), (2, 1, 1))
+        self.assertEqual(saved['elements'][0]['differs_from_style'], ['fonts[0].colour: #fe0000 (style #2d2d2d)'])
+        self.assertEqual(sorted(skin['styles']), ['LIB_Simple', 'LIB_Title'])
+
+
 if __name__ == '__main__':
     unittest.main()

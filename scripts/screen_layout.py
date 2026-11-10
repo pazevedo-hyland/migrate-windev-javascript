@@ -440,7 +440,8 @@ def layout(unit, latest, language=None):
                  'background_stretch': raw_value(raw, 'Stretch background image'),
                  # Read from the source: the skin style the control was created from (`170 AquaBlue.BTN_Ok`), and
                  # its frames (border type, background and border colours) in file order.
-                 'style': details.get('style'), 'frames': details.get('frames')}
+                 'style': details.get('style'), 'frames': details.get('frames'),
+                 'differs_from_style': details.get('differs_from_style')}
         if entry['kind'] == 'Caption':
             entry['v_align'] = details.get('v_align') or raw_value(raw, 'Vert. alignment') or caption_alignment.get('v_align')
         entry.update(date_edit_options(details))
@@ -492,7 +493,9 @@ def layout(unit, latest, language=None):
             control['kind'] = KIND_RENAMES[control['kind']]
     window = {'name': unit, 'title': choose(element.get('title'), 'window.title'), 'size': element.get('size') or source_size,
               'opening_mode': element.get('opening_mode'), 'window_type': element.get('window_type'),
-              'background_image': basename((raw_value(element.get('lines', []), 'Background image') or '').split(': ', 1)[-1]) or None,
+              # The source's own value first (exact path), the dossier's line otherwise.
+              'background_image': basename(choose(element.get('background_image'), 'window.background_image')
+                                           or (raw_value(element.get('lines', []), 'Background image') or '').split(': ', 1)[-1]) or None,
               'flags': element.get('flags', {})}
     if element:
         unwrap(window, 'title', 'window.title')
