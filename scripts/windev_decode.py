@@ -558,7 +558,7 @@ def describe(owner, kind, chunks, encoding='cp1252', keep_end=False):
     """Named fields for the element kinds whose layout is known; every chunk's strings for all of them."""
     by_id = {c['id']: c['data'] for c in chunks}
     fields = None
-    if owner in ('controls', 'content', 'dropdown') and 0 in by_id:
+    if owner in ('controls', 'content', 'dropdown', 'calendar') and 0 in by_id:
         # `content` is the cell of a table column: a control of its own (an edit control for a text column).
         fields = control_fields(by_id[0], encoding)
         end = fields.pop('_end', None) if fields else None
@@ -785,15 +785,26 @@ BINARY_HEAD = re.compile(rb'(?s)[\x68-\x7f]\x02\x00\x00.{4}'
                          rb'(?:\x60\x1b\x00\x00|\xbd\x02\x00\x00|[\x10-\x1f]\x01\x00\x00|\x6f\x02\x00\x00)')
 
 
+# A record without a name of its own (a column's cell, a combo's list, an edit's calendar): the same shape, with
+# one zero byte where the name would be. A column: its name, a version tag, its name again. A tab's pane: tag 0x25a.
+BINARY_UNNAMED = re.compile(rb'(?s)(.\x02\x00\x00)\x00.{8}(.{16})\x00{8}\xff\xff\xff[\x07\x7f\xff]\xff\xff\xff[\x07\x7f\xff]')
+BINARY_COLUMN = re.compile(rb'(?s)(\xff\xce\x88\xf1.{4}([^\x00]{1,200})\x00\xfe\xed\x98\xe1)(.\x02\x00\x00)\1.{8}')
+BINARY_PANE = re.compile(rb'\x5a\x02\x00\x00(?=\xff\xce\x88\xf1|\x00)')
+COLUMN_END = b'\xba\xab\xba\xab'
+UNNAMED_OWNERS = {7: 'dropdown', 47: 'calendar'}
+
+
 def binary_window(block, encoding='cp1252'):
-    """The controls of a window saved in WINDEV's binary format (the first packed block of its `.wdw`), in the
+    """The elements of a window saved in WINDEV's binary format (the first packed block of its `.wdw`), in the
     shape `decode_source` gives. Each control is the record a text source keeps in chunk 0, with its name and
     identifier inside it and, just before it, its length and its type; a control inside another lies within the
     other's length. Taking the name out gives the text format's bytes (file paths apart: absolute here), so the
-    same readers apply. The window itself comes first, with its size. Columns, panes and options are not listed."""
+    same readers apply. A table's columns, each with its cell, a combo's list, a tab's panes and the options of
+    check boxes and radio buttons sit inside their control's record and are listed after it. The window itself
+    comes first, with its size. Menu options are not listed."""
     named = list(BINARY_ELEMENT.finditer(block))
     heads = [m.start() for m in BINARY_HEAD.finditer(block)]
-    elements, spans = [], []
+    elements = []
     # The window itself opens the block (after four zero bytes in format 28): tag, name, identifier, then x, y,
     # width, height.
     for start in (0, 4):
@@ -807,40 +818,185 @@ def binary_window(block, encoding='cp1252'):
                              'fields': {'x': x, 'y': y, 'width': width, 'height': height}})
             break
     window = [e['name'] for e in elements]
-    located = []
+    # Every item with where it starts and ends: (start, order, kind of item, details).
+    items = []
     for index, match in enumerate(named):
-        # The control's own part starts at the first version tag after the previous element's name whose length
+        # A control's own part starts at the first version tag after the previous element's name whose length
         # (the four bytes 8 before it) reaches past this name and stays inside the block, with a type before it.
         for candidate in heads:
             if candidate < 8 or candidate <= (named[index - 1].start() if index else 0) or candidate >= match.start():
                 continue
             size, kind = struct.unpack_from('<II', block, candidate - 8)
             if match.end() < candidate - 8 + size <= len(block) and 0 < kind < 0x200:
-                located.append((candidate, candidate - 8 + size, kind, match))
+                items.append((candidate - 8, 'control', {'head': candidate, 'end': candidate - 8 + size, 'kind': kind,
+                                                         'match': match}))
                 break
-    for index, (head, end, kind, match) in enumerate(located):
-        name = text(match[2], encoding)
-        # Its children follow its own record, inside its length: the record stops where the first one starts.
-        own = min(end, located[index + 1][0] - 8) if index + 1 < len(located) and located[index + 1][0] < end else end
-        # A control lies inside its parents: the elements still open when it starts.
-        spans = [(parent, limit) for parent, limit in spans if head < limit]
-        chunk = block[head:match.start() + 4] + block[match.start(3):own]
-        entry = {'line': None, 'owner': 'controls', 'name': name, 'type': str(kind),
-                 'parents': window + [parent for parent, _ in spans]}
-        fields = describe('controls', str(kind), [{'id': 0, 'version': 14, 'data': chunk}], encoding)
+    cells, head_set = set(), set(heads)
+    for match in BINARY_COLUMN.finditer(block):
+        try:
+            caption, offset = framed_string(block, match.end() + 4, encoding)
+            linked, after = framed_string(block, offset + 32, encoding)
+        except (ValueError, IndexError, struct.error):
+            continue
+        kind = struct.unpack_from('<I', block, match.start() - 4)[0] if match.start() >= 4 else 0
+        # The cell follows the linked item: a word, its type, then its record.
+        cell = BINARY_UNNAMED.search(block, after + 8, after + 8 + 20000) if after + 8 in head_set else None
+        end = block.find(COLUMN_END, cell.end() if cell else after)
+        if end < 0 or not 0 < kind < 0x200:
+            continue
+        details = {'name': text(match[2], encoding), 'kind': kind, 'end': end + 4, 'tag': match[3], 'body': match.end(),
+                   'after': after, 'cell': cell}
+        if cell:
+            cells.add(cell.start())
+            details['cell_kind'] = struct.unpack_from('<I', block, after + 4)[0]
+        items.append((match.start() - 4, 'column', details))
+    for match in BINARY_UNNAMED.finditer(block):
+        if match.start() in cells:
+            continue
+        head = max((h for h in heads if h < match.start()), default=None)
+        if head is not None and head >= 4:
+            items.append((head - 4, 'unnamed', {'head': head, 'kind': struct.unpack_from('<I', block, head - 4)[0],
+                                                'match': match}))
+    controls = [item[2] for item in items if item[1] == 'control']
+    for tab in controls:
+        if tab['kind'] != 16:
+            continue
+        inside = [(c['head'] - 8, c['end']) for c in controls if tab['head'] < c['head'] and c['end'] <= tab['end']]
+        for pane in BINARY_PANE.finditer(block, tab['match'].end(), tab['end']):
+            if not any(start <= pane.start() < end for start, end in inside):
+                items.append((pane.start(), 'pane', {'at': pane.end()}))
+    items.sort(key=lambda item: item[0])
+    starts = [item[0] for item in items]
+    open_controls, panes, column = [], {}, None
+
+    def after_block(rectangle, limit):
+        # Where a record's common block ends in the block, so that its own strings (group, linked item) are not
+        # taken for what follows it.
+        common = control_fields(b'\x5f\x02\0\0' + block[rectangle:limit], encoding) or {}
+        return rectangle + common['_end'] - 4 if '_end' in common else limit
+
+    def options(first, last, parents):
+        # Each choice of a check box or radio button: its caption, then the word 0x0e.
+        for option in FRAMED.finditer(block, first, last):
+            if option[2] and block[option.end():option.end() + 4] == b'\x0e\0\0\0':
+                elements.append({'line': None, 'owner': 'options', 'name': '', 'type': '', 'parents': parents,
+                                 'fields': {'caption': text(option[2], encoding)}})
+
+    def record(entry, kind, chunk):
+        fields = describe(entry['owner'], str(kind), [{'id': 0, 'version': 14, 'data': chunk}], encoding)
         if fields:
             entry['fields'] = fields
         used = fonts(chunk, encoding)[0]
         if used:
             entry['fonts'] = used
-        boxes = frames(chunk)
-        if boxes:
-            entry['frames'] = boxes
-        if str(kind) in KINDS:
+        if str(kind) in KINDS and entry['owner'] != 'columns':
             entry['kind'] = KINDS[str(kind)]
-        elements.append(entry)
-        spans.append((name, end))
+
+    for index, (start, what, item) in enumerate(items):
+        following = starts[index + 1] if index + 1 < len(items) else len(block)
+        open_controls = [c for c in open_controls if start < c['end']]
+        parents = window + [c['name'] for c in open_controls]
+        if column and start < column['end'] and what != 'column':
+            parents = parents + [column['name']]        # inside a column: a control in its cells, its combo's list
+        if what == 'pane':
+            tab = open_controls[-1] if open_controls and open_controls[-1]['kind'] == 16 else None
+            try:
+                caption, _ = framed_string(block, item['at'], encoding)
+            except (ValueError, IndexError, struct.error):
+                continue
+            if tab is not None:
+                panes[tab['name']] = panes.get(tab['name'], 0) + 1
+                elements.append({'line': None, 'owner': 'tabs', 'name': '', 'type': '', 'parents': parents,
+                                 'fields': {'caption': caption}, 'pane': panes[tab['name']]})
+        elif what == 'control':
+            match, kind = item['match'], item['kind']
+            name = text(match[2], encoding)
+            # Its children follow its own record, inside its length: the record stops where the first one starts.
+            own = min(item['end'], following)
+            chunk = block[item['head']:match.start() + 4] + block[match.start(3):own]
+            if kind == 16 and own < item['end']:
+                chunk += block[item['end'] - 58:item['end']]      # a tab's style follows its panes and their controls
+            entry = {'line': None, 'owner': 'controls', 'name': name, 'type': str(kind), 'parents': parents}
+            record(entry, kind, chunk)
+            boxes = frames(chunk)
+            if boxes:
+                entry['frames'] = boxes
+            # A control directly inside a tab belongs to the last pane that started before it.
+            if open_controls and open_controls[-1]['kind'] == 16 and panes.get(open_controls[-1]['name']):
+                entry['pane'] = panes[open_controls[-1]['name']]
+            elements.append(entry)
+            if kind in (5, 6):
+                options(after_block(match.start(3), own), own, parents + [name])
+            open_controls.append({'name': name, 'end': item['end'], 'kind': kind, 'columns': 0})
+        elif what == 'column':
+            table = open_controls[-1] if open_controls else None
+            cell = item['cell']
+            # The text format's column record: tag, then what follows the identifier, without the cell in the middle.
+            chunk = item['tag'] + block[item['body']:item['after'] + 4] + block[item['end'] - 74:item['end']]
+            entry = {'line': None, 'owner': 'columns', 'name': item['name'], 'type': str(item['kind']), 'parents': parents}
+            fields = column_fields(chunk, encoding)
+            if fields:
+                fields.pop('_spans', None)
+                entry['fields'] = fields
+            if table is not None:
+                table['columns'] += 1
+                entry['index'] = table['columns']
+            elements.append(entry)
+            if cell:
+                head = item['after'] + 8
+                content = {'line': None, 'owner': 'content', 'name': '', 'type': str(item['cell_kind']),
+                           'parents': parents + [item['name']]}
+                record(content, item['cell_kind'], block[head:cell.start() + 4] + block[cell.start(2):item['end'] - 74])
+                elements.append(content)
+                if item['cell_kind'] in (5, 6):
+                    options(after_block(cell.start(2), item['end']), min(following, item['end']), parents + [item['name']])
+            column = {'name': item['name'], 'end': item['end']}
+        else:
+            match, kind = item['match'], item['kind']
+            if not 0 < kind < 0x200:
+                continue
+            entry = {'line': None, 'owner': UNNAMED_OWNERS.get(kind, 'content'), 'name': '', 'type': str(kind), 'parents': parents}
+            limit = min([following] + [c['end'] for c in open_controls[-1:]])
+            record(entry, kind, block[item['head']:match.start() + 4] + block[match.start(2):limit])
+            elements.append(entry)
     return place(elements)
+
+
+# In a binary element's code block: the header of one event's code (0x14, a length, the number of lines, the event,
+# then the lines), and the name of the control the following headers belong to (after its code type).
+CODE_HEADER = re.compile(rb'(?s)[\x14-\x1f].{4}(.{4})(.{4})\x00{4,5}\x01\x00\x00\x00(?=\x03)')      # 0x14 in 25, 0x15 in 28
+CODE_OWNER = re.compile(rb'(?s)(.{4})\xff\xce\x88\xf1.{4}([A-Za-z_\x80-\xff][\w$\x80-\xff]{0,200})\x00\xfe\xed\x98\xe1')
+
+
+def binary_code(block, encoding='cp1252'):
+    """The code of an element saved in binary format, from one packed block: [{control, event, lines}] in file
+    order. Each event's code is a header (0x14, a length, the number of lines, the event's number as the text format
+    writes it in `type :`) followed by its lines, each `03, text, who wrote it, 12 bytes`; an empty line has no
+    text, and the writer is often empty too. The name of a control, after the number of its code type, opens the
+    headers that belong to it; before any name the code is the element's own. A procedure is a block whose first
+    line declares it (event 458752 in a window)."""
+    marks = []
+    for match in CODE_OWNER.finditer(block):
+        if 0 < struct.unpack('<I', match[1])[0] < 0x200 and block[match.start() + 3:match.start() + 4] != b'\x03':
+            marks.append((match.start(), text(match[2], encoding)))
+    for match in CODE_HEADER.finditer(block):
+        lines, offset = [], match.end()
+        try:
+            while block[offset:offset + 1] == b'\x03':
+                line, after = framed_string(block, offset + 1, encoding)
+                _, after = framed_string(block, after, encoding)
+                lines.append(line)
+                offset = after + 12
+        except (ValueError, IndexError, struct.error):
+            pass
+        marks.append((match.start(), {'event': struct.unpack('<I', match[2])[0], 'lines': lines}))
+    control, blocks = None, []
+    for _, mark in sorted(marks, key=lambda item: item[0]):
+        if isinstance(mark, str):
+            control = mark
+        else:
+            blocks.append({'control': control, **mark})
+    return blocks
 
 
 def source_language(source):
@@ -1476,7 +1632,7 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
     coverage = {'text_sources': 0, 'properties': 0, 'properties_failed': 0, 'controls': 0, 'controls_with_fields': 0,
                 'controls_with_caption': 0, 'report_controls': 0, 'report_controls_with_geometry': 0, 'containers': 0, 'blocks': 0, 'queries_with_sql': 0,
                 'embedded_queries_with_sql': 0, 'elements_with_learned_properties': 0, 'images': 0, 'binary_windows': 0, 'binary_window_controls': 0, 'binary_elements_with_code': 0,
-                'binary_code_lines': 0, 'skin_styles': 0,
+                'binary_code_blocks': 0, 'binary_code_lines': 0, 'skin_styles': 0,
                 'controls_with_skin_style': 0, 'controls_changed_from_skin_style': 0}
     files, by_name, queries, sources, samples, project, skins = [], {}, {}, {}, [], {}, {}
     text_stems, coded = set(), set()
@@ -1559,21 +1715,24 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                             project['explorer_texts'] = summary['text']
                     elif path.suffix.lower() in ('.wdw', '.wde', '.wdg', '.wdc') and path.stem.lower() not in text_stems \
                             and path.stem.lower() not in coded:
-                        # An element in binary format with no text source: its code, one record per line. Which
-                        # control and event each part belongs to is not marked here: procedures name themselves, the
-                        # rest is in file order.
-                        lines = code_lines(summary['text'])
-                        if lines:
-                            # Empty records pile up between the parts: one blank line is kept, placeholders go.
-                            lines = [line for index, line in enumerate(lines) if line.strip() not in ('', '<?>')
-                                     or (line.strip() == '' and index and lines[index - 1].strip() not in ('', '<?>'))]
-                        if lines:
+                        # An element in binary format with no text source: its code blocks, each with the control it
+                        # belongs to and its event, as one readable file and as data.
+                        found = [b for b in binary_code(block, encoding) if any(line.strip() for line in b['lines'])]
+                        if found:
+                            listing = []
+                            for part in found:
+                                listing.append(f"// ---- {part['control'] or path.stem} : event {part['event']}")
+                                part['line'] = len(listing) + 1       # of its first line in the .wl file
+                                listing += part['lines'] + ['']
                             target = output / 'code' / f'{relative}.wl'
                             target.parent.mkdir(parents=True, exist_ok=True)
-                            target.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+                            target.write_text('\n'.join(listing) + '\n', encoding='utf-8')
+                            target.with_suffix('.json').write_text(
+                                json.dumps({'path': relative, 'blocks': found}, indent=1, ensure_ascii=False), encoding='utf-8')
                             coded.add(path.stem.lower())
                             coverage['binary_elements_with_code'] += 1
-                            coverage['binary_code_lines'] += len(lines)
+                            coverage['binary_code_blocks'] += len(found)
+                            coverage['binary_code_lines'] += sum(len(part['lines']) for part in found)
                     entry['blocks'].append(summary)
                 target = output / 'containers' / (relative + '.json')
                 target.parent.mkdir(parents=True, exist_ok=True)

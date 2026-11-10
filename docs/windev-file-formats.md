@@ -179,7 +179,12 @@ A project that was never switched to text format keeps each window as a binary `
 
 - the window first: version tag, its name, an 8-byte identifier, then x, y, width, height (four zero bytes come before in format 28);
 - then each control as `length (u32), type (u32), record`. The record is what a text source keeps in chunk `0`, with the control's name and identifier put inside it, between the common block's version tag and its rectangle. The type is the text format's `type :`;
-- a control inside another (in a tab, a supercontrol, an internal window) lies within the other's length, after the other's own record.
+- a control inside another (in a tab, a supercontrol, an internal window) lies within the other's length, after the other's own record;
+- what a text source lists apart sits inside its control's record:
+  - a **column**: its type, its name, a version tag, its name again, an identifier, then the text format's column record with the **cell** in the middle (a word, the cell's type, the cell's record) and the column's last options after it, up to the mark `ba ab ba ab`;
+  - a record **without a name** (a cell, a combo's list, an edit's calendar) has one zero byte where the name would be; its type is the word before its own part;
+  - a tab's **pane**: tag `0x25a` and its caption, in the tab's record, each followed by the controls of that pane; the tab's style comes after the last of them;
+  - a check box's or radio button's **options**: each caption followed by the word `0x0e`, after the common block.
 
 Taking the name and identifier out gives the text format's bytes, apart from lengths kept inside the record and file paths (absolute here, `<REPGABARIT>\…` in text). So every reader of section 1 applies unchanged: `binary_window()` rebuilds each record and calls them.
 
@@ -187,15 +192,16 @@ Measured two ways:
 
 | Check | Result |
 |---|---|
-| The 112 windows of the measured project, binary copy (`.cpl/<user>/`) against text source | 1,148 of 1,148 controls found, each with the same type; every field of the common block and of the kind's own record equal (position, size, caption, state, tab order, anchors, plane, linked item, button type and images, edit input type and mask, style…). Parents equal for 1,130; the other 18 sit in table cells, whose column level is not listed |
-| Known differences on that set | image paths are absolute; a container's fonts and frames include those of its columns or panes; the origin of a tab's panes is read for 1 tab of 6, so 88 controls inside tabs keep parent-relative positions only |
+| The 112 windows of the measured project, binary copy (`.cpl/<user>/`) against text source, element by element in file order | controls 1,148 of 1,148, columns 310 of 310, cells 310 of 310, combo lists 46 of 46, calendars 33 of 33, tab panes 25 of 25: same type, parents, pane and every field (position in the window, size, caption, state, tab order, anchors, plane, linked item, button type, edit input type and mask, column options, list binding, style…). Options of check boxes and radio buttons: 85 of 88 (the 3 with an empty caption are not seen) |
+| Known differences on that set | image paths are absolute where the text format writes `<REPGABARIT>\…` |
+| Code of the same 112 windows, binary against text | 1,023 of 1,035 code blocks found with the same lines (the other 12 hold only RAD markers in the text source), each with the same event number and the same control |
 | 696 windows of WINDEV 28's own examples and tutorials (format 28, never seen before) | 5,378 controls read from 5,541 named records, 5,376 with a complete common block; window size for 626 windows. Not compared with a second source |
 | Format 28 against 25 | head tag `0x273`/`0x274` instead of `0x270`; the common block reads the same; the edit record's tag is elsewhere, so input type and mask are refused there (26 of 133 edit controls read), not misread |
-| One tutorial project decoded whole (binary format, no dossier) | 8 windows, 127 controls, 4 queries with SQL, 285 skin styles, 89 lines of project code, and the code of 21 elements |
+| One tutorial project decoded whole (binary format 28, no dossier) | 8 windows, 127 controls, their columns with widths and linked items, 4 queries with SQL, 285 skin styles, 89 lines of project code, and 83 code blocks of 13 elements, each with its control and event |
 
-**Code of binary elements.** Their code is in the next block, one record per line with its author, as in a binary `.wdp`. `code/<file>.wl` holds it in file order with the names of the controls it belongs to between the parts. Which event each part is, and where an empty line was, are not marked: it is a readable draft of the code, not yet a list of blocks with their events. `inspect_windev.py` does not read it, so a binary-format project gets no parity seed from code yet.
+**Code of binary elements.** Their code is in the next block. Each event's code has a header — a byte (`0x14` in format 25, `0x15` in 28), a length, the number of lines, the event's number as a text source writes it in `type :` — then its lines, each `03`, the text, who wrote it, 12 bytes; an empty line has no text. The name of a control, after the number of its code type, opens the headers that belong to it; before any name the code is the element's own. `code/<file>.wl` holds the blocks under a line naming control and event, `code/<file>.json` the same as data with each block's first line in the `.wl` file (also for binary reports, classes and procedure sets).
 
-**Not listed from a binary window yet**: table columns and their cells, tab panes, menu options, combo dropdowns (their records have no name of their own), and reports.
+**Not there yet**: menu options and report controls are not listed from binary files, an option with an empty caption is not seen, and `inspect_windev.py` does not read `code/*.json`: a binary-format project gets its code blocks with control and event, but no parity seed from them until that is wired.
 
 ## 3. Binary files: the PCS container
 

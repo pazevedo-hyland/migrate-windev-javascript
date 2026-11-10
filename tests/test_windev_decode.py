@@ -606,5 +606,68 @@ class BinaryWindows(unittest.TestCase):
                          (640, 'Numeric', 'Validate', 15))
 
 
+class BinaryParts(unittest.TestCase):
+    """What sits inside a control's record in a binary window, and the code block."""
+
+    def test_columns_cells_panes_and_options(self):
+        helper = BinaryWindows()
+        table = control_chunk(0, 40, 300, 90)
+        table = b'\x70\x02\0\0' + b'\0' * 4 + b'\x6f\x02\0\0' + table[12:]
+        cell = edit_chunk(mask='99', kind=1, value_type=8)
+        tag = cell.index(struct.pack('<I', 0x25f))
+        cell = cell[:tag + 4] + b'\0' + b'\x55' * 8 + cell[tag + 4:]          # no name: one zero byte
+        text_column = column_chunk(80, 'Total')
+        linked = text_column.index(b'Order.total') + len(b'Order.total') + 5
+        column = (struct.pack('<I', 2) + framed('COL_Total') + text_column[:4] + framed('COL_Total') + b'\x33' * 8
+                  + text_column[4:linked + 4] + struct.pack('<I', 2) + cell[:-20]
+                  + text_column[linked + 4:linked + 24] + b'\0' * 50 + b'\xba\xab\xba\xab')
+        tab = control_chunk(0, 0, 400, 300)
+        tab = b'\x70\x02\0\0' + b'\0' * 4 + b'\x60\x1b\0\0' + tab[12:]
+        pane = lambda caption: b'\x5a\x02\0\0' + framed(caption) + b'\0' * 12
+        radio = control_chunk(5, 5, 100, 40)
+        radio = b'\x70\x02\0\0' + b'\0' * 4 + b'\x60\x1b\0\0' + radio[12:-60] + b'\0' * 30 \
+            + framed('Monthly') + b'\x0e\0\0\0' + b'\0' * 8 + framed('Yearly') + b'\x0e\0\0\0' + b'\0' * 30
+        window = struct.pack('<I', 0x25f) + framed('WIN_A') + b'\x77' * 8 + struct.pack('<4i', 0, 0, 640, 480) + b'\0' * 40
+        block = window + helper.element('TAB_Main', 16, tab, pane('First') + helper.element('TABLE_A', 9, table, column)
+                                        + pane('Second') + helper.element('RADIO_Period', 6, radio) + b'\0' * 58)
+        elements = module.binary_window(block)
+        shape = [(e['owner'], e['name'] or e['fields'].get('caption'), e.get('pane')) for e in elements]
+        self.assertEqual(shape, [('window', 'WIN_A', None), ('controls', 'TAB_Main', None), ('tabs', 'First', 1),
+                                 ('controls', 'TABLE_A', 1), ('columns', 'COL_Total', None), ('content', '', None),
+                                 ('tabs', 'Second', 2), ('controls', 'RADIO_Period', 2), ('options', 'Monthly', None),
+                                 ('options', 'Yearly', None)])
+        column = next(e for e in elements if e['owner'] == 'columns')
+        self.assertEqual((column['fields']['width'], column['fields']['caption'], column['fields']['linked_item'],
+                          column['fields']['h_align'], column['index'], column['parents']),
+                         (80, 'Total', 'Order.total', 'right', 1, ['WIN_A', 'TAB_Main', 'TABLE_A']))
+        content = next(e for e in elements if e['owner'] == 'content')
+        self.assertEqual((content['kind'], content['fields']['input_mask'], content['parents'][-1]), ('Edit control', '99', 'COL_Total'))
+
+    def test_code_blocks_with_their_control_and_event(self):
+        line = lambda text, author='': b'\x03' + framed(text) + framed(author) + b'\0' * 12
+        header = lambda event, lines, tag=0x14: (bytes([tag]) + struct.pack('<III', 99, len(lines), event) + b'\0' * 4
+                                                 + struct.pack('<I', 1) + b''.join(lines))
+        block = (b'\x01\0\0\0' + b'\0' * 20 + header(34, [line('Init()')]) + b'\0' * 30
+                 + struct.pack('<I', 4) + framed('BTN_Save') + b'\0' * 40
+                 + header(18, [line('IF Check() THEN', 'ANA'), line(''), line('\tSave()', 'ANA'), line('END')], tag=0x15)
+                 + b'\0' * 20 + header(458752, [line('PROCEDURE Check()'), line('RESULT True')]))
+        self.assertEqual(module.binary_code(block), [
+            {'control': None, 'event': 34, 'lines': ['Init()']},
+            {'control': 'BTN_Save', 'event': 18, 'lines': ['IF Check() THEN', '', '\tSave()', 'END']},
+            {'control': 'BTN_Save', 'event': 458752, 'lines': ['PROCEDURE Check()', 'RESULT True']}])
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder, 'project')
+            project.mkdir()
+            (project / 'WIN_A.wdw').write_bytes(b'PCS\0' + b'\x14\0\0\0' + module.pack(BinaryWindows().block()) + b'\0\0'
+                                                + module.pack(block))
+            index = module.decode_project(project, Path(folder, 'out'))
+            listing = Path(folder, 'out/code/WIN_A.wdw.wl').read_text(encoding='utf-8').splitlines()
+            data = json.loads(Path(folder, 'out/code/WIN_A.wdw.json').read_text(encoding='utf-8'))
+        self.assertEqual((index['coverage']['binary_elements_with_code'], index['coverage']['binary_code_blocks']), (1, 3))
+        self.assertEqual(listing[:2], ['// ---- WIN_A : event 34', 'Init()'])
+        self.assertEqual((data['blocks'][1]['control'], data['blocks'][1]['line'], listing[data['blocks'][1]['line'] - 1]),
+                         ('BTN_Save', 5, 'IF Check() THEN'))
+
+
 if __name__ == '__main__':
     unittest.main()
