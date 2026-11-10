@@ -78,6 +78,7 @@ At the end of the roadmap: `parity_check.py --require-complete` passes, golden s
 | [Scripts](scripts/README.md) | Inspector, parity gate, export comparator |
 | [Extraction strategy](docs/extraction-strategy.md) | Four levels of evidence, how each is proven, the audit of what is still unexplained and how to close it |
 | [What is inside the project files](docs/windev-file-formats.md) | `internal_properties`, binary queries and the other project files decoded: what each holds and how far the tools read it |
+| [HFSQL Classic format notes](docs/hfsql-classic-format.md) | Memo file layout and the plain parts of `.fic` files, for data without its analysis |
 | [Upstream audit](docs/upstream-audit.md) | Where every upstream section lives now, and what was replaced |
 
 **Templates** ([templates/](templates/)): `AGENTS.template.md`, `CLAUDE.template.md`, local instruction files, `kickoff-prompt.md` (autonomous run), `PromptInit.md`, `mapping-prompt.md`, `prompt-stage.md`, ADR, handoff, roadmap, parity matrix, window spec, golden scenario, compare config, agent-neutral skills (`review`, `map-element`, `review-mapping`), shared guard with a Git pre-commit hook, and a Claude Code adapter (settings).

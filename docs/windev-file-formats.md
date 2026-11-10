@@ -290,6 +290,8 @@ That turns "match the screenshot" into two smaller jobs: reproduce each skin sty
 
 ### Data files: `.fic` and `.mmo` without a driver
 
+No analysis file at all (data shipped alone)? See [HFSQL Classic files: what is plain, what is not](hfsql-classic-format.md) and the WDMap route in [08](../08-data-migration.md#no-analysis-wdd-recover-the-data-anyway).
+
 `scripts/hfsql_read.py <copy of the data folder> --analysis <project>.wda --out <new folder>` writes what the ODBC export writes (`data.sqlite`, one CSV per file, `manifest.json`). It needs neither WINDEV nor the HFSQL driver, and runs on any system.
 
 A `.fic` is a header, then fixed-length records up to the end of the file. The header's size is not read (it holds the file's own description, enciphered): its last 44 bytes are a counter, the number of records, a zero, the number of deleted records, 20 zero bytes and the first free record; one unused record slot follows, then the records. The reader computes the record length from the analysis and takes the only position where those counts equal the slots that follow.

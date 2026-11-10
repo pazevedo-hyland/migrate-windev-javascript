@@ -143,6 +143,24 @@ python3 scripts/data_profile.py <copy.sqlite or export_odbc folder> [--schema do
 
 Profiles a copy of the data against the schema draft: per column nulls, empty strings, distinct values, shapes, lengths against the analysis size, values not parsing as the WINDEV type, zeros, constant columns, spaces, line breaks, binary content (composite keys); duplicates per unique key; orphans per link (named after a table or its identifier, or `--ref`), `0` counted as no link. Counts and extremes only, no records. See [08 — Data](../08-data-migration.md#profile-the-data-before-deciding-the-schema).
 
+## `wdmap_xml_to_sqlite.py` — WDMap XML exports to one SQLite copy
+
+```sh
+python3 scripts/wdmap_xml_to_sqlite.py <xml dir> [--data-dir <copy of the data folder>] --out <new dir> [--no-memos]
+```
+
+For HFSQL Classic data without its analysis, exported table by table by [wdmap_export.ps1](windows/README.md#wdmap-export-without-the-analysis). Writes `data.sqlite` and `manifest.json` in a new directory, like `export_odbc.py`: one table per XML with `_row` (position in the export, not the physical order) and one TEXT column per item, values exactly as WDMap wrote them (dates `YYYYMMDDHHMMSSmmm`, booleans `0`/`1`, an empty element `''`, a missing item NULL); `__tables` with rows read, export status and the rows the exporter's log counted — it exits non-zero when they differ; with `--data-dir`, every `.fic` (tables without XML listed with 0 rows) and every memo in `__memos` (offset of its first block, kind, record number when present, text, or binary data as BLOB with extension, original file name and SHA-256). Reads Windows-1252 behind the `ISO-8859-1` header and tolerates control characters. `data_profile.py` runs on the copy as is (it skips `__*` tables); without an analysis, give it `--schema` a file holding `{"tables": []}` and name links with `--ref`. Standard library only.
+
+## `hfsql_mmo.py` — memo files read directly
+
+```sh
+python3 scripts/hfsql_mmo.py C:\data\*.mmo                      # memos per file, by kind; exit 1 on any error
+python3 scripts/hfsql_mmo.py C:\data\Table.mmo --out <new dir>  # binary memos as files + index.csv, index.json
+python3 scripts/hfsql_mmo.py C:\data\Table.mmo --offset 0x1d2   # the memo a .fic record points to
+```
+
+Reads HFSQL Classic `.mmo` files without WINDEV: text memos (Windows-1252 or UTF-16LE) and binary memos (PNG, JPEG, BMP, GIF, PDF, RIFF, ZIP… recognized by signature, others `bin`), with the record number the memo header carries and, for named binaries, the original file path. A `.fic` record points to a memo by the file offset of its first block; that pointer, not the export order, links binary memos to rows. Layout: [HFSQL Classic format notes](../docs/hfsql-classic-format.md). Written from the observed layout of WINDEV 28 files: on a real database, 233 memo files, about 514,000 text and 19,000 binary memos, no error. The files are only read. Standard library only.
+
 ## `prepare_evidence.py` — the whole evidence pipeline in one command
 
 ```sh

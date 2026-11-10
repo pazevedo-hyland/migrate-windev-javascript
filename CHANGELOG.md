@@ -73,6 +73,16 @@
 - More fields named and checked against a fresh dossier extract: Visible (802/802), window title (112/112), button image, background image and states (588/589), kinds from type codes, tab panes with their captions, and where a tab's panes start (two tab styles measured), which gives a window position to every control except those in table cells (1,126/1,126).
 - Measured end to end on the same project with the PDF removed: the layout of a 77-control window equals the dossier-validated one on every position, size, kind, anchor, tab order, state, Visible tick and button image. Still PDF-only: planes, other tick-mark properties, alignment, masks, input types, caption widths, table options. Decoded captions keep trailing spaces the PDF text had lost (`"Moldes: "`). The encoded predefined actions decode but their records are not named.
 
+## 2026-11-08 — HFSQL Classic data without the analysis
+
+### Added
+- 08 "No analysis (.wdd)?": find the `.wdd` first (ODBC needs it), otherwise export with WDMap, read memos from the `.mmo` files, profile the copy; WINDEV Express licence caveat.
+- `scripts/windows/wdmap_export.ps1`: WDMap on a hidden desktop driven by posted window messages (no real keystrokes), parallel workers, never overwrites, one log line per table. Validated manually on a real 689-table database: 257 tables with rows exported (about 910,700 rows), 431 empty detected, about 7 s per table; failures are retried by running it again.
+- `scripts/wdmap_xml_to_sqlite.py`: WDMap XML (Windows-1252 behind an ISO-8859-1 header, control characters) and memos into one SQLite copy, values as TEXT, `__tables` with row counts checked against the export log; `data_profile.py` runs on it as is.
+- `scripts/hfsql_mmo.py`: reads `.mmo` memo files (text and binary memos, record number, original file names), extracts binary memos with an index. 233 real memo files read with no error.
+- `docs/hfsql-classic-format.md`: the `.mmo` layout and the plain parts of the `.fic`; the table description stays scrambled and deliberately undecoded.
+- Synthetic tests for both Python scripts; ODBC troubleshooting note on `pyodbc` access violations (.NET `System.Data.Odbc` worked).
+
 ## 2026-11-07 — WLanguage traps from the BLV-TECH skill
 
 - WLanguage traps (09): `ExtractString` returns `EOT` for a missing occurrence; an unassigned `Date`/`Time`/`DateTime` holds the current moment; `DateTimeDifference` returns a string; `END:` runs on every exit (`finally`); `EndProgram()` skips closing events and window event 234 runs at opening. Observed on WINDEV 2025 by the free [BLV-TECH WLanguage skill](https://blv-tech.com/skill-claude/windev-wlangage/), restated here; its dictionary and tools are not included.
@@ -307,6 +317,11 @@ A fresh agent with no human mapped, built and scored the vehicle list and form o
 - Checkbox reader: column headers and text columns (Initial state, Button type, Plane, Nb. columns) no longer read as false flags; detail keys (Opacity) and code lines (IF …) no longer read as controls; the window name no longer read as a property; values centred or right-aligned under headers; tables continued on the next page; control names cut at 31 characters merged into the full name; layout measured from the page margin instead of fixed positions.
 - report-spec: text-source column, start/end-of-document bands, orientation "not in dossier", shared borders; map-element skill: confirm "no caller" with a search, read `keys` and `coverage`.
 
+## 2026-10-23 — HFSQL ODBC architecture troubleshooting
+
+### Added
+- Windows capture kit guidance for matching Python and HFSQL ODBC architectures, including an observed 32-bit workaround for an unexpected 64-bit connection exit.
+
 ## 2026-10-22 — small-scale mapping run with the dossier
 
 A dossier-aware mapping run on two windows and one report (with the first pilot's window as an A/B case) drove these changes.
@@ -363,11 +378,6 @@ A dossier-aware mapping run on two windows and one report (with the first pilot'
 - `templates/github-capture.yml`: run the capture kit on a GitHub-hosted Windows VM from a private repository with fake data.
 - Agent UI inspection: dev browser preview with the test fake backend, used in the pilot to click through the client list and form.
 - Human runs every slice before Done (agents often cannot open GUI windows); foundations include an opt-in dev seed; spec-derived golden data is labelled as such; commit regenerated bindings with the change; README validation status.
-
-## 2026-10-23 — HFSQL ODBC architecture troubleshooting
-
-### Added
-- Windows capture kit guidance for matching Python and HFSQL ODBC architectures, including an observed 32-bit workaround for an unexpected 64-bit connection exit.
 
 ## 2026-10-22 — unattended capture without WINDEV
 
