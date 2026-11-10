@@ -1279,6 +1279,93 @@ ANALYSIS_ITEM = re.compile(rb'(?s)([A-Za-z_\x80-\xff][\w$\x80-\xff]*)\x00\d{8}\x
                            rb'([^\x00]*)\x00')
 
 
+ANALYSIS_CHUNK = re.compile(rb'(?s)\x0c\x00\x00\x00([\x05\x06])\x00\x00\x00.\x00\x00\x00(....)')
+ANALYSIS_GUID = re.compile(rb'[0-9A-F]{32}\x00')
+ANALYSIS_PART = re.compile(rb'(?s)\x0c\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x0d\x00\x00\x00(....)\x00\x00\x00\x00')
+ANALYSIS_DEFAULT = re.compile(rb'(?s)\x0c\x00\x00\x00\x02\x00\x00\x00\x01\x00\x00\x00(....)\x00\x00\x00\x00')
+ANALYSIS_FILE = re.compile(rb'(?s)\x00(\d{8})\x00(....).{0,200}?[0-9A-F]{32}\x00[0-9A-F]{32}\x00.{16}(.)')
+ANALYSIS_KEYS = {0: None, 1: 'unique', 2: 'duplicates'}
+COMPOSITE_KEY, DECIMAL, STRING_ITEM = 28, 41, 2
+# How a text key compares, by the code stored with it. Measured on the index files (`.ndx`) of one project: under
+# code 5 a value is indexed in capitals without accents (604 of 604 values that tell), under code 7 also without
+# spaces and punctuation (63 of 63). Another code stays a number.
+KEY_OPTIONS = {5: 'ignores case and accents', 7: 'ignores case, accents, spaces and punctuation'}
+
+
+def analysis_schema(block):
+    """The data files of an analysis (`.wda`) with their items and keys, as the analysis editor holds them: what the
+    `.xdd` export gives (type code, size, key, default, parts of a composite key), and what it does not (caption,
+    digits of a decimal, who created the item and when, items deleted since).
+
+    The block is a tree of chunks, each `0c 00 00 00`, type, version, length (counted from the length itself):
+    type 6 a data file, type 5 an item. A data file is its number, a zero, its name and other names, the day it was
+    created, four bytes, two identifiers of 32 characters, its rectangle in the editor's graph and a
+    byte that is 0 once the file is deleted. An item is its number, a zero, its file's number, a zero, then name, day of
+    creation, six bytes (decimals and integer digits first, for a decimal), the two authors, eight zero bytes, two
+    times, the size, two bytes, the caption, 13 bytes (type code at 3, key at 6, composite at 8), an identifier of
+    32 characters, the position in the record and in the editor (two words: `position`, `order`) and a byte that
+    is 0 once the item is deleted. Strings are UTF-8, each ended by a zero byte."""
+    def string(offset):
+        end = block.index(b'\0', offset)
+        return block[offset:end].decode('utf-8', 'replace'), end + 1
+
+    tables, by_number, items = [], {}, {}
+    for match in ANALYSIS_CHUNK.finditer(block):
+        start, end = match.end(), match.start() + 12 + struct.unpack('<I', match[2])[0]
+        if end > len(block) or end - start < 40:
+            continue
+        try:
+            if match[1] == b'\x06':
+                number = struct.unpack('<I', block[start:start + 4])[0]
+                name, offset = string(start + 8)
+                by_number[number] = {'name': name, 'items': []}
+                described = ANALYSIS_FILE.match(block, offset - 1) or ANALYSIS_FILE.search(block, offset, min(end, offset + 400))
+                if described:
+                    by_number[number]['created'] = described[1].decode()
+                    if not described[3][0]:
+                        by_number[number]['deleted'] = True
+                tables.append(by_number[number])
+                continue
+            number, _, owner, _ = struct.unpack('<4I', block[start:start + 16])
+            name, offset = string(start + 16)
+            created, offset = string(offset)
+            digits = block[offset:offset + 2]
+            author, offset = string(offset + 6)
+            changed_by, offset = string(offset)
+            size = struct.unpack('<I', block[offset + 16:offset + 20])[0]
+            caption, offset = string(offset + 22)
+            guid = ANALYSIS_GUID.match(block, offset + 13)
+            if not guid or not re.fullmatch(r'\d{8}', created) or owner not in by_number:
+                continue
+            tail = block[guid.end():end]
+            item = {'name': name, 'caption': caption, 'type_code': block[offset + 3], 'size': size,
+                    'key': ANALYSIS_KEYS.get(block[offset + 6], block[offset + 6]), 'position': struct.unpack('<H', tail[:2])[0],
+                    'order': struct.unpack('<H', tail[2:4])[0],
+                    'created': created, 'created_by': author, 'changed_by': changed_by}
+            if item['type_code'] == DECIMAL:
+                item['decimals'], item['integer_digits'] = digits[0], digits[1]
+            if block[offset + 8]:
+                item['parts'] = [struct.unpack('<I', part[1])[0] for part in ANALYSIS_PART.finditer(tail)]
+            default = ANALYSIS_DEFAULT.search(tail)
+            if default:
+                stop = default.start() + 12 + struct.unpack('<I', default[1])[0]
+                item['default'] = tail[default.end():stop].split(b'\0')[0].decode('utf-8', 'replace')
+            if not tail[4]:
+                item['deleted'] = True
+            if item['key'] and item['type_code'] == STRING_ITEM:
+                item['key_options_code'] = tail[5]
+                if tail[5] in KEY_OPTIONS:
+                    item['key_compares'] = KEY_OPTIONS[tail[5]]
+            items[number] = item
+            by_number[owner]['items'].append(item)
+        except (ValueError, struct.error, IndexError):
+            continue
+    for item in items.values():
+        if 'parts' in item:
+            item['parts'] = [items[number]['name'] for number in item['parts'] if number in items]
+    return [table for table in tables if table['items']]
+
+
 def analysis_records(block, encoding='cp1252'):
     """The items and keys of an analysis (`.wda`) in file order: [name, caption]. Each record is the name, the day
     it was created, six bytes, who created and who last changed it, 22 bytes, then its caption. Records follow the
@@ -1852,13 +1939,21 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                         summary['file'] = target.relative_to(output).as_posix()
                     if summary.get('sql') and path.suffix.lower() == '.wdr':
                         queries.setdefault(path.stem, summary['sql'])
-                    if path.suffix.lower() == '.wda' and 'analysis' not in project:
+                    # The analysis the project is built from is in `<name>.ana/`; a copy elsewhere (next to the
+                    # executable, a backup) may be older and is only taken when there is no other.
+                    in_ana = path.parent.suffix.lower() == '.ana'
+                    if path.suffix.lower() == '.wda' and ('analysis' not in project or (in_ana and not project.get('_ana'))):
                         records = analysis_records(block, encoding)
                         if records:
-                            (output / 'analysis.json').write_text(
-                                json.dumps({'path': relative, 'records': records}, indent=1, ensure_ascii=False), encoding='utf-8')
+                            project['_ana'] = in_ana
+                            tables = analysis_schema(block)
+                            (output / 'analysis.json').write_text(json.dumps(
+                                {'path': relative, 'tables': tables, 'records': records}, indent=1, ensure_ascii=False), encoding='utf-8')
                             project['analysis'] = 'analysis.json'
                             coverage['analysis_item_records'] = len(records)
+                            kept = [table for table in tables if not table.get('deleted')]
+                            coverage['analysis_tables'] = len(kept)
+                            coverage['analysis_items'] = sum(not item.get('deleted') for table in kept for item in table['items'])
                     if path.suffix.lower() == '.wdp' and path.parent == source_root:
                         project.setdefault('_blocks', []).append(block)
                         lines = code_lines(summary['text'])
@@ -1953,6 +2048,7 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
         project['folders'] = folders
     windows = {Path(f['path']).stem.lower(): Path(f['path']).stem for f in files if f['path'].lower().endswith('.wdw')}
     mentions = collections.Counter()
+    project.pop('_ana', None)
     for block in project.pop('_blocks', []):
         mentions.update(first_windows(block, windows, encoding))
     if mentions:

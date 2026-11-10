@@ -120,13 +120,16 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
                  *(['--compiled', docs / 'mapping/event-codes.json'] if compile_dir else []),
                  '--out', docs / 'evidence-report.md', *(['--language', language] if language else []))
     paths.update(evidence_report=str(docs / 'evidence-report.md'), navigation=str(docs / 'navigation.md'))
-    if any(Path(paths['inspect'], 'schema').rglob('*.json')):
+    analysis_file = Path(paths['decoded'], 'analysis.json') if paths.get('decoded') else None
+    from_file = bool(analysis_file and analysis_file.exists() and json.loads(analysis_file.read_text(encoding='utf-8')).get('tables'))
+    if any(Path(paths['inspect'], 'schema').rglob('*.json')) or from_file:
+        # Without an .xdd, the draft takes the structure from the analysis file the decoder read.
         run('schema_draft.py', paths['inspect'], *(['--dossier', dossier] if dossier else []),
             *(['--decoded', paths['decoded']] if paths.get('decoded') else []),
             '--out', docs / 'schema/schema-draft.md')
         paths['schema_draft'] = str(docs / 'schema/schema-draft.md')
     else:
-        print('no .xdd in legacy/: no schema draft (export the analysis to legacy/schema/)')
+        print('no .xdd and no analysis file (.wda) read in legacy/: no schema draft (export the analysis to legacy/schema/)')
     paths['layouts'] = str(analysis / f'layouts-{stamp}')
     run('render_layouts.py', paths['inspect'], '--out', paths['layouts'], *(['--dossier', dossier] if dossier else []))
     paths['images'] = publish_images(dossier, paths['layouts'], docs / 'evidence/images')

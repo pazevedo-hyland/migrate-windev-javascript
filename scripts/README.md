@@ -59,7 +59,7 @@ Decodes every `internal_properties` value of the text sources (base64 → fixed-
 - A window's `opening_mode`, `title_bar`, `system_menu`, `minimize_icon`, `maximize_icon`, `independent_hfsql_context`, `background_image`; a list's or combo's `source`, `initial_content`, `browsed_file`, `browsed_item`, `displayed_item`, `stored_item`; a query's `parameter_names` in the evidence folder.
 - `predefined_actions` of a window in the evidence folder: control, the element its action names, the action's kind. `evidence_report.py` counts them as callers and proposes them for the encoded action (`Print RPT_X`).
 - A window in binary format with no text source of its name is read too (`"format": "binary"` in its properties file): its controls, columns, cells, combo lists, panes and options with type, parents and the same fields, and `code/<file>.wl` / `.json` with its code blocks, each with its control and event number (also for binary reports, classes and procedure sets). A binary report gives its page, bands, controls and linked items; a binary window its menu options and the predefined actions that name an element.
-- `analysis.json` — the item records of the analysis file (`.wda`): name and caption in file order, for `schema_draft.py --decoded` (captions are not in the `.xdd`).
+- `analysis.json` — the analysis file (`.wda`): `tables` lists every data file with its items (name, caption, type code, size, key, parts of a composite key, default, digits of a decimal, how a text key compares, position in the record, who created it and when, deleted or not). `schema_draft.py --decoded` takes captions and decimal digits from it, and the whole structure when there is no `.xdd`; `hfsql_read.py` takes the record layout from it.
 - `index.json` — `coverage` (values decoded and failed, controls with fields and captions, report controls with geometry, containers, blocks, queries, images) and, with `--dossier`, `calibration`: per field, how many decoded values equal the dossier's.
 
 On the real project: 3,993 of 3,993 values decoded; against its dossier, size 1,144/1,144, window position 1,126/1,126, Visible 802/802, tab order 1,034/1,034, state 1,081/1,081, button type 589/589, button images 588/589, anchor rates 1,130/1,130, captions 819/820 (with the accents the PDF lost), window titles 112/112, report geometry 493/493; 5 of 5 query SQL texts. With no PDF at all, the pipeline's layout of a 77-control window equals the dossier-validated one on geometry, kinds, anchors, tab order, state, Visible and button images. Offsets were measured on file format 25: on another version check `coverage` and `calibration` first. Format, limits and how the key was obtained: [docs/windev-file-formats.md](../docs/windev-file-formats.md).
@@ -100,6 +100,16 @@ python3 scripts/parity_check.py docs/parity/parity.csv [--seed docs/parity/parit
 ```
 
 Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). Confidence `assumed` marks rows built on a `proposed:` answer or a default ADR: they may be verified, are counted apart (`verified_on_assumptions`), and a row citing `proposed:` cannot claim `verified` confidence. With `--seed`, every seed row must still exist, and a matrix row the seed no longer has is matched to its new ID when one seed row has the same element, context and event ("rename it"). `--element` scopes every check to those units (a rule row belongs to the unit its context starts with); `--check-files` also resolves seed evidence under `legacy/`. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
+
+## `hfsql_read.py` — the data, without a driver
+
+```sh
+python3 scripts/hfsql_read.py <copy of the data folder> --analysis legacy/<project>/<project>.ana/<project>.wda --out legacy/data
+```
+
+Reads HFSQL Classic `.fic` and `.mmo` files directly and writes what `windows/export_odbc.py` writes: `data.sqlite`, one CSV per data file and `manifest.json` (rows, columns, deleted records skipped, files not read and why). No WINDEV, no HFSQL ODBC driver, any operating system. The record layout comes from the analysis file, so use the analysis the data was written with (the `.wda` next to the data when there is one).
+
+It refuses rather than guesses: a file whose records are not the length the analysis gives (not rebuilt after the analysis changed, compressed, or encrypted) is listed under `not_read`, and the command ends with an error naming it. Item types it was not measured on are written as `base64:` of the stored bytes. On the measured project every value of 29 files equals what the HFSQL ODBC driver returns (224,567 values); details in [windev-file-formats.md](../docs/windev-file-formats.md). Use the ODBC route for what it refuses, and to cross-check once when both are available.
 
 ## `data_profile.py` — what the legacy data really is
 
@@ -194,6 +204,8 @@ python3 scripts/schema_draft.py <inspect dir> --dossier <dossier dir> --out docs
 ```
 
 XDD structure (items, raw type codes, key type, size, default, null support) + dossier type names and captions → a type-code legend, a draft SQLite DDL that loads as is, and a list of per-column decisions for the database ADR. On the real project: 17 tables, 135 columns, 14 type codes named, 35 decisions (unsigned 8-byte codes, 8-byte reals, decimals, date/time formats); the XDD also exposed items the PDF parser missed, now fixed.
+
+With `--decoded <windev_decode.py output>` the draft also takes from the analysis file (`.wda`) each item's caption, the digits of each decimal (`Decimal (10+6 digits)`: the scale question is answered) and how each text key compares (ignoring case and accents, or also spaces and punctuation — a decision for the target's unique indexes and lookups). When the project has no `.xdd`, the whole structure comes from the analysis file: on the second project that draft equals the one made from the `.xdd` on every field (32 tables, 252 columns, 2,268 fields). Null support is not read there: the draft says so and leaves the columns nullable.
 
 ## `evidence_report.py` — is the evidence complete?
 

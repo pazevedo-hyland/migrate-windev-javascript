@@ -53,6 +53,39 @@ class SchemaDraftTests(unittest.TestCase):
             connection.execute('INSERT INTO Clientes (Codigo, Ativo) VALUES (2, 5)')  # Boolean check
         self.assertIn('unresolved', module.markdown(data))
 
+    def test_without_an_xdd_the_structure_comes_from_the_analysis_file(self):
+        item = lambda name, code, size, order, **more: {'name': name, 'caption': name.title(), 'type_code': code, 'size': size,
+                                                         'key': None, 'position': order, 'order': order, **more}
+        tables = [{'name': 'Clientes', 'items': [
+            item('Saldo', 41, 7, 2, decimals=6, integer_digits=10, default='0'), item('Codigo', 27, 8, 0, key='unique'),
+            item('Nome', 2, 100, 1, key='duplicates', key_options_code=7, key_compares='ignores case, accents, spaces and punctuation'),
+            item('Velho', 2, 5, 3, deleted=True),
+            item('CodigoNome', 28, 108, 4, key='unique', parts=['Codigo', 'Nome'])]},
+            {'name': 'Apagada', 'deleted': True, 'items': [item('x', 2, 5, 0)]}]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'inspect').mkdir()
+            (root / 'decoded').mkdir()
+            (root / 'decoded/analysis.json').write_text(json.dumps({'tables': tables, 'records': []}))
+            data = module.draft(root / 'inspect', None, root / 'decoded')
+        self.assertEqual((data['source'], [t['table'] for t in data['tables']]), ('analysis file', ['Clientes']))
+        columns = data['tables'][0]['columns']
+        self.assertEqual([(c['name'], c['code'], c['size'], c['key'], c['caption'], c['nullable']) for c in columns],
+                         [('Codigo', '27', '8', 'unique', 'Codigo', None), ('Nome', '2', '100', 'duplicates', 'Nome', None),
+                          ('Saldo', '41', '7', None, 'Saldo', None)])
+        self.assertEqual((columns[2]['scale'], columns[2]['integer_digits'], columns[2]['default']), (6, 10, '0'))
+        self.assertIn('10 integer digits and 6 decimals', columns[2]['decision'])
+        self.assertEqual(data['tables'][0]['keys'][-1], {'name': 'CodigoNome', 'columns': ['Codigo', 'Nome'], 'key': 'unique'})
+        text, sql = module.markdown(data), module.ddl(data)
+        self.assertIn('this project has no XDD', text)
+        self.assertIn('Decimal (10+6 digits)', text)
+        self.assertIn('Null support is not read from the analysis file (3 items)', text)
+        self.assertNotIn('NOT NULL', sql)
+        self.assertIn('1 of the 1 text keys ignore case and accents', text)
+        self.assertIn('- Clientes.Nome: duplicates on (Nome): ignores case, accents, spaces and punctuation', text)
+        self.assertIn('ON "Clientes" ("Nome");  -- HFSQL ignores case, accents, spaces and punctuation on this key', sql)
+        sqlite3.connect(':memory:').executescript(sql)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -34,6 +34,9 @@ Measured on one project (file format 25: `major_version : 25` in its sources; 11
 | Table column shown or hidden | 275 columns with a dossier value | 275 of 275 equal (57 hidden) |
 | Tick image of check boxes and radio buttons | | 43 of 43 equal |
 | Item captions of the analysis (`.wda`) | 308 records | 218 of 220 equal; 27 items get a caption the dossier lacked |
+| The analysis itself (`.wda`): data files, items, type code, size, key, default, parts of composite keys | 32 files, 252 items, 17 composite keys | against the `.xdd` export: 252 of 252 types, sizes and defaults, 269 of 269 keys, 17 of 17 composite keys. A schema draft made with no `.xdd` equals the one made with it on every field (2,268 of 2,268) |
+| Digits of decimal items, how text keys compare, deleted files and items | 12 decimals, 53 text keys | not in the `.xdd` nor the dossier: decimals against the stored data (16,826 values equal the ODBC driver's), key comparison against the index files (667 of 667 values that tell) |
+| The data (`.fic`, `.mmo`), read without a driver | 29 of 30 data files, 24,896 rows | against the HFSQL ODBC driver: 224,567 of 224,567 values equal. The 30th file is refused: it does not follow the analysis |
 | Report control geometry (mm) | 497 controls | 493 of 493 equal |
 | Report control kind (static, calculation, preset, image, shape) | | 493 of 493 equal |
 | Report type, data source, margins | 27 reports | 26 of 26 equal each |
@@ -235,10 +238,34 @@ Every binary project file starts with `PCS\0`: `.wdp` (project), `.WDR` (query),
 | `<project>.wdp` | project code (declarations, initialisation, constants) one record per line, each followed by its author (an empty line is a record without text); the project explorer's folders with their elements; configurations (`32-bit Windows executable`…); editor resources | `project/<project>.code.wl`: the start-up code when the `.wdp` is not in text format (220 lines here: constants, connection set-up from an INI file, schema update); `project.json` → `folders`: the authors' own grouping of windows (back office, front office, monitor…), a ready-made slice list |
 | `<project>.cpl/<user>/*.wdw`, `*.wde` | the same description and code as the text file, in binary | a second copy to compare with; the only copy when the project was never switched to text format |
 | `*.wdw.cache`, `*.wde.cache` | description, compiled state and a **thumbnail** of the window or report as WINDEV draws it (about 150 px) | `images/`: a picture of every window without the dossier — small, but enough to see a layout is right |
-| `<project>.ana/<project>.wda` | the whole analysis (files, items, keys, links, captions) | the `.xdd` beside it gives the structure as XML but **not the captions**: `analysis.json` lists each item's record (name, caption) in file order — the name, the day it was created, six bytes, who created and last changed it, 22 bytes, the caption — and `schema_draft.py` gives them to the tables |
+| `<project>.ana/<project>.wda` | the whole analysis (files, items, keys, captions) | `analysis.json` → `tables`: every data file with its items — the structure an `.xdd` gives, and what it does not give (below). `schema_draft.py` uses it for captions and decimal digits, and for the whole structure when the project has no `.xdd` |
 | `*.wdw.wcw`, `.wbw`, `.wrw` in `.cpl/<user>/00000000/` | compiled code with WINDEV's event labels (`Click BTN_Save`) | already used by `event_legend.py` |
 
-Blocks that are not SQL or images are listed with their strings (`text`); `--blocks` saves each one for closer reading. `<project>.wdd` has no such block in this project (it is stored another way): use the `.xdd`.
+Blocks that are not SQL or images are listed with their strings (`text`); `--blocks` saves each one for closer reading. `<project>.wdd` has no such block in this project (it is stored another way): use the `.wda`, or the `.xdd`.
+
+### The analysis file
+
+The packed block of `<project>.wda` is a tree of chunks: `0c 00 00 00`, a type, a version, a length counted from the length field. Type 6 is a data file, type 5 an item; strings are UTF-8, each ended by a zero byte.
+
+| In an item's chunk | Where | Checked |
+|---|---|---|
+| Number, the number of its data file | words 1 and 3 | every item falls in its file |
+| Name, day of creation, author, who changed it last | strings after the four words, six bytes between the day and the authors | — |
+| Digits of a decimal | first two of those six bytes: decimals, then integer digits (`06 0a` = 10 integer digits and 6 decimals) | the 7 stored bytes of such an item are the value × 10⁶: 16,826 values equal the ODBC driver's |
+| Size | word 16 bytes after the second author | 252 of 252 against the `.xdd` |
+| Caption | string 22 bytes after the second author | 218 of 220 against the dossier |
+| Type code, key (1 unique, 2 with duplicates), composite key | bytes 3, 6 and 8 after the caption | 252 of 252, 269 of 269, 17 of 17 |
+| Position in the record, position in the editor | two 16-bit words after a 32-character identifier | records read in the first order equal the driver's columns; the `.xdd` lists items in the second |
+| Deleted item | the next byte is 0 | the 29 items the `.xdd` no longer has |
+| How a text key compares | the byte after that: 5 or 7 | in the index files (`.ndx`), values under 5 are stored in capitals without accents (604 of 604 values that tell the difference), under 7 also without spaces and punctuation (63 of 63). No text key here compares byte for byte |
+| Parts of a composite key | one small chunk per part, holding the part's item number | 17 of 17 |
+| Default value | a type-2 chunk holding it as text | 252 of 252 |
+
+A data file's chunk gives its number, name, day of creation and, after two 32-character identifiers and its rectangle in the editor's graph, a byte that is 0 when the file was deleted from the analysis (2 here, both absent from the `.xdd`).
+
+**Not read**: null support (it never varies here), links between files (this analysis declares none), the four bytes after a file's creation day (close to the record length, but one more than the real one for 4 files), type codes beyond those met.
+
+**The other way an analysis is stored.** WINDEV 28's examples and tutorial keep a 1 KB stub in `.wda` and the description in HFSQL files beside it (`DEFFIC.FIC`, `DEFRUB.FIC`, `Liaison.FIC`…), an older form. Those are not read: for such a project the `.xdd` is the source.
 
 ### The skin: what a style name stands for
 
@@ -257,16 +284,41 @@ That turns "match the screenshot" into two smaller jobs: reproduce each skin sty
 | `<project>.WPF` | PCS, plain strings | a profiler run, when one was recorded: the events, procedures and WLanguage functions the application executed during it |
 | `<project>.env` | UTF-16 INI | editor settings; not needed |
 | `HstDuree.log` | UTF-16 CSV | who worked on the project and when; not needed |
-| `Exe/*.fic`, `.ndx`, `.mmo` | HFSQL | the data: export through the ODBC driver ([data export](../scripts/windows/README.md)), never by hand |
+| `Exe/*.fic`, `.ndx`, `.mmo` | HFSQL Classic | the data: `hfsql_read.py` reads a copy directly (below), or export through the ODBC driver ([data export](../scripts/windows/README.md)) |
 | `Exe/*.ini`, `CONFIG.INI` | text | deployment configuration the code reads |
 | `Templates/`, `*.sty`, `*.wdy` | images, PCS | the skin: images are usable as is (`skin_assets.py`); the `.sty` holds every style's fonts, colours, frames and images (`skin/<skin>.json`, above) |
+
+### Data files: `.fic` and `.mmo` without a driver
+
+`scripts/hfsql_read.py <copy of the data folder> --analysis <project>.wda --out <new folder>` writes what the ODBC export writes (`data.sqlite`, one CSV per file, `manifest.json`). It needs neither WINDEV nor the HFSQL driver, and runs on any system.
+
+A `.fic` is a header, then fixed-length records up to the end of the file. The header's size is not read (it holds the file's own description, enciphered): its last 44 bytes are a counter, the number of records, a zero, the number of deleted records, 20 zero bytes and the first free record; one unused record slot follows, then the records. The reader computes the record length from the analysis and takes the only position where those counts equal the slots that follow.
+
+| In a record | Stored as |
+|---|---|
+| State | one byte: `10` in use, `80` deleted (skipped, counted in the manifest) |
+| Then | two bytes, the time of the last change (seconds since 1970), a zero byte, one bit per item |
+| Text (type 2) | the size plus one byte, code page text ended by a zero |
+| Date (14), time (11) | text `yyyymmdd`, `hhmm`, plus the zero byte |
+| Date and time (34) | day, month (one byte each), year (two), milliseconds since midnight (four) |
+| Duration (35) | milliseconds, 8 bytes |
+| Decimal (41) | a signed integer of the item's size: the value × 10^decimals |
+| Integers (5, 9, 26, 27, 36), boolean (37) | little-endian, of the item's size; 5 is read signed |
+| Text memo (29) | the offset of a block in the `.mmo` file, or eight `ff` for none |
+| Composite keys, deleted items | not in the record |
+
+A memo block is two bytes, its size twice, a byte, the offset of the next block (eight `ff` in the last), two bytes and `size` bytes; the bytes of a memo's blocks put together are a 19-byte head ending in the content's length, then the content.
+
+Compared with the HFSQL 28 ODBC driver on the measured project's data: 29 files, 24,896 rows, 224,567 values, all equal (text, integers, booleans, dates, times, dates and times, durations, decimals, memos in one or several blocks).
+
+**Refused, with the reason in the manifest**: a file whose records are not the length the analysis gives. One of the 30 is like that: its records are 3 bytes longer than its two items, because the file was created under an earlier description of one item and never rebuilt; the driver copes by reading the file's own description, which this reader cannot. A compressed or encrypted file fails the same check. **Not measured**: reals, currency, signed integers of other sizes, Unicode text, binary memos, passwords, arrays — their bytes are written as `base64:` and the type codes listed in the manifest. The bit per item is read as "has a value" (every bit was set here; a cleared bit gives NULL, unverified).
 
 ### What a full survey of one project left unread
 
 Every key of the text sources and every file type of the project folder was listed and checked against what the tools read (243 windows and copies, 83 reports, 16 classes, 4 procedure sets).
 
 - **Text sources: nothing left.** Besides code, names, types and `internal_properties`, the only other keys are identifiers, a `description` per window, `original_name` (the template a window was created from) and `enabled : false` on event slots. No disabled slot holds code here (1,283 code blocks checked), so no code is silently dead; check that count on another project before trusting it there.
-- **`<project>.wdcoverage`** and the 153 per-element `*wdcoverage` files (code coverage of the last test runs) and **`<project>.wdd`** are PCS files whose body is neither packed nor under the cipher of `internal_properties`: not read. The coverage files are not a reused key stream either (67 share their first 28 bytes and nothing after), so they need the routine itself from WINDEV's libraries. The `.wdd` is the analysis, which the `.xdd` gives in XML. Coverage would say which lines the authors' tests ran; nothing else holds that.
+- **`<project>.wdcoverage`** and the 153 per-element `*wdcoverage` files (code coverage of the last test runs) and **`<project>.wdd`** are PCS files whose body is neither packed nor under the cipher of `internal_properties`: not read. The coverage files are not a reused key stream either (67 share their first 28 bytes and nothing after), so they need the routine itself from WINDEV's libraries. The `.wdd` is the compiled analysis; the `.wda` (above) and the `.xdd` give the same description. Coverage would say which lines the authors' tests ran; nothing else holds that.
 - **`<project>.waudit`**, `.wdap`, `.mdf`, `.ref`, `.wtp`, `.wlr`: editor state and build leftovers, a few hundred bytes each.
 - **Inside the decoded chunks**: a table's own options, the tick-mark properties not named above, a report control's alignment and borders, where a file-bound list says "loaded in memory". An exact search over every offset found nothing more for them: in this project they either never vary or always vary together (a table's magnifier mode and its three margins change as one), so no position can be told from another. They need a project that varies them, or one property changed in WINDEV on a copy of a window.
 

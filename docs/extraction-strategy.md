@@ -46,6 +46,8 @@ The whole pipeline was run on the measured project with its PDF taken away, and 
 | Output | Without the PDF |
 |---|---|
 | Schema draft | WINDEV type and SQL type equal for 252 of 252 columns (type names from the built-in code table); captions from the analysis file equal for 218 of 220 and present for 27 the dossier lacked |
+| Schema draft with no `.xdd` either | structure read from the analysis file (`.wda`): every table, column, type, size, key, composite key, default and caption equal to the draft made from the `.xdd` (2,268 of 2,268 fields); adds the digits of each decimal and how each text key compares; null support is not read |
+| Data with no ODBC driver | `hfsql_read.py` on a copy of the `.fic`/`.mmo` files: 29 of 30 files, 24,896 rows, every value equal to the driver's; the 30th is refused (it does not follow the analysis) |
 | Screen layouts | identical for position, size, kind, plane, anchors and rates, tab order, state, Visible, caption, style, button type, images, image states and stretching, edit input type, size, mask, alignment and caption width, date options, column width, title, alignment, place, linked item, shown or hidden and four more options |
 | Evidence report | same callers, the same proposals for predefined actions and the same five runtime questions |
 | Code, events, navigation, code map, queries with SQL | unchanged: they never came from the PDF |

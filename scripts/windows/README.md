@@ -1,6 +1,6 @@
 # Windows data export
 
-Exports every table of an HFSQL database through PC SOFT's HFSQL ODBC driver: a lossless SQLite copy, CSV files and a manifest. If `export_odbc.py` crashes while connecting (HFSQL 28), use [the ANSI exporter](#when-export_odbcpy-crashes-the-ansi-exporter-hfsql-28). Static UI evidence (captions, tab order, masks, window images, query SQL) comes from WINDEV's project documentation instead — see [dossier_extract.py](../README.md#dossier_extractpy--windevs-project-documentation-as-data).
+Exports every table of an HFSQL database through PC SOFT's HFSQL ODBC driver: a lossless SQLite copy, CSV files and a manifest. If `export_odbc.py` crashes while connecting (HFSQL 28), use [the ANSI exporter](#when-export_odbcpy-crashes-the-ansi-exporter-hfsql-28). No driver at hand, or not on Windows: [`hfsql_read.py`](../README.md#hfsql_readpy--the-data-without-a-driver) reads the `.fic`/`.mmo` files directly and writes the same output. Static UI evidence (captions, tab order, masks, window images, query SQL) comes from WINDEV's project documentation instead — see [dossier_extract.py](../README.md#dossier_extractpy--windevs-project-documentation-as-data).
 
 ## Steps
 
