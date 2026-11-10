@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-10 — a worked example of the porting patterns
+
+- `templates/porting.example.md`: the `docs/porting.md` the second migration ended with, made generic — where each kind of code goes, one line per WLanguage construct (data access, windows and dialogs, values, printing and files, evidence gaps) and the tests a slice adds. The mapping prompt (step 1b) points to it as a checklist.
+
 ## 2026-11-10 — from extracted to used: readiness, briefs and a check of the toolkit against itself
 
 - **`scripts/readiness_report.py`**, run by `prepare_evidence.py`: every unit's open points — what an implementer would have to guess, each with what closes it — ranked and sized, after a summary of how far the decoder applies to the project. Every window's layout is passed through the screen generator in memory. On the second project: 149 units, 79 with no open point, 103 open points, in 19 seconds and no agent time.
