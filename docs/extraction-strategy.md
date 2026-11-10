@@ -74,7 +74,7 @@ Record each answer where the next project finds it: a decoder field with its cal
 - **Behavior** is in the code and stays the mapper's and the tests' work: the decoder adds no rule, only what the designer set.
 - **The skin as a whole** is not rebuilt for you: `skin/<skin>.json` lists each style's fonts, colours, frames and images, and each control says what it changed from its style, but which font or frame draws which part of a control is by order, not named.
 - **Colours other than text**: frames (border type, background and border colours) are read by their shape and listed per control; no second source confirmed them, so they are a lead for the eye, not a fact.
-- **Predefined actions** of code-less event slots decode to small identical records; their meaning still comes from the proposals of `evidence_report.py`.
+- **Predefined actions**: an action that names an element (a Print button and its report) is read from the source and becomes a caller in the evidence report and the proposal of its encoded action. Actions that name nothing (close, validate) leave a record with no readable meaning: those still rest on the proposals of `evidence_report.py`.
 - **Controls inside table cells** have no window position.
 - **Other WINDEV versions**: every offset here was measured on one file format. `coverage`, `calibration` and the audit tell at once whether they hold; a partial dossier re-learns what moved.
 - **Multilingual projects** were not measured: a caption is read as one string.

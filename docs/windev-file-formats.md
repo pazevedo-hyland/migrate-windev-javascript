@@ -30,6 +30,7 @@ Measured on one project (file format 25: `major_version : 25` in its sources; 11
 | Window: opening mode, title bar, system menu, minimize and maximize icons, own HFSQL context, background image | 112 windows | opening mode 112 of 112 equal; the five options 498 of 498 (the PDF extract mixes the names of neighbouring tick marks for some windows: those are not compared) |
 | Skin styles (`Templates/<skin>/<skin>.sty`) | 1,203 styles in 3 skins | not in the dossier. 1,015 controls name a style found there; 291 of them changed a font, a colour or a frame from it |
 | Query parameters | 13 of 24 queries have some | names read from the SQL (`{pOrder}`); the dossier extract had none |
+| Predefined actions that name an element | 9 Print buttons, each naming its report | not in the dossier; each named report is one no code calls and that the window's compiled code mentions |
 | Report control geometry (mm) | 497 controls | 493 of 493 equal |
 | Report control kind (static, calculation, preset, image, shape) | | 493 of 493 equal |
 | Report type, data source, margins | 27 reports | 26 of 26 equal each |
@@ -131,6 +132,7 @@ Found in chunk `0` by its signature: a version, four integers, eight zero bytes 
 | | title, background image | two strings, 316 bytes after that face | |
 | | title bar, system menu, minimize icon, maximize icon | 4 × u32, 5 bytes after the background image | maximize was never off where the dossier names it clearly: its place is the one left |
 | | own HFSQL context | u32, 46 bytes after the background image | |
+| Event slot (`p_codes`, chunk `9`) | predefined action | five short strings every slot has (`*`, `*`, `*`, `23`, `0`); an action that needs an element adds a record: a kind (u32, 16 bytes before the name) and the element's name | kind 1100 with a report name on the RAD's Print buttons. A slot without that record has no element to act on; what the 85 plain records differ in (two values, by button role) is not named |
 | Report | type, data source | u32 at + 9 and + 13 after the report's name | 2 table, 4 label, 5 free; 0 none, 1 embedded query, 6 the dossier's "text file" |
 | | page | eight doubles in a row: height, width, margins top, bottom, left, right (mm) | found by shape. Reports created by the RAD keep a Letter size there while the dossier prints A4: the band widths follow the stored size |
 | Report band, report control | type | one byte after the four geometry doubles | bands: 1 start of document, 2 page header, 4 body, 6 break header, 7 break footer, 11 page footer, 12 end of document. Controls: 16 calculation, 17 shape, 18 image, 20 preset, 39 static. A code outside these lists is kept as `type_code` |
@@ -213,7 +215,7 @@ Every key of the text sources and every file type of the project folder was list
 - **Text sources: nothing left.** Besides code, names, types and `internal_properties`, the only other keys are identifiers, a `description` per window, `original_name` (the template a window was created from) and `enabled : false` on event slots. No disabled slot holds code here (1,283 code blocks checked), so no code is silently dead; check that count on another project before trusting it there.
 - **`<project>.wdcoverage`** (code coverage of the last test runs) and **`<project>.wdd`** are PCS files whose body is neither packed nor under the cipher of `internal_properties`: not read. The `.wdd` is the analysis, which the `.xdd` gives in XML. Coverage would say which lines the authors' tests ran; nothing else holds that.
 - **`<project>.waudit`**, `.wdap`, `.mdf`, `.ref`, `.wtp`, `.wlr`: editor state and build leftovers, a few hundred bytes each.
-- **Inside the decoded chunks**: a table's own options, the tick-mark properties not named above, a report control's alignment and borders, where a file-bound list says "loaded in memory", and the records of predefined button actions. The audit lists each control they touch.
+- **Inside the decoded chunks**: a table's own options, the tick-mark properties not named above, a report control's alignment and borders, where a file-bound list says "loaded in memory". An exact search over every offset found nothing more for them: in this project they either never vary or always vary together (a table's magnifier mode and its three margins change as one), so no position can be told from another. They need a project that varies them, or one property changed in WINDEV on a copy of a window.
 
 ## 4. What stays outside the files
 

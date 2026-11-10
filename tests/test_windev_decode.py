@@ -538,5 +538,24 @@ class WindowsAndSkins(unittest.TestCase):
         self.assertEqual(sorted(skin['styles']), ['LIB_Simple', 'LIB_Title'])
 
 
+class PredefinedActions(unittest.TestCase):
+    def test_an_action_naming_an_element_reaches_the_evidence(self):
+        usual = b'\x01\0\0\0' + b'\0' * 40 + framed('*') * 3 + framed('23') + framed('0') + b'\0' * 60
+        named = usual + struct.pack('<4I', 1100, 61, 1, 31) + framed('RPT_List_Items') + b'\0' * 20
+        self.assertIsNone(module.action_fields(usual))
+        self.assertEqual(module.action_fields(named), {'action_code': 1100, 'action_target': 'RPT_List_Items'})
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder, 'project')
+            project.mkdir()
+            (project / 'WIN_A.wdw').write_text('\n'.join([
+                'window :', ' name : WIN_A', ' controls :', '  -', '    name : BTN_Print',
+                '    internal_properties : ' + value_of(control_chunk(1, 2, 80, 24)), '    type : 4',
+                '    code_elements :', '     type_code : 4', '     p_codes :', '      -',
+                '        internal_properties : ' + value_of(named, 9, 65535), '        type : 18']) + '\n', encoding='utf-8')
+            module.decode_project(project, Path(folder, 'out'), evidence=True)
+            window = json.loads(Path(folder, 'out/evidence/windev-window/WIN_A.json').read_text(encoding='utf-8'))
+        self.assertEqual(window['predefined_actions'], [{'control': 'BTN_Print', 'target': 'RPT_List_Items', 'code': 1100}])
+
+
 if __name__ == '__main__':
     unittest.main()

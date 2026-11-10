@@ -479,6 +479,18 @@ def list_record(data, end, encoding='cp1252'):
     return fields
 
 
+def action_fields(data, encoding='cp1252'):
+    """A predefined action attached to an event slot (chunk 9 of a `p_codes` entry). Every slot has the same five
+    short strings; an action that needs an element of the project adds a record after them: a kind (u32, 16 bytes
+    before the name) and the element's name. Seen here: kind 1100 with a report's name on the Print buttons the
+    RAD generated. Returns None for a slot with no such record."""
+    found = [m for m in FRAMED.finditer(data)]
+    if len(found) < 6 or not found[5][2] or found[5].start() < 16:
+        return None
+    return {'action_code': struct.unpack_from('<I', data, found[5].start() - 16)[0],
+            'action_target': text(found[5][2], encoding)}
+
+
 def report_page(data, encoding='cp1252'):
     """A report's own chunk 15: its name, type and data source, then the page as doubles in millimetres (height,
     width, margins top, bottom, left, right). The doubles are found by their shape: eight plausible lengths in a
@@ -632,6 +644,8 @@ def describe(owner, kind, chunks, encoding='cp1252', keep_end=False):
             title = texts[1] if len(texts) > 1 else b''
             fields['title'] = '' if FILE_PATH.search(title) else text(title, encoding)
             fields.update(window_record(by_id[0], encoding) or {})     # by position, when the record is where expected
+    elif owner == 'p_codes' and 9 in by_id:
+        fields = action_fields(by_id[9], encoding)
     elif owner == 'columns' and 0 in by_id:
         fields = column_fields(by_id[0], encoding)
         if fields and not keep_end:
@@ -1301,9 +1315,14 @@ def write_evidence(sources, queries, target, dossier=None):
                 and len(decoded['parents']) >= 2 and decoded['parents'][1].upper().startswith('MENU')]
         if menu:
             element['menu'] = menu
-        bands = []
+        bands, actions = [], []
         for decoded in item['elements']:
             fields = decoded.get('fields')
+            if fields and decoded['owner'] == 'p_codes' and decoded['parents']:
+                # A predefined action that names an element: who opens or prints it without a line of code.
+                actions.append({'control': decoded['parents'][-1], 'target': fields['action_target'],
+                                'code': fields['action_code']})
+                continue
             if fields and decoded['owner'] in ('content', 'dropdown') and decoded['parents'] \
                     and known.get(decoded['parents'][-1].lower()):
                 # A column's cell: its input type, size and mask belong to the column's entry.
@@ -1349,6 +1368,8 @@ def write_evidence(sources, queries, target, dossier=None):
             counts['controls'] += 1
         if bands:
             element['bands'] = bands
+        if actions:
+            element['predefined_actions'] = actions
         path.write_text(json.dumps(element, indent=1, ensure_ascii=False), encoding='utf-8')
     for name, sql in sorted(queries.items()):
         folder = target / 'query'
