@@ -705,6 +705,24 @@ class InspectorReadsBinaryElements(unittest.TestCase):
 
 
 class BinaryReportsMenusAndActions(unittest.TestCase):
+    def test_first_window_is_the_one_named_outside_the_element_list(self):
+        entry = lambda name, kind=2: framed(name) + struct.pack('<5I', kind, 1, 1, 0, 40)
+        block = (framed('32-bit Windows executable') + entry('WIN_Main') + entry('WIN_Login') + entry('RPT_A', 3)
+                 + b'\0' * 12 + struct.pack('<I', 1) + framed('WIN_Login') + b'\0' * 16 + struct.pack('<I', 1) + framed('Arial'))
+        windows = {'win_main': 'WIN_Main', 'win_login': 'WIN_Login'}
+        self.assertEqual(module.first_windows(block, windows), {'WIN_Login': 1})
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder, 'project')
+            project.mkdir()
+            (project / 'App.wdp').write_bytes(b'PCS\0' + b'\x14\0\0\0' + module.pack(block))
+            for name in ('WIN_Main', 'WIN_Login'):
+                (project / f'{name}.wdw').write_text(f'window :\n name : {name}\n internal_properties : '
+                                                     + value_of(window_chunk(300, 200)) + '\n', encoding='utf-8')
+            module.decode_project(project, Path(folder, 'out'), evidence=True)
+            saved = json.loads(Path(folder, 'out/project/project.json').read_text(encoding='utf-8'))
+            line = json.loads(Path(folder, 'out/evidence/project/_decoded.json').read_text(encoding='utf-8'))
+        self.assertEqual((saved['first_window'], line['lines']), ('WIN_Login', ['First window WIN_Login']))
+
     def test_binary_report_bands_controls_page_and_linked_items(self):
         page = (b'\x59\0' + framed('RPT_A') + b'\x22' * 8 + b'\0' + struct.pack('<4I', 2, 1, 0, 1) + b'\0' * 7
                 + framed('') + framed('') + framed('') + b'\0' * 21 + struct.pack('<10d', 297, 210, 10, 10, 20, 20, 1, 1, 1, 2) + b'\0' * 30)

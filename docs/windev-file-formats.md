@@ -251,6 +251,7 @@ That turns "match the screenshot" into two smaller jobs: reproduce each skin sty
 | File | Format | What it gives a migration |
 |---|---|---|
 | `<project>.xdd` | XML | the schema (already read by `inspect_windev.py`) |
+| `<project>.wdp` (first window) | in the block that lists the elements, a window named again outside the list, after a word 1 | `project.json` → `first_window`, and a `First window …` line in the evidence folder for `evidence_report.py`: equal to the dossier on the measured project; found in 3 of the 10 WINDEV example projects tried, not found in the other 7 (the rule is narrow on purpose: no name is better than a wrong one) |
 | `<project>.wdu` | text, one path per line: an element, then the files it uses | `project.json` → `used_files`: images, skin files and external files per element → the asset list |
 | `<project>.REP` | text | each data file's name and physical location |
 | `<project>.WPF` | PCS, plain strings | a profiler run, when one was recorded: the events, procedures and WLanguage functions the application executed during it |

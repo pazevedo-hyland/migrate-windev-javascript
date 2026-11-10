@@ -1286,6 +1286,22 @@ def analysis_records(block, encoding='cp1252'):
     return [[text(m[1], encoding), text(m[2], encoding)] for m in ANALYSIS_ITEM.finditer(block)]
 
 
+ELEMENT_ENTRY = re.compile(rb'(?s).\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00')
+
+
+def first_windows(block, windows, encoding='cp1252'):
+    """Windows a project file names outside its list of elements, after a word 1: where each configuration keeps
+    its first window. Returns {window name: mentions}. (In the list of elements a name is followed by its type and
+    two words 1.)"""
+    found = collections.Counter()
+    for match in FRAMED.finditer(block):
+        name = text(match[2], encoding)
+        if name.lower() in windows and block[match.start() - 4:match.start()] == b'\x01\0\0\0' \
+                and not ELEMENT_ENTRY.match(block, match.end()):
+            found[windows[name.lower()]] += 1
+    return dict(found)
+
+
 def read_text(data):
     if data.startswith((b'\xff\xfe', b'\xfe\xff')):
         return data.decode('utf-16')
@@ -1633,7 +1649,7 @@ def merge_control(entry, element, language):
     return written
 
 
-def write_evidence(sources, queries, target, dossier=None):
+def write_evidence(sources, queries, target, dossier=None, project=None):
     """A folder in the shape `dossier_extract.py` writes, so every tool that reads a dossier reads the decoded values:
     a copy of the dossier extract when there is one (the fallback for what the decoder does not name), with decoded
     captions, geometry, tab order, state, button type, anchors and SQL written over it, and entries for the windows,
@@ -1733,6 +1749,11 @@ def write_evidence(sources, queries, target, dossier=None):
             query['parameter_names'] = names
         path.write_text(json.dumps(query, indent=1, ensure_ascii=False), encoding='utf-8')
         counts['queries'] += 1
+    if (project or {}).get('first_window') and not any((target / 'project').glob('*.json')):
+        # What the dossier's project section says in one line, for the tools that read it there.
+        (target / 'project').mkdir(parents=True, exist_ok=True)
+        (target / 'project' / '_decoded.json').write_text(json.dumps(
+            {'lines': [f"First window {project['first_window']}"], 'decoded': ['first_window']}, indent=1), encoding='utf-8')
     index_path = target / 'index.json'
     index = json.loads(index_path.read_text(encoding='utf-8')) if index_path.exists() else {'images': False}
     index['decoded'] = {**counts, 'dossier': bool(dossier)}
@@ -1839,6 +1860,7 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                             project['analysis'] = 'analysis.json'
                             coverage['analysis_item_records'] = len(records)
                     if path.suffix.lower() == '.wdp' and path.parent == source_root:
+                        project.setdefault('_blocks', []).append(block)
                         lines = code_lines(summary['text'])
                         if lines and 'code' not in project:
                             target = output / 'project' / f'{path.stem}.code.wl'
@@ -1929,6 +1951,14 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
     folders = project_folders(project.pop('explorer_texts', None), elements)
     if folders:
         project['folders'] = folders
+    windows = {Path(f['path']).stem.lower(): Path(f['path']).stem for f in files if f['path'].lower().endswith('.wdw')}
+    mentions = collections.Counter()
+    for block in project.pop('_blocks', []):
+        mentions.update(first_windows(block, windows, encoding))
+    if mentions:
+        # One name is the project's first window; several are the first windows of its configurations.
+        project['first_window'] = mentions.most_common(1)[0][0]
+        project['first_windows'] = dict(mentions)
     for path in sorted(source_root.glob('*.wdu')):
         project['used_files'] = used_files(path.read_bytes().decode(encoding, 'replace'), elements)
     if project:
@@ -1955,7 +1985,7 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
     if dossier:
         index['calibration'] = calibrate(by_name, dossier)
     if evidence:
-        index['evidence'] = write_evidence(sources, queries, output / 'evidence', dossier)
+        index['evidence'] = write_evidence(sources, queries, output / 'evidence', dossier, project)
     (output / 'index.json').write_text(json.dumps(index, indent=1, ensure_ascii=False), encoding='utf-8')
     return index
 
