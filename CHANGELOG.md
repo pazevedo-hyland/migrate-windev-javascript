@@ -73,6 +73,11 @@
 - More fields named and checked against a fresh dossier extract: Visible (802/802), window title (112/112), button image, background image and states (588/589), kinds from type codes, tab panes with their captions, and where a tab's panes start (two tab styles measured), which gives a window position to every control except those in table cells (1,126/1,126).
 - Measured end to end on the same project with the PDF removed: the layout of a 77-control window equals the dossier-validated one on every position, size, kind, anchor, tab order, state, Visible tick and button image. Still PDF-only: planes, other tick-mark properties, alignment, masks, input types, caption widths, table options. Decoded captions keep trailing spaces the PDF text had lost (`"Moldes: "`). The encoded predefined actions decode but their records are not named.
 
+## 2026-11-07 — WLanguage traps from the BLV-TECH skill
+
+- WLanguage traps (09): `ExtractString` returns `EOT` for a missing occurrence; an unassigned `Date`/`Time`/`DateTime` holds the current moment; `DateTimeDifference` returns a string; `END:` runs on every exit (`finally`); `EndProgram()` skips closing events and window event 234 runs at opening. Observed on WINDEV 2025 by the free [BLV-TECH WLanguage skill](https://blv-tech.com/skill-claude/windev-wlangage/), restated here; its dictionary and tools are not included.
+- Event codes: look a code up in a published table before labelling it from context. A WINDEV 28 project had labelled scheduler (130–139) and dashboard-widget (194–198) codes as local procedures or end of initialization.
+
 ## 2026-11-06 — lessons from a second migration (production management, WINDEV 28 / HFSQL Classic)
 
 - HFSQL ANSI ODBC export: `scripts/windows/hfsql-export.ps1` + `HfSqlOdbcAnsi.cs` read HFSQL Classic files through the driver's ANSI entry points in 32-bit Windows PowerShell (hash-checked copy, temporary per-user DSN always deleted, rows = `COUNT(*)` before and after per table) when `export_odbc.py` crashes on HFSQL 28 (exit 139 / access violation); `hfsql_jsonl.py` converts its JSONL into `export_odbc.py`'s `data.sqlite` + CSV + `manifest.json` through the same `export()` (now with an optional `info`). Real run: 30 tables / 24,915 rows, counts agree. Method first used in the gestao-oficinas migration.
