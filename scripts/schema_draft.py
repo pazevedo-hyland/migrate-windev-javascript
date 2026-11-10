@@ -242,10 +242,11 @@ def markdown(data):
             if c['decision'] or not c['sqlite']:
                 lines.append(f"| {table['table']} | {c['name']} | {c['caption'] or ''} | {c['type'] or 'code ' + str(c['code'])} | "
                              f"{c['key'] or ''} | {c['decision'] or 'unresolved type: name it from WINDEV documentation'} |")
-    lines += ['', '## Keys', '', 'Unique keys become UNIQUE indexes; keys with duplicates become plain indexes (HFSQL '
-              'searches them with HReadSeek*: keep them for performance and ordering). Key options such as case or accent '
-              'insensitivity are not in this draft: check them in WINDEV (08, "Key options").', '']
     text_keys = [key for table in data['tables'] for key in table['keys'] if 'key_options_code' in key]
+    lines += ['', '## Keys', '', 'Unique keys become UNIQUE indexes; keys with duplicates become plain indexes (HFSQL '
+              'searches them with HReadSeek*: keep them for performance and ordering).'
+              + ('' if text_keys else ' Key options such as case or accent insensitivity are not in this draft: check them '
+                 'in WINDEV (08, "Key options"), or pass --decoded to read them from the analysis file.'), '']
     if text_keys:
         folded = sum('key_compares' in key for key in text_keys)
         lines += [f'**Text keys do not compare byte for byte**: {folded} of the {len(text_keys)} text keys ignore case and accents '

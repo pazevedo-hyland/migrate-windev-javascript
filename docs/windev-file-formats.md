@@ -35,7 +35,7 @@ Measured on one project (file format 25: `major_version : 25` in its sources; 11
 | Tick image of check boxes and radio buttons | | 43 of 43 equal |
 | Item captions of the analysis (`.wda`) | 308 records | 218 of 220 equal; 27 items get a caption the dossier lacked |
 | The analysis itself (`.wda`): data files, items, type code, size, key, default, parts of composite keys | 32 files, 252 items, 17 composite keys | against the `.xdd` export: 252 of 252 types, sizes and defaults, 269 of 269 keys, 17 of 17 composite keys. A schema draft made with no `.xdd` equals the one made with it on every field (2,268 of 2,268) |
-| Digits of decimal items, how text keys compare, deleted files and items | 12 decimals, 53 text keys | not in the `.xdd` nor the dossier: decimals against the stored data (16,826 values equal the ODBC driver's), key comparison against the index files (667 of 667 values that tell) |
+| Digits of decimal items, how text keys compare, deleted files and items | 12 decimals, 51 text keys | not in the `.xdd` nor the dossier: decimals against the stored data (16,826 values equal the ODBC driver's), key comparison against the index files (667 of 667 values that tell) |
 | The data (`.fic`, `.mmo`), read without a driver | 29 of 30 data files, 24,896 rows | against the HFSQL ODBC driver: 224,567 of 224,567 values equal. The 30th file is refused: it does not follow the analysis |
 | Report control geometry (mm) | 497 controls | 493 of 493 equal |
 | Report control kind (static, calculation, preset, image, shape) | | 493 of 493 equal |
