@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-10 — from extracted to used: readiness, briefs and a check of the toolkit against itself
+
+- **`scripts/readiness_report.py`**, run by `prepare_evidence.py`: every unit's open points — what an implementer would have to guess, each with what closes it — ranked and sized, after a summary of how far the decoder applies to the project. Every window's layout is passed through the screen generator in memory. On the second project: 149 units, 79 with no open point, 103 open points, in 19 seconds and no agent time.
+- **One page per unit** (`docs/briefs/<unit>.md`): what it is, who opens it, the data files it touches, its events with line ranges, its open points, where to look next. The 149 briefs of the second project are 210 KB together; the evidence pack of one large window is 360 KB. `AGENTS.md`, the kickoff prompt and the map-element skill read the brief first.
+- **The readiness run found a defect no test had**: columns of different tables sharing a name (`COL_nome` in three tables of one window) kept one evidence entry between them, so 34 columns had no caption or input type in their layout. The decoder now gives each its own entry under its full path.
+- **`scripts/field_use.py`**: every field the pipeline writes, and who reads it. 176 fields, 21 with no reader in code. `docs/agent-inputs.md` lists what is extracted and applied by no tool, as the adapter's job.
+- The server template's `tools/pg_schema.py` carries what the schema draft read from the analysis file: decimal digits and how text keys compare go to the catalogue and to comments on columns and indexes, with a warning that the indexes it writes compare exactly.
+- `prepare_evidence.py --data <folder>` reads the data files without a driver and profiles them.
+- `screen_layout.py` no longer tells every reader that fonts and colours are "not extracted" when the layout holds them.
+- New: `docs/agent-inputs.md` (every output, who writes and reads it, and the reading order for one unit) and `docs/new-windev-version.md` (the ten-minute procedure for a project of another WINDEV version).
+
 ## 2026-11-10 — the analysis and the data, read from their own files
 
 - **`scripts/hfsql_read.py`: HFSQL Classic data without a driver.** Reads `.fic` and `.mmo` files directly, with the record layout from the analysis file, and writes what `export_odbc.py` writes (`data.sqlite`, CSV, `manifest.json`). Against the HFSQL 28 ODBC driver on the second project's data: 29 of 30 files, 24,896 rows, 224,567 values, all equal — text, integers, booleans, dates, times, dates and times, durations, decimals, memos in one or several blocks; deleted records skipped. The 30th file is refused with its reason (its records do not follow the analysis; the message gives the record length the file itself fits). `--fit-integers` reads it — one integer item is still stored in 4 bytes where the analysis now says 1, the only widening that explains the length — and then all 30 files, 24,915 rows and 224,605 values equal the driver's. Item types not measured are written as stored bytes and listed. No WINDEV, no ODBC, any operating system.

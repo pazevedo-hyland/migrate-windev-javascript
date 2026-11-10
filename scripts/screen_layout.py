@@ -503,7 +503,8 @@ def layout(unit, latest, language=None):
         assets.add(window['background_image'])
     if not element:
         unknown.append('no dossier entry: captions, images and skin unknown')
-    unknown.append('fonts, font sizes and colors: from the skin template (.sty), not extracted — read them from the dossier image')
+    if not any(control.get('font') or control.get('fonts') for control in controls):
+        unknown.append('fonts, font sizes and colors: not in this evidence (run windev_decode.py, or read them from the dossier image)')
     return {'format_version': 1, 'window': window, 'controls': controls, 'assets': sorted(assets),
             'unknown': sorted(set(unknown)), 'diagnostics': sorted(set(diagnostics)),
             'source': source.get('path'), 'language': language,

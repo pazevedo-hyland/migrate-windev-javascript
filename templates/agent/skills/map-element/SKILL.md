@@ -9,6 +9,7 @@ Input: one unit name. Paths below are defaults; a stage prompt may give others. 
 
 ## Read
 
+0. `docs/briefs/<unit>.md` when it exists: the unit in one page and its open points — each open point becomes a `U-` item or is closed by what you read below.
 1. The unit's evidence pack — windows, reports and the project (`.wdp`): `python3 scripts/unit_evidence.py <unit> --out analysis-local/units/<unit>.json` (keep it: the reviewer diffs it later). For a **table group**: the tables' seed rows (`element` = each table), `docs/schema/schema-draft.md` and `docs/data/profile.md`, and validate with `--element <Table1>,<Table2>`. For a **query**: its SQL in the dossier extract (`query/<QRY>.json` in the `dossier` folder of `analysis-local/latest.json`) and its callers (`grep -rn <QRY> legacy/`). The window or report pack It holds the seed rows, code blocks with event meanings, encoded actions with every other slot sharing the same action ID, the parsed dossier fields, callers, calls out, gaps and runtime questions.
 2. The unit's source in `legacy/` in full, and the callers' and callees' code one level out (call sites are in the pack).
 3. `docs/wlanguage-traps.md`, `docs/mapping/event-codes.md` (generated, verified), `docs/evidence/encoded-actions.md` (answers, or proposals until answered), the images `docs/evidence/images/<unit>.*`.

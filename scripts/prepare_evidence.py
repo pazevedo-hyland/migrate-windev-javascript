@@ -11,6 +11,9 @@
   schema_draft.py                          -> docs/schema/schema-draft.md, .sql
   render_layouts.py                        -> analysis-local/layouts-<stamp>/
   images                                   -> docs/evidence/images/  (dossier images + layout drawings, committed)
+  readiness_report.py                      -> docs/readiness.md, docs/briefs/<unit>.md  (open points; a page per unit)
+  hfsql_read.py + data_profile.py  --data <copy of the data folder>
+                                           -> analysis-local/data-<stamp>/, docs/data/profile.md  (no driver needed)
 
 Every run writes fresh dated folders (the inspector refuses to reuse one) and records them in
 analysis-local/latest.json, so prompts can say "the paths in latest.json". Generated docs are overwritten.
@@ -58,7 +61,30 @@ def find_compile_dir(legacy):
     return next(iter(sorted(cpls, key=lambda p: (not any(p.parent.glob('*.wdp')), len(p.parts), str(p)))), None)
 
 
-def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language=None, images=True):
+def read_data(data, legacy, target, docs, schema_draft):
+    """The data files read directly (hfsql_read.py) and profiled. The analysis beside the data is preferred: it is
+    the one the files were written with. A file the reader refuses is reported, not fatal."""
+    data = Path(data)
+    beside = sorted(p for p in data.iterdir() if p.suffix.lower() == '.wda')
+    project = sorted(p for p in Path(legacy).rglob('*.wda') if p.parent.suffix.lower() == '.ana')
+    analysis_file = next(iter(beside + project), None)
+    if analysis_file is None:
+        print(f'--data: no analysis file (.wda) beside {data} or under {legacy}: data not read')
+        return None
+    command = [sys.executable, str(HERE / 'hfsql_read.py'), str(data), '--analysis', str(analysis_file), '--out', str(target)]
+    result = subprocess.run(command, capture_output=True, text=True)
+    sys.stderr.write(result.stderr)
+    print(result.stdout.strip())
+    if not Path(target, 'manifest.json').exists():
+        return None
+    if schema_draft:
+        (docs / 'data').mkdir(parents=True, exist_ok=True)
+        print(run('data_profile.py', Path(target, 'data.sqlite'), '--schema', Path(schema_draft).with_suffix('.json'),
+                  '--out', docs / 'data/profile.md').strip())
+    return str(target)
+
+
+def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language=None, images=True, data=None):
     legacy, analysis, docs = Path(legacy), Path(analysis), Path(docs)
     stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
     # The fixed layout first (00 §E), else anywhere under legacy/: the WINDEV project folder can be dropped in as is.
@@ -136,6 +162,15 @@ def prepare(legacy, analysis, docs, dossier_pdf=None, compile_dir=None, language
     paths['summary'] = report.strip().splitlines()[-1] if report.strip() else ''
     analysis.mkdir(parents=True, exist_ok=True)
     (analysis / 'latest.json').write_text(json.dumps(paths, indent=2), encoding='utf-8')
+    # What is still open, unit by unit, and one page per unit for the agent that takes it (reads the paths above).
+    print(run('readiness_report.py', '--latest', analysis / 'latest.json', '--out', docs / 'readiness.md',
+              '--briefs', docs / 'briefs').strip())
+    paths.update(readiness=str(docs / 'readiness.md'), briefs=str(docs / 'briefs'))
+    if data:
+        read = read_data(data, legacy, analysis / f'data-{stamp}', docs, paths.get('schema_draft'))
+        if read:
+            paths['data'] = read
+    (analysis / 'latest.json').write_text(json.dumps(paths, indent=2), encoding='utf-8')
     return paths
 
 
@@ -149,9 +184,11 @@ def main():
     parser.add_argument('--language', help="the application's language for dialog texts, as WINDEV names it (pt-PT, "
                                            "fr-FR…); default: the first language of each text")
     parser.add_argument('--no-images', action='store_true', help='skip dossier images (faster)')
+    parser.add_argument('--data', type=Path, help='a COPY of the folder with the HFSQL Classic .fic/.mmo files: read without '
+                                                  'a driver into analysis-local/ and profiled (docs/data/profile.md)')
     args = parser.parse_args()
     paths = prepare(args.legacy, args.analysis, args.docs, args.dossier_pdf, args.compile_dir, args.language,
-                    not args.no_images)
+                    not args.no_images, args.data)
     print(json.dumps(paths, indent=2))
     warnings = (paths.get('coverage') or {}).get('warnings', [])
     for warning in warnings:

@@ -101,6 +101,22 @@ python3 scripts/parity_check.py docs/parity/parity.csv [--seed docs/parity/parit
 
 Validates columns, unique IDs, statuses and confidence values, and evidence rules (`verified` needs an executed test and cannot be `unresolved`; `excluded` needs a decision; `implemented` needs `implemented_in`). Confidence `assumed` marks rows built on a `proposed:` answer or a default ADR: they may be verified, are counted apart (`verified_on_assumptions`), and a row citing `proposed:` cannot claim `verified` confidence. With `--seed`, every seed row must still exist, and a matrix row the seed no longer has is matched to its new ID when one seed row has the same element, context and event ("rename it"). `--element` scopes every check to those units (a rule row belongs to the unit its context starts with); `--check-files` also resolves seed evidence under `legacy/`. With `--require-complete`, every row must be `verified` or `excluded`. Prints a summary and exits non-zero on any error. See [10 — Parity](../10-parity-and-verification.md).
 
+## `readiness_report.py` — what is still open, unit by unit
+
+```sh
+python3 scripts/readiness_report.py --out docs/readiness.md --briefs docs/briefs     # run by prepare_evidence.py
+```
+
+For every window, report, class and set of procedures: the points an implementer would have to guess (controls without a position, a layout `generate_screens.py` refuses — it is run in memory on every window —, predefined actions with no code and no named element, an embedded query without SQL, names built at run time, data files not in the analysis, the gaps and runtime questions that name the unit), each with what closes it; units ranked by open points and sized by parity rows and code lines. The report opens with how far the decoder applies to the project. `--briefs` writes one page per unit for the agent that takes it. No code is copied into either: names, counts and line ranges only. On the second project: 149 units, 79 with no open point, 103 open points, 19 seconds.
+
+## `field_use.py` — which extracted fields does anything read?
+
+```sh
+python3 scripts/field_use.py --out docs/field-use.md [--consumers src packages server]
+```
+
+Lists every field name found in the pipeline's JSON outputs (layouts, analysis, schema draft, code map, evidence report) with how often it occurs, and who mentions it: the other scripts, the templates, the guide, and the application folders given with `--consumers`. A field with no reader in code is waiting for a consumer or is weight in every context. The search is by name, so it is a list of places to look, not a verdict. On the second project: 176 fields, 21 with no reader in code — among them the frames, a button's background stretching and a window's opening mode ([what to do with them](../docs/agent-inputs.md#read-from-the-files-applied-by-no-tool-yet)).
+
 ## `hfsql_read.py` — the data, without a driver
 
 ```sh

@@ -14,6 +14,9 @@ export interface CatalogueColumn {
   size?: number;
   key?: "unique" | "duplicates" | null;
   caption?: string | null;
+  /** Decimals and integer digits of a decimal item, when the analysis file gave them. */
+  scale?: number;
+  integerDigits?: number;
 }
 
 export interface CatalogueTable {
@@ -22,7 +25,8 @@ export interface CatalogueTable {
   /** Primary key column: the automatic identifier, or the technical `rowid_` when the file has none. */
   primary: string;
   columns: readonly CatalogueColumn[];
-  keys?: readonly { name: string; columns: readonly string[]; unique: boolean }[];
+  /** `compares`: how HFSQL compares a text key ("ignores case and accents"); the index here compares exactly. */
+  keys?: readonly { name: string; columns: readonly string[]; unique: boolean; compares?: string }[];
 }
 
 export type Catalogue = Readonly<Record<string, CatalogueTable>>;

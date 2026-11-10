@@ -1757,6 +1757,8 @@ def write_evidence(sources, queries, target, dossier=None, project=None):
         counts['new_elements'] += not path.exists()
         language = item['language'] or 'default'
         known = {name.lower(): name for name in element.setdefault('controls', {})}
+        repeated = collections.Counter(decoded['name'].lower() for decoded in item['elements']
+                                       if decoded.get('owner') in ('controls', 'columns') and decoded.get('name'))
         # The menu as a tree in file order: each option with its caption and the options above it.
         menu = [{'name': decoded['name'], 'caption': decoded['fields']['caption'],
                  'under': [parent for parent in decoded['parents'][2:]]}
@@ -1773,10 +1775,11 @@ def write_evidence(sources, queries, target, dossier=None, project=None):
                 actions.append({'control': decoded['parents'][-1], 'target': fields['action_target'],
                                 'code': fields['action_code']})
                 continue
-            if fields and decoded['owner'] in ('content', 'dropdown') and decoded['parents'] \
-                    and known.get(decoded['parents'][-1].lower()):
+            owner_key = decoded['parents'] and (known.get('.'.join(decoded['parents'][1:]).lower())
+                                                or known.get(decoded['parents'][-1].lower()))
+            if fields and decoded['owner'] in ('content', 'dropdown') and owner_key:
                 # A column's cell: its input type, size and mask belong to the column's entry.
-                entry = element['controls'][known[decoded['parents'][-1].lower()]]
+                entry = element['controls'][owner_key]
                 entry['decoded'] = entry.get('decoded', []) + merge_control(entry, decoded, language)
                 continue
             if fields and decoded['owner'] == 'report':
@@ -1807,9 +1810,14 @@ def write_evidence(sources, queries, target, dossier=None, project=None):
                 continue
             if decoded['owner'] not in ('controls', 'columns'):
                 continue
-            name = known.get(decoded['name'].lower())
+            # Two controls of one window can share a name (a column `COL_name` in three tables): each then gets an
+            # entry under its full path, which is where screen_layout.py looks first.
+            wanted = decoded['name']
+            if repeated[wanted.lower()] > 1:
+                wanted = '.'.join([*decoded['parents'][1:], wanted])
+            name = known.get(wanted.lower())
             if name is None:
-                name = known[decoded['name'].lower()] = decoded['name']
+                name = known[wanted.lower()] = wanted
                 element['controls'][name] = {'raw': []}
                 counts['new_controls'] += 1
             written = merge_control(element['controls'][name], decoded, language)

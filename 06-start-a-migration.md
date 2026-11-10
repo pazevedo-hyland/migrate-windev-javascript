@@ -58,7 +58,19 @@ python3 scripts/evidence_report.py analysis-local/inspect-<stamp> --dossier anal
 
 Coverage per element with the list of gaps, the platform functions the code depends on (printing, INI files, external programs, command-line modes), the few runtime questions for someone with the running app, and the **encoded actions**: event slots without code whose predefined action (close, print, open…) WINDEV keeps encoded, grouped by action ID — slots with the same ID hold the same value, so one answer settles the whole group (on the real project: 225 code-less slots, 14 distinct actions). Each group and question comes with a **proposed answer** and its basis — the skin template's own button names (a group holding `BTN_SYST_FERMER` closes the window), button types, code that sets `..ReturnedValue` (the window must close for the caller to get it), a report named only in one window's compiled code, WINDEV's conventions — or a labelled default. The migration does not wait: rows cite `proposed: A-2b6ca2` and say "assumed". Someone with WINDEV (the control's Actions tab) or the running app confirms or corrects the generated answer sheet `docs/evidence/encoded-actions.md` whenever they can — it is written once and never overwritten — and rows then cite `runtime: A-2b6ca2`; a different answer reopens the rows that assumed otherwise. Fix or record every gap before mapping.
 
+## 4b-bis. Read what is still open, before planning
+
+`prepare_evidence.py` ends by writing `docs/readiness.md` and one page per unit in `docs/briefs/`. Both cost nothing to produce and decide where agent time goes:
+
+- **`docs/readiness.md`** first says how far the decoder's reading applies to this project (all properties decoded, controls with a position, agreement with the dossier): if a line there is off, follow [docs/new-windev-version.md](docs/new-windev-version.md) before building on decoded values. Then it ranks every unit by its **open points** — controls without a position, a layout the screen generator refuses, predefined actions nobody named, an embedded query without SQL, names built at run time, data files the analysis does not have, runtime questions — each with what closes it. Plan the first slices among the units with none; settle a unit's points before its slice starts.
+- **`docs/briefs/<unit>.md`** is what the agent taking a unit reads first: what it is, who opens it, what it touches, its events with line ranges, its open points, and where to look next. It replaces reading the whole evidence pack to find out what the unit is.
+
+What each output is for and who reads it: [docs/agent-inputs.md](docs/agent-inputs.md). On the second project: 149 units, 79 with no open point, 103 open points; the same run found 34 table columns that had lost their caption and input type because columns of different tables shared a name — fixed in the decoder.
+
 ## 4c. Export the data
+
+**Without a driver**: `python3 scripts/prepare_evidence.py --data <copy of the data folder>` reads HFSQL Classic `.fic`/`.mmo` files directly into `analysis-local/data-<stamp>/` and profiles them (`docs/data/profile.md`). A file it refuses is named with the reason; use the ODBC route below for those, and once to cross-check when both are available ([08](08-data-migration.md)).
+
 
 Export every table to CSV through the HFSQL ODBC driver ([data export](scripts/windows/README.md)), from a copy of the data or a backup of the HFSQL server database. If `export_odbc.py` crashes while connecting (exit code 139, HFSQL 28), use the [ANSI exporter](scripts/windows/README.md#when-export_odbcpy-crashes-the-ansi-exporter-hfsql-28) instead.
 

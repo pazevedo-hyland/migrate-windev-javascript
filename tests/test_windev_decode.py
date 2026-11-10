@@ -365,6 +365,26 @@ class KindRecords(unittest.TestCase):
         odd = module.column_fields(column_chunk(80, 'Total', sortable=7))
         self.assertEqual(odd, {'width': 80, 'caption': 'Total'})
 
+    def test_columns_sharing_a_name_each_keep_their_own_entry(self):
+        table = lambda name, width, caption, mask: [
+            '  -', f'    name : {name}', '    internal_properties : ' + value_of(control_chunk(0, 40, 300, 90)),
+            '    columns :', '     -', '       name : COL_Name',
+            '       internal_properties : ' + value_of(column_chunk(width, caption)), '       content :',
+            '        internal_properties : ' + value_of(edit_chunk(mask=mask, kind=1, value_type=8)),
+            '        type : 2', '       type : 2', '    type : 9']
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder, 'project')
+            project.mkdir()
+            (project / 'WIN_A.wdw').write_text('\n'.join([
+                'window :', ' name : WIN_A', ' controls :', *table('TABLE_A', 80, 'First', '99'),
+                *table('TABLE_B', 120, 'Second', '9999'), 'languages :', ' - pt-PT']) + '\n', encoding='utf-8')
+            module.decode_project(project, Path(folder, 'out'), evidence=True)
+            controls = json.loads(Path(folder, 'out/evidence/windev-window/WIN_A.json').read_text(encoding='utf-8'))['controls']
+        self.assertNotIn('COL_Name', controls)
+        first, second = controls['TABLE_A.COL_Name'], controls['TABLE_B.COL_Name']
+        self.assertEqual((first['width'], first['input_mask'], second['width'], second['input_mask']),
+                         (80, {'pt-PT': '99'}, 120, {'pt-PT': '9999'}))
+
     def test_report_page_bands_and_control_kinds(self):
         page = (b'\x59\0' + framed('RPT_A') + b'\x22' * 8 + b'\0' + struct.pack('<4I', 4, 6, 0, 0) + b'\0' * 7
                 + framed('No data.') + framed('Wait.') + b'\0' * 21
