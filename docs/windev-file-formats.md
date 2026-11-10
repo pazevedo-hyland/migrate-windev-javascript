@@ -173,7 +173,31 @@ Replacing each string of a chunk by one zero byte gives the layout an all-empty 
 - `windev_decode.py --evidence` writes `<out>/evidence/`, a folder in the shape `dossier_extract.py` writes: when a dossier extract is given it is copied and the decoded captions, titles, geometry, tab order, state, Visible, button type and images, anchors and SQL are written over it (each control lists them in `decoded`; a query keeps the PDF's text as `sql_pdf`); controls, windows, reports and queries the dossier lacks get entries. Everything the decoder does not name stays as the dossier had it. Without a dossier the folder holds the decoded values alone.
 - `prepare_evidence.py` makes that folder the `dossier` of `analysis-local/latest.json`, so `evidence_report.py`, `render_layouts.py`, `screen_layout.py` and `unit_evidence.py` use it unchanged; the PDF extract stays at `dossier_pdf`.
 
-## 2. Binary files: the PCS container
+## 2. Windows saved in binary format
+
+A project that was never switched to text format keeps each window as a binary `.wdw` (a PCS container, below). Its first packed block is the window's description, and it holds **the same records as a text source**, laid out as a tree:
+
+- the window first: version tag, its name, an 8-byte identifier, then x, y, width, height (four zero bytes come before in format 28);
+- then each control as `length (u32), type (u32), record`. The record is what a text source keeps in chunk `0`, with the control's name and identifier put inside it, between the common block's version tag and its rectangle. The type is the text format's `type :`;
+- a control inside another (in a tab, a supercontrol, an internal window) lies within the other's length, after the other's own record.
+
+Taking the name and identifier out gives the text format's bytes, apart from lengths kept inside the record and file paths (absolute here, `<REPGABARIT>\…` in text). So every reader of section 1 applies unchanged: `binary_window()` rebuilds each record and calls them.
+
+Measured two ways:
+
+| Check | Result |
+|---|---|
+| The 112 windows of the measured project, binary copy (`.cpl/<user>/`) against text source | 1,148 of 1,148 controls found, each with the same type; every field of the common block and of the kind's own record equal (position, size, caption, state, tab order, anchors, plane, linked item, button type and images, edit input type and mask, style…). Parents equal for 1,130; the other 18 sit in table cells, whose column level is not listed |
+| Known differences on that set | image paths are absolute; a container's fonts and frames include those of its columns or panes; the origin of a tab's panes is read for 1 tab of 6, so 88 controls inside tabs keep parent-relative positions only |
+| 696 windows of WINDEV 28's own examples and tutorials (format 28, never seen before) | 5,378 controls read from 5,541 named records, 5,376 with a complete common block; window size for 626 windows. Not compared with a second source |
+| Format 28 against 25 | head tag `0x273`/`0x274` instead of `0x270`; the common block reads the same; the edit record's tag is elsewhere, so input type and mask are refused there (26 of 133 edit controls read), not misread |
+| One tutorial project decoded whole (binary format, no dossier) | 8 windows, 127 controls, 4 queries with SQL, 285 skin styles, 89 lines of project code, and the code of 21 elements |
+
+**Code of binary elements.** Their code is in the next block, one record per line with its author, as in a binary `.wdp`. `code/<file>.wl` holds it in file order with the names of the controls it belongs to between the parts. Which event each part is, and where an empty line was, are not marked: it is a readable draft of the code, not yet a list of blocks with their events. `inspect_windev.py` does not read it, so a binary-format project gets no parity seed from code yet.
+
+**Not listed from a binary window yet**: table columns and their cells, tab panes, menu options, combo dropdowns (their records have no name of their own), and reports.
+
+## 3. Binary files: the PCS container
 
 Every binary project file starts with `PCS\0`: `.wdp` (project), `.WDR` (query), `.wdd`/`.wda` (analysis), `.sty`, `.WPF`, `.wdcoverage`, the `.wdw.cache`/`.wde.cache` files and, in `<project>.cpl/<user>/`, a binary copy of every window, report, class and procedure set. Inside are packed blocks of the same kind as above (byte `4`, sizes, LZW), **without the cipher**. The tool finds each block by its header and keeps it only if it unpacks to its declared size.
 
@@ -194,7 +218,7 @@ Blocks that are not SQL or images are listed with their strings (`text`); `--blo
 
 That turns "match the screenshot" into two smaller jobs: reproduce each skin style once (its fonts, colours and images are listed), then apply per control only the listed changes. A control with a style and no `differs_from_style` needs nothing of its own.
 
-## 3. Other files worth reading
+## 4. Other files worth reading
 
 | File | Format | What it gives a migration |
 |---|---|---|
@@ -213,17 +237,17 @@ That turns "match the screenshot" into two smaller jobs: reproduce each skin sty
 Every key of the text sources and every file type of the project folder was listed and checked against what the tools read (243 windows and copies, 83 reports, 16 classes, 4 procedure sets).
 
 - **Text sources: nothing left.** Besides code, names, types and `internal_properties`, the only other keys are identifiers, a `description` per window, `original_name` (the template a window was created from) and `enabled : false` on event slots. No disabled slot holds code here (1,283 code blocks checked), so no code is silently dead; check that count on another project before trusting it there.
-- **`<project>.wdcoverage`** (code coverage of the last test runs) and **`<project>.wdd`** are PCS files whose body is neither packed nor under the cipher of `internal_properties`: not read. The `.wdd` is the analysis, which the `.xdd` gives in XML. Coverage would say which lines the authors' tests ran; nothing else holds that.
+- **`<project>.wdcoverage`** and the 153 per-element `*wdcoverage` files (code coverage of the last test runs) and **`<project>.wdd`** are PCS files whose body is neither packed nor under the cipher of `internal_properties`: not read. The coverage files are not a reused key stream either (67 share their first 28 bytes and nothing after), so they need the routine itself from WINDEV's libraries. The `.wdd` is the analysis, which the `.xdd` gives in XML. Coverage would say which lines the authors' tests ran; nothing else holds that.
 - **`<project>.waudit`**, `.wdap`, `.mdf`, `.ref`, `.wtp`, `.wlr`: editor state and build leftovers, a few hundred bytes each.
 - **Inside the decoded chunks**: a table's own options, the tick-mark properties not named above, a report control's alignment and borders, where a file-bound list says "loaded in memory". An exact search over every offset found nothing more for them: in this project they either never vary or always vary together (a table's magnifier mode and its three margins change as one), so no position can be told from another. They need a project that varies them, or one property changed in WINDEV on a copy of a window.
 
-## 4. What stays outside the files
+## 5. What stays outside the files
 
 - **Runtime behavior**: what a dialog's Esc does, values set by code at opening, data-dependent states. From the code, and where the code cannot settle it, from the running application.
 - **Predefined button actions** (the encoded event slots of `evidence_report.py`): each slot's `internal_properties` now decodes like any other; the records are small and not yet named. Until they are, the proposed answers stay.
 - **Fields not yet named** (section 1): present in the chunks; each control's differences from the usual values of its kind are listed in `audit.json`.
 
-## 5. How this was established, and its limits
+## 6. How this was established, and its limits
 
 The packing was first measured on the files alone: values with one differing property share long runs of bytes and differ by fixed patterns, which showed a keyed transform over the whole value instead of real encryption. The exact routine and its key were then read from the editor's own text-format reader (`wdfen.dll` of a WINDEV 28 Express installation), which unpacks the same values. No WINDEV code is included or run by the tool.
 

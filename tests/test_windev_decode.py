@@ -557,5 +557,54 @@ class PredefinedActions(unittest.TestCase):
         self.assertEqual(window['predefined_actions'], [{'control': 'BTN_Print', 'target': 'RPT_List_Items', 'code': 1100}])
 
 
+class BinaryWindows(unittest.TestCase):
+    """A window saved in binary format: the same records, each with its name inside and its length and type before."""
+
+    def element(self, name, kind, chunk, children=b''):
+        tag = chunk.index(struct.pack('<I', 0x25f))
+        body = chunk[:tag + 4] + framed(name) + b'\x99' * 8 + chunk[tag + 4:] + children
+        return struct.pack('<II', len(body) + 8, kind) + body
+
+    def block(self):
+        edit = edit_chunk(caption='Total')
+        button = control_chunk(5, 6, 80, 24, caption='', button_type=1)
+        button = b'\x70\x02\0\0' + b'\0' * 4 + b'\x10\x01\0\0' + button[12:]
+        box = control_chunk(10, 20, 300, 200)
+        box = b'\x70\x02\0\0' + b'\0' * 4 + b'\x60\x1b\0\0' + box[12:]
+        window = struct.pack('<I', 0x25f) + framed('WIN_A') + b'\x77' * 8 + struct.pack('<4i', 0, 0, 640, 480) + b'\0' * 40
+        return (window + self.element('SC_Box', 40, box, self.element('BTN_Ok', 4, button))
+                + self.element('EDT_Total', 2, edit))
+
+    def test_controls_types_parents_and_fields(self):
+        elements = module.binary_window(self.block())
+        self.assertEqual([(e['owner'], e['name'], e['type'], e['parents']) for e in elements], [
+            ('window', 'WIN_A', '', []), ('controls', 'SC_Box', '40', ['WIN_A']),
+            ('controls', 'BTN_Ok', '4', ['WIN_A', 'SC_Box']), ('controls', 'EDT_Total', '2', ['WIN_A'])])
+        self.assertEqual(elements[0]['fields'], {'x': 0, 'y': 0, 'width': 640, 'height': 480})
+        button, edit = elements[2], elements[3]
+        self.assertEqual((button['kind'], button['fields']['button_type'], button['fields']['window_x'], button['fields']['window_y']),
+                         ('Button', 'validate', 15, 26))
+        self.assertEqual((edit['fields']['caption'], edit['fields']['input_type'], edit['fields']['input_mask'],
+                          edit['fields']['style'], edit['fields']['caption_width']),
+                         ('Total', 'numeric', '999,99', '170 AquaBlue.SAI_Simple', 64))
+        # A length that runs past the block: that element is left out, the others stay.
+        broken = self.block().replace(struct.pack('<I', 2) + b'\x70\x02', struct.pack('<I', 2) + b'\x70\x02', 1)
+        self.assertEqual(len(module.binary_window(broken[:-200])), 3)
+
+    def test_a_binary_window_without_a_text_source_is_decoded_by_the_project_run(self):
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder, 'project')
+            project.mkdir()
+            (project / 'WIN_A.wdw').write_bytes(b'PCS\0' + b'\x14\0\0\0' + module.pack(self.block()))
+            index = module.decode_project(project, Path(folder, 'out'), evidence=True)
+            saved = json.loads(Path(folder, 'out/properties/WIN_A.wdw.json').read_text(encoding='utf-8'))
+            window = json.loads(Path(folder, 'out/evidence/windev-window/WIN_A.json').read_text(encoding='utf-8'))
+        self.assertEqual((index['coverage']['binary_windows'], index['coverage']['binary_window_controls']), (1, 3))
+        self.assertEqual(saved['format'], 'binary')
+        self.assertEqual((window['size']['width'], window['controls']['EDT_Total']['input_type'],
+                          window['controls']['BTN_Ok']['button_type'], window['controls']['BTN_Ok']['x']),
+                         (640, 'Numeric', 'Validate', 15))
+
+
 if __name__ == '__main__':
     unittest.main()

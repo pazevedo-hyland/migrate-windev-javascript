@@ -758,8 +758,12 @@ def decode_source(source, encoding='cp1252', raw=False, mapper=None, fieldmap=No
         elif slot['owner'] == 'controls' and tuple(slot['parents']) in panes:
             entry['pane'] = panes[tuple(slot['parents'])]
         elements.append(entry)
-    # Window coordinates: the parents' positions added, plus each tab's pane origin where its style is known.
-    # A table (9) places controls in cells: those children keep parent-relative positions only.
+    return place(elements)
+
+
+def place(elements):
+    """Window coordinates: the parents' positions added, plus each tab's pane origin where its style is known.
+    A table (9) places controls in cells: those children keep parent-relative positions only."""
     controls = {e['name']: e for e in elements if e['owner'] == 'controls' and 'x' in e.get('fields', ())}
     for entry in controls.values():
         chain = [controls[name] for name in entry['parents'] if name in controls]
@@ -769,6 +773,74 @@ def decode_source(source, encoding='cp1252', raw=False, mapper=None, fieldmap=No
         entry['fields']['window_y'] = entry['fields']['y'] + sum(parent['fields']['y'] + parent['fields'].get('pane_top', 0)
                                                                for parent in chain)
     return elements
+
+
+# A named element of a binary window: version tag, its name, an 8-byte identifier, then the rectangle and the
+# signature of the common block. A control's own part starts at the tag 0x270 before it.
+BINARY_ELEMENT = re.compile(rb'(?s)(.\x02\x00\x00)\xff\xce\x88\xf1.{4}([^\x00]{1,200})\x00\xfe\xed\x98\xe1.{8}'
+                            rb'(.{16})\x00{8}\xff\xff\xff[\x07\x7f\xff]\xff\xff\xff[\x07\x7f\xff]')
+# A control's own part: a version tag (0x270 in format 25, 0x273 and 0x274 seen in 28), a length, then one of the
+# words that open a kind's style.
+BINARY_HEAD = re.compile(rb'(?s)[\x68-\x7f]\x02\x00\x00.{4}'
+                         rb'(?:\x60\x1b\x00\x00|\xbd\x02\x00\x00|[\x10-\x1f]\x01\x00\x00|\x6f\x02\x00\x00)')
+
+
+def binary_window(block, encoding='cp1252'):
+    """The controls of a window saved in WINDEV's binary format (the first packed block of its `.wdw`), in the
+    shape `decode_source` gives. Each control is the record a text source keeps in chunk 0, with its name and
+    identifier inside it and, just before it, its length and its type; a control inside another lies within the
+    other's length. Taking the name out gives the text format's bytes (file paths apart: absolute here), so the
+    same readers apply. The window itself comes first, with its size. Columns, panes and options are not listed."""
+    named = list(BINARY_ELEMENT.finditer(block))
+    heads = [m.start() for m in BINARY_HEAD.finditer(block)]
+    elements, spans = [], []
+    # The window itself opens the block (after four zero bytes in format 28): tag, name, identifier, then x, y,
+    # width, height.
+    for start in (0, 4):
+        try:
+            title, offset = framed_string(block, start + 4, encoding)
+            x, y, width, height = struct.unpack_from('<4i', block, offset + 8)
+        except (ValueError, IndexError, struct.error):
+            continue
+        if title and block[start + 1:start + 4] == b'\x02\0\0' and 0 < width < 20000 and 0 < height < 20000:
+            elements.append({'line': None, 'owner': 'window', 'name': title, 'type': '', 'parents': [],
+                             'fields': {'x': x, 'y': y, 'width': width, 'height': height}})
+            break
+    window = [e['name'] for e in elements]
+    located = []
+    for index, match in enumerate(named):
+        # The control's own part starts at the first version tag after the previous element's name whose length
+        # (the four bytes 8 before it) reaches past this name and stays inside the block, with a type before it.
+        for candidate in heads:
+            if candidate < 8 or candidate <= (named[index - 1].start() if index else 0) or candidate >= match.start():
+                continue
+            size, kind = struct.unpack_from('<II', block, candidate - 8)
+            if match.end() < candidate - 8 + size <= len(block) and 0 < kind < 0x200:
+                located.append((candidate, candidate - 8 + size, kind, match))
+                break
+    for index, (head, end, kind, match) in enumerate(located):
+        name = text(match[2], encoding)
+        # Its children follow its own record, inside its length: the record stops where the first one starts.
+        own = min(end, located[index + 1][0] - 8) if index + 1 < len(located) and located[index + 1][0] < end else end
+        # A control lies inside its parents: the elements still open when it starts.
+        spans = [(parent, limit) for parent, limit in spans if head < limit]
+        chunk = block[head:match.start() + 4] + block[match.start(3):own]
+        entry = {'line': None, 'owner': 'controls', 'name': name, 'type': str(kind),
+                 'parents': window + [parent for parent, _ in spans]}
+        fields = describe('controls', str(kind), [{'id': 0, 'version': 14, 'data': chunk}], encoding)
+        if fields:
+            entry['fields'] = fields
+        used = fonts(chunk, encoding)[0]
+        if used:
+            entry['fonts'] = used
+        boxes = frames(chunk)
+        if boxes:
+            entry['frames'] = boxes
+        if str(kind) in KINDS:
+            entry['kind'] = KINDS[str(kind)]
+        elements.append(entry)
+        spans.append((name, end))
+    return place(elements)
 
 
 def source_language(source):
@@ -1403,9 +1475,11 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
     output.mkdir(parents=True, exist_ok=False)
     coverage = {'text_sources': 0, 'properties': 0, 'properties_failed': 0, 'controls': 0, 'controls_with_fields': 0,
                 'controls_with_caption': 0, 'report_controls': 0, 'report_controls_with_geometry': 0, 'containers': 0, 'blocks': 0, 'queries_with_sql': 0,
-                'embedded_queries_with_sql': 0, 'elements_with_learned_properties': 0, 'images': 0, 'skin_styles': 0,
+                'embedded_queries_with_sql': 0, 'elements_with_learned_properties': 0, 'images': 0, 'binary_windows': 0, 'binary_window_controls': 0, 'binary_elements_with_code': 0,
+                'binary_code_lines': 0, 'skin_styles': 0,
                 'controls_with_skin_style': 0, 'controls_changed_from_skin_style': 0}
     files, by_name, queries, sources, samples, project, skins = [], {}, {}, {}, [], {}, {}
+    text_stems, coded = set(), set()
     source_root = next((p.parent for p in sorted(source.rglob('*.wdp')) if '.cpl' not in p.as_posix().lower()), source)
     import sys
     if str(Path(__file__).resolve().parent) not in sys.path:
@@ -1437,6 +1511,21 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                     coverage['skin_styles'] += len(styles)
                     files.append({'path': relative, 'kind': 'skin', 'styles': len(styles)})
                 continue
+            if data[:4] == b'PCS\0' and path.suffix.lower() == '.wdw' and path.stem.lower() not in by_name:
+                # A window in binary format with no text source of the same name: read its controls from it.
+                packed = packed_blocks(data)
+                elements = binary_window(packed[0][-1], encoding) if packed else []
+                if len(elements) > 1:
+                    by_name[path.stem.lower()] = elements
+                    sources[path.stem] = {'elements': elements, 'suffix': '.wdw', 'path': relative,
+                                          'relative': relative + '.json', 'language': None}
+                    target = output / 'properties' / (relative + '.json')
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(json.dumps({'path': relative, 'format': 'binary', 'elements': elements}, indent=1,
+                                                 ensure_ascii=False), encoding='utf-8')
+                    files.append({'path': relative, 'kind': 'properties', 'elements': len(elements), 'format': 'binary'})
+                    coverage['binary_windows'] += 1
+                    coverage['binary_window_controls'] += sum(e['owner'] == 'controls' for e in elements)
             if data[:4] == b'PCS\0':
                 container = decode_container(data, encoding)
                 if not container['blocks']:
@@ -1468,6 +1557,23 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                             project['code_lines'] = len(lines)
                         if summary['text'][:1] == ['Project']:
                             project['explorer_texts'] = summary['text']
+                    elif path.suffix.lower() in ('.wdw', '.wde', '.wdg', '.wdc') and path.stem.lower() not in text_stems \
+                            and path.stem.lower() not in coded:
+                        # An element in binary format with no text source: its code, one record per line. Which
+                        # control and event each part belongs to is not marked here: procedures name themselves, the
+                        # rest is in file order.
+                        lines = code_lines(summary['text'])
+                        if lines:
+                            # Empty records pile up between the parts: one blank line is kept, placeholders go.
+                            lines = [line for index, line in enumerate(lines) if line.strip() not in ('', '<?>')
+                                     or (line.strip() == '' and index and lines[index - 1].strip() not in ('', '<?>'))]
+                        if lines:
+                            target = output / 'code' / f'{relative}.wl'
+                            target.parent.mkdir(parents=True, exist_ok=True)
+                            target.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+                            coded.add(path.stem.lower())
+                            coverage['binary_elements_with_code'] += 1
+                            coverage['binary_code_lines'] += len(lines)
                     entry['blocks'].append(summary)
                 target = output / 'containers' / (relative + '.json')
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -1480,6 +1586,7 @@ def decode_project(source, output, dossier=None, encoding='cp1252', raw=False, s
                 elements = decode_source(source_text, encoding, raw, mapper, learned, path.stem, path.suffix.lower(),
                                          samples if path.stem.lower() not in by_name else None)
                 coverage['text_sources'] += 1
+                text_stems.add(path.stem.lower())
                 for element in elements:
                     if element.get('sql') and element['name']:
                         queries.setdefault(element['name'], element['sql'])
