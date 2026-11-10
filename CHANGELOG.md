@@ -364,6 +364,11 @@ A dossier-aware mapping run on two windows and one report (with the first pilot'
 - Agent UI inspection: dev browser preview with the test fake backend, used in the pilot to click through the client list and form.
 - Human runs every slice before Done (agents often cannot open GUI windows); foundations include an opt-in dev seed; spec-derived golden data is labelled as such; commit regenerated bindings with the change; README validation status.
 
+## 2026-10-23 — HFSQL ODBC architecture troubleshooting
+
+### Added
+- Windows capture kit guidance for matching Python and HFSQL ODBC architectures, including an observed 32-bit workaround for an unexpected 64-bit connection exit.
+
 ## 2026-10-22 — unattended capture without WINDEV
 
 ### Added
