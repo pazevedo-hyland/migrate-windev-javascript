@@ -115,7 +115,7 @@ For every window, report, class and set of procedures: the points an implementer
 python3 scripts/field_use.py --out docs/field-use.md [--consumers src packages server]
 ```
 
-Lists every field name found in the pipeline's JSON outputs (layouts, analysis, schema draft, code map, evidence report) with how often it occurs, and who mentions it: the other scripts, the templates, the guide, and the application folders given with `--consumers`. A field with no reader in code is waiting for a consumer or is weight in every context. The search is by name, so it is a list of places to look, not a verdict. On the second project: 176 fields, 21 with no reader in code — among them the frames, a button's background stretching and a window's opening mode ([what to do with them](../docs/agent-inputs.md#read-from-the-files-applied-by-no-tool-yet)).
+Lists every field name found in the pipeline's JSON outputs (layouts, analysis, schema draft, code map, evidence report) with how often it occurs, and who mentions it: the other scripts, the templates, the guide, and the application folders given with `--consumers`. A field with no reader in code is waiting for a consumer or is weight in every context. The search is by name, so it is a list of places to look, not a verdict. On the second project: 176 fields, 22 with no reader in code — among them the frames, a button's background stretching and a window's opening mode ([what to do with them](../docs/agent-inputs.md#read-from-the-files-applied-by-no-tool-yet)).
 
 ## `hfsql_read.py` — the data, without a driver
 

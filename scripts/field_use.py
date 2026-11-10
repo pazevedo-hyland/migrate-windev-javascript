@@ -22,7 +22,7 @@ from pathlib import Path
 import re
 
 HERE = Path(__file__).resolve().parent
-TEXT = {'.py', '.ts', '.tsx', '.mjs', '.js', '.md', '.json', '.css'}
+TEXT = {'.py', '.ts', '.tsx', '.mjs', '.js', '.md', '.css'}      # JSON is data the tools wrote, not a reader
 # Output -> the scripts that write it (not counted as its readers).
 WRITERS = {'layout': {'screen_layout.py', 'windev_decode.py', 'dossier_extract.py', 'inspect_windev.py', 'windev_fieldmap.py'},
            'analysis': {'windev_decode.py'}, 'schema draft': {'schema_draft.py'}, 'code map': {'code_map.py'},
@@ -89,18 +89,21 @@ def produced(latest, layouter=None):
     return result
 
 
-def consumer_texts(folders):
+def consumer_texts(folders, skip=()):
     """{relative path: text} of everything that could read a field."""
     texts = {}
     for folder in folders:
         folder = Path(folder)
         files = [folder] if folder.is_file() else [p for p in folder.rglob('*') if p.is_file()]
         for path in files:
-            if path.suffix.lower() not in TEXT or any(part in ('node_modules', '.git', 'dist', 'target', 'generated', 'tests')
+            if path.suffix.lower() not in TEXT or path.name in skip or any(part in ('node_modules', '.git', 'dist', 'target', 'generated', 'tests')
                                                       for part in path.parts) or path.stat().st_size > 2_000_000:
                 continue
             try:
-                texts[path.as_posix()] = path.read_text(encoding='utf-8')
+                # Paths as the reader would type them: relative to the playbook or to the project, never absolute.
+                shown = next((path.relative_to(base).as_posix() for base in (HERE.parent, Path.cwd())
+                              if path.is_absolute() and base in path.parents), path.as_posix())
+                texts[shown] = path.read_text(encoding='utf-8')
             except UnicodeDecodeError:
                 continue
     return texts
@@ -151,7 +154,7 @@ def main():
     args = parser.parse_args()
     folders = [HERE, *(p for p in (HERE.parent / 'templates', HERE.parent / 'docs', HERE.parent / 'skills') if p.exists()),
                *HERE.parent.glob('*.md'), *args.consumers]
-    rows = audit(load(args.latest), consumer_texts(folders), tool('screen_layout'))
+    rows = audit(load(args.latest), consumer_texts(folders, {args.out.name}), tool('screen_layout'))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(markdown(rows), encoding='utf-8')
     args.out.with_suffix('.json').write_text(json.dumps(rows, indent=1, ensure_ascii=False), encoding='utf-8')
