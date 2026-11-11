@@ -31,7 +31,7 @@ TYPES = [
     (r'Binary Memo|Image Memo', 'BLOB', 'store in the database or as files with checksums?'),
     (r'Password', 'TEXT', 'HFSQL password item (salted hash): do not copy; plan reset or rehash (08 transformation checklist)'),
 ]
-KEY_TYPES = {'0': None, '1': 'unique', '2': 'duplicates'}
+KEY_TYPES = {'0': None, '1': 'unique', '2': 'duplicates', '4': 'unique'}  # 4: the file's primary key
 # XDD type code -> WINDEV type name, for a project without a dossier. Each pair was named by a dossier (the second
 # migration's project, 249 items): a code not listed here stays `code N` until a dossier or WINDEV's documentation
 # names it.

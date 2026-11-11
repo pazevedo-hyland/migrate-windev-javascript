@@ -15,7 +15,12 @@ CONFIDENCE = {'verified', 'inferred', 'assumed', 'unresolved'}
 DONE = {'verified', 'excluded'}
 # One evidence item: a source location, a dossier or analysis reference, or a file (screenshot, export, golden).
 # A JSON file may name the field: "dossier/windev-window/WIN_X.json (controls.BTN_Ok.flags)".
-EVIDENCE = re.compile(r'\S+:\d+(?:-\d+)?|(?:dossier|analysis|export|golden|runtime|proposed): ?\S.*|[^\s;]+\.[A-Za-z0-9]{2,5}(?: \(.+\))?')
+# A path may hold spaces when its first word already looks like a path (`Templates/WD/180 BanQoo/Preview/WD_Print.wdw`,
+# `X.wdc (binary) listing/X.wdc.wl:2-11`: the inspector's own seed rows); prose ending in a file name is still refused.
+# `decoded:` and `learned:` are the prefixes skills/map-element/SKILL.md asks for.
+PATH = r'(?:\S+|[^\s;]*[/\.][^;]*)'
+EVIDENCE = re.compile(PATH + r':\d+(?:-\d+)?|(?:dossier|decoded|learned|analysis|export|golden|runtime|proposed): ?\S.*|'
+                      + r'(?:[^\s;]+|[^\s;]*[/\.][^;]*)' + r'\.[A-Za-z0-9]{2,5}(?: \(.+\))?')
 
 
 def read_csv(path):
@@ -75,7 +80,7 @@ def check(matrix, seed=None, require_complete=False, element=None, check_files=F
         if not value['evidence']:
             errors.append(f'{where}: evidence is required (path:line, export or screenshot)')
         for item in filter(None, (i.strip() for i in value['evidence'].split(';'))):
-            if check_files and EVIDENCE.fullmatch(item) and not re.match(r'(?:dossier|analysis|export|golden|runtime|proposed):', item):
+            if check_files and EVIDENCE.fullmatch(item) and not re.match(r'(?:dossier|decoded|learned|analysis|export|golden|runtime|proposed):', item):
                 path = re.split(r':\d|\s\(', item)[0]
                 if not Path(path).exists() and not Path('legacy', path).exists():  # seed evidence is legacy-relative
                     errors.append(f'{where}: evidence file not found: {path}')
@@ -113,7 +118,7 @@ def check(matrix, seed=None, require_complete=False, element=None, check_files=F
         # differently. One seed row with the same element, context and event is the new name for it.
         for row in rows:
             if row['id'].startswith('SRC-') and row['id'] not in seeded and (
-                    not wanted or unit_of(row, units).lower() in wanted):
+                    not wanted or in_scope(unit_of(row, units), wanted, units)):
                 match = [i for i in same.get(((row.get('element') or '').lower(), row.get('context', ''),
                                               row.get('event', '')), []) if i not in ids]
                 if len(match) == 1:
@@ -127,7 +132,7 @@ def check(matrix, seed=None, require_complete=False, element=None, check_files=F
         errors.extend(f'seed row missing from matrix: {r["id"]}' for r in scoped
                       if r['id'] not in ids and r['id'] not in renamed)
     if wanted:  # the summary describes the units asked for, not the whole matrix
-        rows = [r for r in rows if unit_of(r, units).lower() in wanted]
+        rows = [r for r in rows if in_scope(unit_of(r, units), wanted, units)]
     counts = {s: sum(1 for r in rows if (r.get('status') or '').strip() == s) for s in STATUSES}
     total = len(rows)
     done = counts['verified'] + counts['excluded']

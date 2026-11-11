@@ -332,7 +332,7 @@ def encoded_actions(inspect_dir, dossier_dir, language=None):
     for name, data in sorted(elements_from_inspector(inspect_dir).items()):
         described = (windows.get(name) or reports.get(name) or {}).get('controls', {})
         for slot in data.get('encoded_slots', []):
-            control = slot['names'][-1]
+            control = slot['names'][-1] if slot['names'] else name  # a slot of the element itself has no control
             details = described.get(control) or next((c for n, c in described.items() if n.split('.')[-1] == control), {})
             caption = details.get('caption')
             caption = text_in(caption, language) if isinstance(caption, dict) else caption

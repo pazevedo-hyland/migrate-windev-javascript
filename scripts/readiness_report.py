@@ -117,7 +117,7 @@ def assess(latest, generator=None, layouter=None):
                 opened.append({'kind': 'layout', 'what': f'no layout: {error}', 'closes': 'screen_layout.py on this unit, by hand'})
         # Event slots that hold neither code nor an action anyone named.
         for slot in source.get('encoded_slots', []):
-            control = slot['names'][-1]
+            control = slot['names'][-1] if slot['names'] else unit
             if slot.get('has_code') or control.lower() in decoded[key]['actions']:
                 continue
             proposal = proposals.get(slot.get('action')) or {}

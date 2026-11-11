@@ -49,6 +49,19 @@ def names_in(data, name):
     return bool(ascii_name.search(data) or wide.search(data))
 
 
+PLAIN_NAME = re.compile(r'[A-Za-z0-9_]+')
+ASCII_WORD = re.compile(rb'\w+')
+WIDE_WORD = re.compile(rb'(?:\w\x00)+')
+
+
+def names_among(data, names):
+    """The names `names_in` finds in `data`, with one scan of the file instead of two searches per name (thousands
+    of elements times thousands of compiled files took hours). A name with other characters is searched one by one."""
+    words = set(ASCII_WORD.findall(data)) | {word[::2] for word in WIDE_WORD.findall(data)}
+    return {name for name in names
+            if (name.encode() in words if PLAIN_NAME.fullmatch(name) else names_in(data, name))}
+
+
 def report_queries(compile_dir):
     """{report: [{'item', 'caption'}]}: the items an embedded report query selects, from the compiled report
     (`.wbe`). The dossier does not print embedded queries; their compiled form keeps item names and captions
@@ -94,8 +107,8 @@ def legend(source_dir, compile_dir):
         windows += 1
         data = wcw.read_bytes()
         labels = compiled_labels(data)
-        references[source.stem] = {name for name in element_names if name.lower() != source.stem.lower()
-                                   and names_in(data, name)}
+        references[source.stem] = names_among(data, {name for name in element_names
+                                                     if name.lower() != source.stem.lower()})
         events = collections.defaultdict(set)
         own = {source.stem.lower(), inspector.element_name(text, source.stem).lower(), 'mywindow', 'mafenêtre',
                'mafenetre', 'myreport', 'monetat'}
