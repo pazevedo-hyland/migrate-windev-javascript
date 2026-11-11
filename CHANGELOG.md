@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-11 — a large project (2,300 windows, 480 reports, 660 tables) through the pipeline
+
+Found by running the toolkit on an application about twenty times the size of the earlier ones. `prepare_evidence.py` did not finish in a night; with these it takes about an hour.
+
+- `scripts/windev_decode.py`: the SQL lines of a block are found with `bytes.find` instead of a lazy regex; on a 23 MB code block (a 3 MB window) the regex rescanned the block from every line head and ran for 7 hours.
+- `scripts/event_legend.py`: the element names a compiled file mentions are read in one scan of the file (`names_among`) instead of two regex searches per name per file (about 18 million searches, hours).
+- `scripts/screen_layout.py`: `layout()` indexes the inspector's files once instead of reading all of them for each unit (`readiness_report.py` asks for every layout).
+- `scripts/evidence_report.py`, `readiness_report.py`, `unit_evidence.py`: an encoded slot of the element itself (no control name) no longer raises `IndexError`.
+- `scripts/parity_check.py`: accepts the inspector's own seed evidence when a path holds spaces, and the `decoded:` / `learned:` prefixes `skills/map-element/SKILL.md` prescribes; prose ending in a file name is still refused. Test added.
+- `templates/server/tools/pg_schema.py`: index names are `ix_<table>_<key>` (a table `a` with a key `b_c` and a table `a_b_c` produced the same relation name), cut and made unique at PostgreSQL's 63 bytes.
+
 ## 2026-11-10 — a worked example of the porting patterns
 
 - `templates/porting.example.md`: the `docs/porting.md` the second migration ended with, made generic — where each kind of code goes, one line per WLanguage construct (data access, windows and dialogs, values, printing and files, evidence gaps) and the tests a slice adds. The mapping prompt (step 1b) points to it as a checklist.

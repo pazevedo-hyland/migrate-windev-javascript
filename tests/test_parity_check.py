@@ -61,6 +61,13 @@ class ParityCheckTests(unittest.TestCase):
         self.assertIn('U-nn', errors[0])
         self.assertIn('see docs/notes.md', errors[1])  # prose ending in a file name is not a reference
 
+    def test_seed_paths_with_spaces_and_decoded_prefixes(self):
+        errors, _ = self.run_check([
+            row('R1', 'specified', target_behavior='same',
+                evidence='Templates/WD/180 Skin/Preview/WD_Print.wdw; X.wdc (binary) listing/X.wdc.wl:2-11; '
+                         'decoded: WIN_A/BTN_Ok/caption; learned: WIN_A/BTN_Ok/anchor')])
+        self.assertEqual(errors, [])
+
     def test_check_files(self):
         (self.root / 'a.wdw').write_text('x', encoding='utf-8')
         write(self.root / 'parity.csv', [row('R1', 'specified', target_behavior='same', evidence=f'{self.root}/a.wdw:3; {self.root}/gone.wdw:1')])

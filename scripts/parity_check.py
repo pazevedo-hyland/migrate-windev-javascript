@@ -15,7 +15,12 @@ CONFIDENCE = {'verified', 'inferred', 'assumed', 'unresolved'}
 DONE = {'verified', 'excluded'}
 # One evidence item: a source location, a dossier or analysis reference, or a file (screenshot, export, golden).
 # A JSON file may name the field: "dossier/windev-window/WIN_X.json (controls.BTN_Ok.flags)".
-EVIDENCE = re.compile(r'\S+:\d+(?:-\d+)?|(?:dossier|analysis|export|golden|runtime|proposed): ?\S.*|[^\s;]+\.[A-Za-z0-9]{2,5}(?: \(.+\))?')
+# A path may hold spaces when its first word already looks like a path (`Templates/WD/180 BanQoo/Preview/WD_Print.wdw`,
+# `X.wdc (binary) listing/X.wdc.wl:2-11`: the inspector's own seed rows); prose ending in a file name is still refused.
+# `decoded:` and `learned:` are the prefixes skills/map-element/SKILL.md asks for.
+PATH = r'(?:\S+|[^\s;]*[/\.][^;]*)'
+EVIDENCE = re.compile(PATH + r':\d+(?:-\d+)?|(?:dossier|decoded|learned|analysis|export|golden|runtime|proposed): ?\S.*|'
+                      + r'(?:[^\s;]+|[^\s;]*[/\.][^;]*)' + r'\.[A-Za-z0-9]{2,5}(?: \(.+\))?')
 
 
 def read_csv(path):
@@ -75,7 +80,7 @@ def check(matrix, seed=None, require_complete=False, element=None, check_files=F
         if not value['evidence']:
             errors.append(f'{where}: evidence is required (path:line, export or screenshot)')
         for item in filter(None, (i.strip() for i in value['evidence'].split(';'))):
-            if check_files and EVIDENCE.fullmatch(item) and not re.match(r'(?:dossier|analysis|export|golden|runtime|proposed):', item):
+            if check_files and EVIDENCE.fullmatch(item) and not re.match(r'(?:dossier|decoded|learned|analysis|export|golden|runtime|proposed):', item):
                 path = re.split(r':\d|\s\(', item)[0]
                 if not Path(path).exists() and not Path('legacy', path).exists():  # seed evidence is legacy-relative
                     errors.append(f'{where}: evidence file not found: {path}')

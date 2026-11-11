@@ -46,7 +46,7 @@ def pack(unit, latest):
     actions = []
     for slot in source.get('encoded_slots', []):
         others = [s for s in groups.get(slot['action'], [])
-                  if not (s['element'].lower() == unit.lower() and s['control'] == slot['names'][-1])]
+                  if not (s['element'].lower() == unit.lower() and s['control'] == (slot['names'][-1] if slot['names'] else unit))]
         actions.append({'control': '/'.join(slot['names']), 'event': slot['event'], 'meaning': meaning(slot['event']),
                         'line': slot['line'], 'has_code': slot['has_code'], 'action': slot['action'],
                         'proposed': proposals.get(slot['action']), 'same_action_elsewhere': others})

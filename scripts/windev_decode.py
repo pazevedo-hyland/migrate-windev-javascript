@@ -1152,7 +1152,22 @@ def packed_blocks(data):
 
 CODE_MARK = re.compile('\x08v[0-9a-fA-F]{16}|\x08')
 # In a query block each SQL line is a record: 0x03, the line, the author, a date.
-SQL_LINE = re.compile(rb'(?s)\x03\xff\xce\x88\xf1.{4}(.*?)\x00\xfe\xed\x98\xe1\xff\xce\x88\xf1')
+SQL_HEAD, SQL_TAIL = b'\x03\xff\xce\x88\xf1', b'\x00\xfe\xed\x98\xe1\xff\xce\x88\xf1'
+
+
+def sql_lines(block):
+    """The records of a query block, found with bytes.find: a lazy regex over a block of several megabytes with
+    many heads and no tail (a large window's code) rescans the block from every head and takes hours."""
+    lines, position = [], 0
+    while True:
+        start = block.find(SQL_HEAD, position)
+        if start < 0 or start + len(SQL_HEAD) + 4 > len(block):
+            return lines
+        end = block.find(SQL_TAIL, start + len(SQL_HEAD) + 4)
+        if end < 0:
+            return lines
+        lines.append(block[start + len(SQL_HEAD) + 4:end])
+        position = end + len(SQL_TAIL)
 
 
 def block_summary(block, encoding='cp1252'):
@@ -1162,7 +1177,7 @@ def block_summary(block, encoding='cp1252'):
         summary['kind'] = 'image'
     elif re.search(rb'\xff\xce\x88\xf1.{4}\s*(SELECT|INSERT|UPDATE|DELETE)\b', block, re.S | re.I):
         summary['kind'] = 'sql'
-        summary['sql'] = '\n'.join(text(m[1], encoding).replace('\t', ' ').rstrip() for m in SQL_LINE.finditer(block)).strip()
+        summary['sql'] = '\n'.join(text(line, encoding).replace('\t', ' ').rstrip() for line in sql_lines(block)).strip()
     return summary, found
 
 

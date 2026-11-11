@@ -382,13 +382,21 @@ def join_wrapped(text, words, known=3):
     return text
 
 
+UNIT_FILES = {}  # inspect folder -> {unit name, lower case: [files]}
+
+
 def layout(unit, latest, language=None):
     inspect, dossier = Path(latest['inspect']), latest.get('dossier')
     if not PROJECT_FILES and latest.get('legacy') and Path(latest['legacy']).is_dir():
         PROJECT_FILES.update({re.sub(r'\s+', '', file.name).lower(): file.name for file in Path(latest['legacy']).rglob('*')
                               if ' ' in file.name and file.suffix.lower() in ('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico')})
-    matches = [s for s in (load(p) for p in sorted((inspect / 'code').rglob('*.json')))
-               if s.get('name', '').lower() == unit.lower()]
+    # Which file holds which unit, read once per inspect folder: reading every file again for each unit made a
+    # project of a few thousand windows take hours (readiness_report.py asks for every layout).
+    if inspect not in UNIT_FILES:
+        UNIT_FILES[inspect] = index = {}
+        for path in sorted((inspect / 'code').rglob('*.json')):
+            index.setdefault(load(path).get('name', '').lower(), []).append(path)
+    matches = [load(path) for path in UNIT_FILES[inspect].get(unit.lower(), [])]
     if not matches:
         raise SystemExit(f'{unit}: not in {inspect}')
     if len(matches) != 1:
