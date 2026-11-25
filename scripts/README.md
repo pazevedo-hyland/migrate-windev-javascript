@@ -288,3 +288,7 @@ python3 scripts/compare_exports.py --config docs/golden/compare.json \
 ```
 
 Compares CSV exports table by table using the configured key (target column names), legacy→target column renames, ignored columns, per-side delimiter/encoding, and **declared** normalizations per column: `trim` (default on), `decimal` with optional `decimal_places`, `date_formats`, `casefold`, `strip_accents`, `empty_as_null`. Reports missing/extra rows, mismatched cells, duplicate keys and missing columns; exits 1 on any difference. Example: [templates/compare.example.json](../templates/compare.example.json).
+
+## Source-based browser visual QA
+
+Extract a standalone visual preview, capture it locally, and compare equal-size regions against optional native screenshots. See [the visual QA workflow](visual_qa/README.md).
