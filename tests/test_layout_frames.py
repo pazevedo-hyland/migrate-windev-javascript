@@ -77,6 +77,27 @@ class LayoutFramesTests(unittest.TestCase):
         self.assertEqual(frames.tab_panes_of(source), {'TAB_Principal': [['TABLE_Lin']]})
 
 
+def window_head(width, height, client_width, client_height, xy=''):
+    lines = ['window :', ' name : WIN_X', ' identifier : 0x1', ' internal_properties : abc', ' properties :']
+    lines += ([f'  x : {xy[0]}', f'  y : {xy[1]}'] if xy else [])
+    lines += [f'  width : {width}', f'  height : {height}', f'  widthClient : {client_width}',
+              f'  heightClient : {client_height}', ' controls :', '']
+    return '\r\n'.join(lines)
+
+
+class WindowFrameTests(unittest.TestCase):
+    def test_a_window_without_title_bar_and_one_with(self):
+        self.assertEqual(frames.window_frame(window_head(538, 216, 532, 210)),
+                         {'client': {'width': 532, 'height': 210}, 'border': 3, 'title_bar': 0})
+        self.assertEqual(frames.window_frame(window_head(430, 292, 428, 260, (6, 6)))['title_bar'], 30)
+
+    def test_enrich_sets_the_client_and_the_title_bar_flag(self):
+        result = layout()
+        frames.enrich(result, PROPERTIES, window_head(538, 216, 532, 210) + SOURCE)
+        window = result['window']
+        self.assertEqual((window['client'], window['flags']['Title bar']), ({'width': 532, 'height': 210}, False))
+
+
 class EditMaskTests(unittest.TestCase):
     def test_numeric_masks_right_align_and_dates_do_not(self):
         props = {'elements': [

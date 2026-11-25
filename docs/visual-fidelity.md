@@ -40,6 +40,20 @@ On one project 16,905 controls had a font of their own (captions at 12-13 px whe
 colour and 27,954 a non-left alignment. Read them before guessing a font from screenshots: a measured caption that did
 not match the style sheet looked like a font substitution and was the control's own 12 px font.
 
+The same record holds, for edits, combos and lists, **where the caption ends and the input starts** (after the caption
+font record: position 4 = left / 0 = above, then the width in px, 0 = caption not drawn). Widths measured on the
+designer images by looking for the input's border were wrong more often than not (19 for 24, 57 for 28, 184 for 42 px)
+and missed 7,000 controls; the record's value is exact. A frame type of 0x11 is a vertical gradient from near-white to
+the fill colour (the blue "title" buttons of windows without a title bar). Fonts named `MS Shell Dlg` are drawn by
+Windows with its FontSubstitutes (Microsoft Sans Serif; `MS Shell Dlg 2` = Tahoma).
+
+**Each window's frame.** The window's text source gives `width` / `height` and `widthClient` / `heightClient`; control
+coordinates are client-relative. The difference gives the border and the title bar: one project had 668 windows without
+a title bar (a 3 px raised dialog frame), 988 with a 30 px bar and 543 with a 23 px bar and an 8 px resizable border.
+Draw the client area at its designer size and add the runtime's own title bar only where there is one
+(`layout_frames.window_frame`); a title bar drawn inside the outer size of an untitled window pushes its content 32 px
+down and its bottom buttons out of the window.
+
 ## 3. Engine rules that apply to every window
 
 - Every control carries its style (`data-wd-skin` / `data-wd-style`); the generated sheet styles it.

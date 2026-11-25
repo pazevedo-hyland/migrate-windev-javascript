@@ -14,6 +14,11 @@ of the running application:
 3. **Option captions.** The text WINDEV draws beside a check box is its option's caption, an unnamed `options` record
    of the decoded window ("Corta papel"), not the control's own caption ("Corta papel?" or none). A radio button has
    one record per option. Records holding a control template's path (`TPLC_Ribbon.CBOX_x`) are not captions.
+4. **Window frame.** The window's text source gives its outer size and its client size (`width`, `height`,
+   `widthClient`, `heightClient`); control coordinates are client-relative. Border = (width - widthClient) / 2, title
+   bar = height - heightClient - 2 x border: on one project 668 windows of 2,335 had no title bar (a 3 px raised dialog
+   frame and a template "title" button drawn in the client area instead), 988 a 30 px bar and a 1 px border, 543 a
+   23 px bar and an 8 px resizable border. Drawing a title bar on every window cut 32 px off the untitled ones.
 
 `enrich(layout, properties)` adds `pane_top` / `pane_captions` to each Tab, `tab_panes` ({tab path: 1-based pane})
 and `pane_offset` to each control inside a pane (its `y` moved down by the offsets of every Tab it sits in), the
@@ -146,11 +151,36 @@ def numeric_mask(mask):
     return bool(mask) and (mask in NUMERIC_NAMES or bool(NUMERIC_MASK.match(mask)))
 
 
+WINDOW_SIZE = re.compile(r'^window :\s+name : \S+.*?^ properties :\s+(?:x : -?\d+\s+y : -?\d+\s+)?width : (\d+)\s+height : (\d+)'
+                         r'\s+widthClient : (\d+)\s+heightClient : (\d+)', re.S | re.M)
+
+
+def window_frame(text):
+    """{'client': {width, height}, 'border': px, 'title_bar': px} of a window's text source, or None."""
+    found = WINDOW_SIZE.search(text or '')
+    if not found:
+        return None
+    width, height, client_width, client_height = map(int, found.groups())
+    border = max(0, (width - client_width) // 2)
+    return {'client': {'width': client_width, 'height': client_height}, 'border': border,
+            'title_bar': max(0, height - client_height - 2 * border)}
+
+
 def enrich(layout, properties, source_text=''):
     """Adds the Tab frames, pane membership and offsets and option captions to one layout (in place); `source_text` is
     the window's text source (`.wdw`), for the pane membership. Returns the number of changes."""
     controls = layout.get('controls', [])
     changes = 0
+    frame = window_frame(source_text)
+    window = layout.setdefault('window', {})
+    if frame:
+        flags = window.get('flags') or {}
+        wanted = {**{k: v for k, v in window.items() if k not in ('client', 'border', 'title_bar')}, **frame,
+                  'flags': {**flags, 'Title bar': frame['title_bar'] > 0}}
+        if wanted != window:
+            window.clear()
+            window.update(wanted)
+            changes += 1
     frames = {path.lower(): frame for path, frame in tab_frames(properties).items()}
     tabs = {}
     for control in controls:
