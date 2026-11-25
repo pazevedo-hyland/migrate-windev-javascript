@@ -9,7 +9,9 @@ of the running application:
    windev_decode.py into the Tab's fields). Without it every pane's controls sit under the strip, and screens that
    draw their own strip draw it above the Tab, over other controls. The pane captions ("[ &1 ] - Linhas") are the
    unnamed `tabs` records of the decoded window, one per pane in pane order.
-2. **Option captions.** The text WINDEV draws beside a check box is its option's caption, an unnamed `options` record
+2. **Edit masks.** The display mask of an edit (`MoneySystemMask`, `999 999,99`, `AAAAMMJJ`) is a decoded string of
+   the edit (`display_mask`); a numeric mask means the value is drawn on the right (`h_align: Right` when unknown).
+3. **Option captions.** The text WINDEV draws beside a check box is its option's caption, an unnamed `options` record
    of the decoded window ("Corta papel"), not the control's own caption ("Corta papel?" or none). A radio button has
    one record per option. Records holding a control template's path (`TPLC_Ribbon.CBOX_x`) are not captions.
 
@@ -122,6 +124,28 @@ def option_captions(properties):
     return found
 
 
+NUMERIC_MASK = re.compile(r'^[-+]?[9 ,.]*9[9 ,.]*%*$')
+NUMERIC_NAMES = {'MoneySystemMask', 'NumericSystemMask'}
+
+
+def edit_masks(properties):
+    """{edit path (lower case): its display mask} from the decoded edit's strings (`MoneySystemMask`, `999 999,99`,
+    `999,99%%`, `AAAAMMJJ`…)."""
+    found = {}
+    for element in properties.get('elements', []):
+        if element.get('owner') != 'controls' or str(element.get('type')) != '2' or not element.get('name'):
+            continue
+        for text in _texts(element):
+            if text in NUMERIC_NAMES or NUMERIC_MASK.match(text) or text in ('UseSystemMask', 'AAAAMMJJ') or 'JJ' in text:
+                found['.'.join(element.get('parents', [])[1:] + [element['name']]).lower()] = text
+                break
+    return found
+
+
+def numeric_mask(mask):
+    return bool(mask) and (mask in NUMERIC_NAMES or bool(NUMERIC_MASK.match(mask)))
+
+
 def enrich(layout, properties, source_text=''):
     """Adds the Tab frames, pane membership and offsets and option captions to one layout (in place); `source_text` is
     the window's text source (`.wdw`), for the pane membership. Returns the number of changes."""
@@ -150,6 +174,17 @@ def enrich(layout, properties, source_text=''):
                 control['y'] += offset
                 control['pane_offset'] = offset
                 changes += 1
+    # a numeric edit's value is drawn on the right (WINDEV's default for a numeric mask) unless an alignment is known
+    masks = edit_masks(properties)
+    for control in controls:
+        mask = masks.get(control['path'].lower())
+        if control.get('kind') == 'Edit control' and mask:
+            if control.get('display_mask') != mask:
+                control['display_mask'] = mask
+                changes += 1
+            if numeric_mask(mask) and not control.get('h_align'):
+                control['h_align'] = 'Right'
+                changes += 1
     options = option_captions(properties)
     for control in controls:
         captions = options.get(control['path'].lower())
@@ -166,13 +201,14 @@ def enrich(layout, properties, source_text=''):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('layouts', nargs='+', type=Path)
+    parser.add_argument('layouts', nargs='+', type=Path, help='layout files, or folders of *.layout.json')
     parser.add_argument('--decoded', type=Path, required=True, help='windev_decode.py output folder')
     parser.add_argument('--legacy', type=Path, help='the WINDEV project folder (window text sources, for pane membership)')
     parser.add_argument('--check', action='store_true', help='report only')
     args = parser.parse_args()
     total = files = 0
-    for path in args.layouts:
+    paths = [p for given in args.layouts for p in (sorted(given.glob('*.layout.json')) if given.is_dir() else [given])]
+    for path in paths:
         layout = json.loads(path.read_text(encoding='utf-8'))
         name = (layout.get('window') or {}).get('name') or path.name.split('.')[0]
         source = args.decoded / 'properties' / f'{name}.wdw.json'

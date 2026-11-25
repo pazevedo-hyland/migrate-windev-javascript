@@ -77,5 +77,21 @@ class LayoutFramesTests(unittest.TestCase):
         self.assertEqual(frames.tab_panes_of(source), {'TAB_Principal': [['TABLE_Lin']]})
 
 
+class EditMaskTests(unittest.TestCase):
+    def test_numeric_masks_right_align_and_dates_do_not(self):
+        props = {'elements': [
+            element('controls', ['WIN_X'], 1, '140 iStyle.SAI_Simple', 'MoneySystemMask', name='EDT_Valor', type_='2'),
+            element('controls', ['WIN_X'], 2, 'AAAAMMJJ', name='EDT_Data', type_='2'),
+            element('controls', ['WIN_X'], 3, '999,99%%', name='EDT_Taxa', type_='2'),
+        ]}
+        result = {'controls': [{'name': n, 'path': n, 'kind': 'Edit control', 'x': 0, 'y': 0} for n in ('EDT_Valor', 'EDT_Data', 'EDT_Taxa')]}
+        result['controls'].append({'name': 'EDT_Fixo', 'path': 'EDT_Fixo', 'kind': 'Edit control', 'h_align': 'Left', 'x': 0, 'y': 0})
+        frames.enrich(result, props)
+        valor, data, taxa, _ = result['controls']
+        self.assertEqual((valor['display_mask'], valor['h_align']), ('MoneySystemMask', 'Right'))
+        self.assertEqual((data['display_mask'], data.get('h_align')), ('AAAAMMJJ', None))
+        self.assertEqual(taxa['h_align'], 'Right')
+
+
 if __name__ == '__main__':
     unittest.main()
