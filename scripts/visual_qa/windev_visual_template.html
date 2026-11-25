@@ -24,7 +24,13 @@
     border: 1px solid var(--frame-border, #b4b4b4); border-radius: 2px; background: white; }
   .field.memo { flex-direction: column; align-items: stretch; gap: 1px; }
   .field.memo .input { min-height: 16px; margin: 0; }
-  .combo .input::after { content: "▾"; float: right; padding: 0 4px; background: #e6e6e6; }
+  .combo .input { position: relative; padding-right: 19px; }
+  .combo .input::after { content: "▾"; position: absolute; top: 0; right: 0; bottom: 0; width: 16px;
+    display: grid; place-items: center; line-height: 1; color: #333; background: #e6e6e6; }
+  .combo .input.skin-combo::after { top: -1px; bottom: -1px; right: -1px;
+    background: var(--combo-image) right center / auto 100% no-repeat; }
+  .combo .input.filled-combo { border: 0; border-radius: 0; padding-top: 2px; }
+  .combo .input.filled-combo::after { top: -1px; right: -16px; bottom: -1px; background: transparent; }
   .choice i { width: 13px; height: 13px; flex: none; background: white; border: 1px solid #999; }
   .choice.radio i { border-radius: 50%; }
   .image { justify-content: center; }
@@ -87,7 +93,10 @@
   .dropdown-indicator { font-size: 8px; opacity: .8; }
   .emphasis { font-weight: bold !important; text-decoration: underline; }
   .spin { display:flex; flex-direction:column; text-align:center; font-size:7px; background:#eee; border:1px solid #aaa; }
-  .spin span { flex: 1; }
+  .spin span { display: grid; place-items: center; flex: 1; min-height: 0;
+    line-height: 1; background-size: 100% 100%; }
+  .spin.skinned-spin { border: 0; background: transparent; padding-block: 2px; }
+  .grid-header-indicator { flex: none; width: 16px; background-repeat: no-repeat; background-position: 3px -29px; }
   .mdi-tab .tab-bar button { padding: 0 5px; }
   .status { border-top: 1px solid #ccc; background: #ededed; padding: 4px; }
   .shell-preview header { margin: 0 0 5px; }
@@ -262,7 +271,16 @@ function renderControl(control) {
     node.textContent = text;
   } else if (kind === "Spin" && layout.workspace_preview) {
     node.classList.add("spin");
-    node.append(element("span", "", "▴"), element("span", "", "▾"));
+    const up = element("span", "", "▴");
+    const down = element("span", "", "▾");
+    const more = layout.assets_embedded[control.spin_more_asset];
+    const less = layout.assets_embedded[control.spin_less_asset];
+    if (more && less) {
+      node.classList.add("skinned-spin");
+      up.style.backgroundImage = 'url("' + more.data + '")';
+      down.style.backgroundImage = 'url("' + less.data + '")';
+    }
+    node.append(up, down);
   } else if (kind === "Button") {
     node.classList.add("button");
     if (control.ribbon_button) {
@@ -301,6 +319,19 @@ function renderControl(control) {
     if (control.preview_align) input.style.textAlign = control.preview_align;
     if (control.preview_focus) input.classList.add("focus");
     applySkin(input, control);
+    const combo = layout.assets_embedded[control.combo_asset];
+    if (combo) {
+      const bitmap = 'url("' + combo.data + '")';
+      input.style.setProperty("--combo-image", bitmap);
+      input.classList.add("skin-combo");
+      if (control.preview_value) {
+        input.classList.add("filled-combo");
+        input.style.borderImage = bitmap + " 3 16 3 3 fill stretch";
+        input.style.borderWidth = "1px 16px 1px 1px";
+        input.style.borderStyle = "solid";
+        input.style.paddingRight = "3px";
+      }
+    }
     node.append(input);
   } else if (kind === "Check Box" || kind === "RadioButton") {
     node.classList.add("choice");
@@ -356,6 +387,12 @@ function renderControl(control) {
         line.append(div);
       }
       body.append(line);
+    }
+    const indicators = layout.assets_embedded[control.table_indicators];
+    if (control.preview_rows && indicators) {
+      const corner = element("div", "grid-header-indicator");
+      corner.style.backgroundImage = 'url("' + indicators.data + '")';
+      header.append(corner);
     }
     if (header.childElementCount) {
       inner.append(header, body);

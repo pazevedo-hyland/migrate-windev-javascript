@@ -168,6 +168,24 @@ def attach_skin_asset(control, strings, project, assets):
         ("Tab", "istyle_tab_top.gif"): (60, 28, 30, 28),
         ("Ribbon", "istyle_ribbon_bg.gif"): (32, 90, 32, 90),
     }
+    stretch_assets = {
+        ("Combo Box", "istyle_combo.png"): ("combo_asset", (185, 20), (0, 0, 37, 20)),
+        ("Spin", "istyle_spin_btn_more.gif"): ("spin_more_asset", (60, 20), (0, 0, 12, 20)),
+        ("Spin", "istyle_spin_btn_less.gif"): ("spin_less_asset", (60, 20), (0, 0, 12, 20)),
+        ("Table", "istyle_select.png"): ("selection_asset", (640, 128), (0, 0, 128, 128)),
+        ("Table", "istyle_table_colpict.gif"): ("table_indicators", (33, 53), (0, 0, 33, 53)),
+    }
+    references = [(name, asset_path(project, name)) for name in strings
+                  if name.startswith(("<REPGABARIT>", ".\\"))]
+    for reference, path in references:
+        field = stretch_assets.get((control["kind"], PureWindowsPath(reference).name.lower()))
+        if field and path:
+            key, size, crop = field
+            with Image.open(path) as original:
+                if original.size == size:
+                    preview = path.relative_to(project).as_posix() + "#preview-normal"
+                    save_image(assets, preview, original.convert("RGBA").crop(crop))
+                    control[key] = preview
     for reference in strings:
         grid = grids.get((control["kind"], PureWindowsPath(reference).name.lower()))
         if not grid or not reference.startswith(("<REPGABARIT>", ".\\")):
