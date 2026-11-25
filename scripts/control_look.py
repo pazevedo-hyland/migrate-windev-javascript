@@ -25,6 +25,7 @@ ALIGN_H = {0: 'Left', 1: 'Center', 2: 'Right', 3: 'Justified'}
 ALIGN_V = {0: 'Top', 1: 'Center', 2: 'Bottom'}
 CAPTION = {4: 'left', 0: 'top'}
 TITLE_MARK = b'\x96\x2c\x00\x00'
+HEADER_FRAME = b'\x64\x02\x00\x00\x06\x00\x00\x00'
 # frame types seen with a fill colour: 1 plain; 0x11 a vertical gradient from 15 % of the colour in white at the top
 # to the colour at the bottom (designer images: #d9ecd9 -> #008000, #ffd9d9 -> #ff0000; 4,714 buttons)
 FRAME_KINDS = {1: 'plain', 0x11: 'gradient'}
@@ -83,6 +84,11 @@ def look(data):
             found['text_background'] = _rgb(text_background)
         if horizontal in ALIGN_H:
             found['h_align'] = ALIGN_H[horizontal]
+        # vertical alignment of a caption's text in its box (0 top, 1 centre, 2 bottom; 864 captions checked)
+        if at + 20 <= len(data):
+            vertical = struct.unpack_from('<I', data, at + 16)[0]
+            if vertical in ALIGN_V:
+                found['v_align'] = ALIGN_V[vertical]
     at = data.find(FONT)
     if 0 <= at <= len(data) - 24:
         length = struct.unpack_from('<I', data, at + 8)[0]
@@ -103,11 +109,20 @@ def look(data):
                 position, width = struct.unpack_from('<II', data, record_end + 20)
                 if position in CAPTION and width < 2000:
                     found['caption'] = {'position': CAPTION[position], 'width': width}
-    # a table: its column-title height, the u32 just before `96 2c 00 00` (24 on 561 tables, 22 on 275; the header
-    # separator is drawn at that row on the designer images)
-    at = data.find(TITLE_MARK)
-    if at >= 4:
-        height = struct.unpack_from('<I', data, at - 4)[0]
-        if 10 <= height <= 120:
+    # a table's column-title height: the u32 44 bytes after its header frame block (tag 0x264, type 6); 1 = no column
+    # titles (all 16 header-less tables of the catalogue; .cache/rea-findings-2.md §4). The header separator is drawn
+    # at that row on the designer images.
+    at = data.find(HEADER_FRAME)
+    if 0 <= at <= len(data) - 48:
+        height = struct.unpack_from('<I', data, at + 44)[0]
+        if height == 1:
+            found['header_height'] = 0
+        elif 10 <= height <= 120:
             found['header_height'] = height
+    # its rows: the record's last six u32 are rowHeight, flags (1 / 5 with margins), marginTop, 3, marginBottom, 0;
+    # the drawn pitch is rowHeight + marginTop + marginBottom (276 of 277 tables)
+    if len(data) >= 24 and found.get('header_height') is not None:
+        row, flags, top, three, bottom, zero = struct.unpack_from('<6I', data, len(data) - 24)
+        if three == 3 and zero == 0 and flags in (1, 5) and 8 <= row <= 200 and top < 20 and bottom < 20:
+            found['row_pitch'] = row + top + bottom
     return found
