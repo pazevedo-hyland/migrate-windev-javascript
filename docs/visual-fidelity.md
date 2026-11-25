@@ -33,6 +33,13 @@ every window, not a sample.
 - **Option captions.** A check box's text is its option record ("Corta papel"), not the control caption ("Corta
   papel?" or none). Radio buttons have one record per option. Records holding a template path are not captions.
 
+**Each control's own look.** In the format-28 control record the font is a fixed record whose face is a plain string
+(windev_decode.py looked for framed face strings and found "0 records" for every control), followed by frame and
+alignment records: `scripts/control_look.py` reads face, size, weight, text colour, background, border and alignment.
+On one project 16,905 controls had a font of their own (captions at 12-13 px where the style says 11), 8,043 a fill
+colour and 27,954 a non-left alignment. Read them before guessing a font from screenshots: a measured caption that did
+not match the style sheet looked like a font substitution and was the control's own 12 px font.
+
 ## 3. Engine rules that apply to every window
 
 - Every control carries its style (`data-wd-skin` / `data-wd-style`); the generated sheet styles it.
