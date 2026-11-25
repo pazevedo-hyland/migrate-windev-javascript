@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add a source-based WINDEV HTML preview, visual evidence audit and browser capture with optional aligned screenshot comparison.
+
 ## 2026-11-10 — a worked example of the porting patterns
 
 - `templates/porting.example.md`: the `docs/porting.md` the second migration ended with, made generic — where each kind of code goes, one line per WLanguage construct (data access, windows and dialogs, values, printing and files, evidence gaps) and the tests a slice adds. The mapping prompt (step 1b) points to it as a checklist.

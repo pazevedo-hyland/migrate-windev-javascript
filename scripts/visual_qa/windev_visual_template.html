@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WINDEV preview</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 16px; color: #222; background: #e9e9e9; font: 13px "Segoe UI", sans-serif; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 8px; }
+  #selectors { display: flex; flex-wrap: wrap; gap: 8px; }
+  .viewport { overflow: auto; }
+  #canvas { position: relative; isolation: isolate; overflow: hidden; background: #f0f0f0; }
+  .control { position: absolute; overflow: hidden; color: #2d2d2d; font: 11px "Segoe UI", sans-serif; }
+  .button, .field, .choice, .image { display: flex; align-items: center; gap: 4px; }
+  .button { justify-content: center; padding: 1px 4px; border: 1px solid #b4b4b4; border-radius: 2px;
+    background: linear-gradient(#f6f6f6, #ddd); text-align: center; }
+  .button > span { min-width: 0; }
+  .button:has(img):not(:has(span)) { padding: 0; }
+  .button:has(img):not(:has(span)) img { max-height: none; }
+  .inactive { opacity: .6; }
+  .field > span { min-width: 0; white-space: nowrap; overflow: hidden; }
+  .field .input { min-width: 16px; flex: 1; align-self: stretch; margin: 2px 0;
+    border: 1px solid var(--frame-border, #b4b4b4); border-radius: 2px; background: white; }
+  .field.memo { flex-direction: column; align-items: stretch; gap: 1px; }
+  .field.memo .input { min-height: 16px; margin: 0; }
+  .combo .input { position: relative; padding-right: 19px; }
+  .combo .input::after { content: "▾"; position: absolute; top: 0; right: 0; bottom: 0; width: 16px;
+    display: grid; place-items: center; line-height: 1; color: #333; background: #e6e6e6; }
+  .combo .input.skin-combo::after { top: -1px; bottom: -1px; right: -1px;
+    background: var(--combo-image) right center / auto 100% no-repeat; }
+  .combo .input.filled-combo { border: 0; border-radius: 0; padding-top: 2px; }
+  .combo .input.filled-combo::after { top: -1px; right: -16px; bottom: -1px; background: transparent; }
+  .choice i { width: 13px; height: 13px; flex: none; background: white; border: 1px solid #999; }
+  .choice.radio i { border-radius: 50%; }
+  .image { justify-content: center; }
+  img { object-fit: contain; flex: none; max-width: 100%; max-height: 100%; }
+  .tab { border: 1px solid #b4b4b4; overflow: visible; }
+  .tab-bar { display: flex; align-items: flex-end; }
+  .tab-bar button { border: 1px solid #b4b4b4; border-radius: 3px 3px 0 0; color: inherit;
+    background: linear-gradient(#f7f7f7, #d9d9d9); height: calc(100% - 2px); font: inherit;
+    padding: 0 13px; cursor: pointer; }
+  .ribbon { background: linear-gradient(#f5f5f5,#d7e2f0); border-bottom: 1px solid #b4c5dc; }
+  .ribbon .tab-bar { border-bottom: 1px solid #b4c5dc; background: #ececec; padding-left: 27px; }
+  .ribbon .tab-bar button { border-color: transparent; background: transparent; padding: 0 9px; }
+  .ribbon .tab-bar [aria-selected="true"] { border: 1px solid #b4c5dc; background: #f4f4f4; }
+  .ribbon-group { border-right: 1px solid #fff9; }
+  .ribbon-group span { position: absolute; inset: auto 0 0; background: #65748a55; color: #333;
+    text-align: center; height: 16px; line-height: 16px; }
+  .ribbon-button.large { flex-direction: column; gap: 2px; }
+  .ribbon-button.large img { max-height: 43px; }
+  .ribbon-button:not(.large) img { max-height: 17px; max-width: 18px; }
+  .tab-bar [aria-selected="true"] { border-top: 2px solid #63b4d6; background: #f6f6f6; }
+  .grid-inner { display: flex; flex-direction: column; min-height: 100%; width: max-content; min-width: 100%; }
+  .grid .grid-row { flex: none; }
+  .grid-body { display: flex; flex: 1; position: relative; }
+  .grid-data-row { position: absolute; left: 0; display: flex; align-items: stretch; }
+  .grid-data-row.selected { color: white; background: #7ba4d8; background-size: 100% 100%; }
+  .grid-data-cell { display: flex; align-items: center; min-width: 0; overflow: hidden; padding: 0 3px; }
+  .grid-data-cell img { max-height: 100%; }
+  .dialog { background: #f1f1f1; border-radius: 9px; box-shadow: 0 14px 34px #0005, inset 0 0 0 1px #505050; }
+  .dialog-title { display: flex; align-items: center; padding: 0 7px 0 4px; gap: 5px;
+    color: white; background: #474543; font: 15px "Segoe UI", sans-serif; }
+  .dialog-title > img { width: 20px; height: 20px; }
+  .dialog-title > span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dialog-title > button { appearance: none; width: 38px; background: transparent; color: inherit;
+    border: 0; font: 18px "Segoe UI", sans-serif; cursor: pointer; }
+  .button.focus-button { outline: 1px solid #77aad6; outline-offset: -1px; }
+  .choice:has(> img) { padding-left: 3px; }
+  .choice > img { width: 13px; height: 13px; }
+  .preview-action { cursor: pointer; }
+  .grid-body span { flex: none; border-right: 1px solid #b4b4b4; }
+  .grid.scrollable { overflow: auto hidden; scrollbar-color: #b6b6b6 #e9e9e9; }
+  .field .input { padding: 1px 3px; color: inherit; }
+  .field .input.focus { outline: 1px solid #1498e9; outline-offset: -1px; }
+  .grid { background: white; border: 1px solid #b4b4b4; }
+  .grid-row { display: flex; background: linear-gradient(#fafafa, #e0e0e0); border-bottom: 1px solid #bbb; }
+  .grid-row span { flex: none; padding: 3px 4px; border-right: 1px solid #b4b4b4; overflow: hidden; }
+  .workspace { border: 1px solid #777; background: #f1f1f1; }
+  .sidebar { border: 1px solid #c1c1c1; background: #e9e9e9; }
+  .side-heading { height: 26px; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(#f4f5fc,#d7deee); border: 1px solid #c7cfde; border-radius: 3px; }
+  .side-heading::before { position: absolute; left: 6px; content: "⌄"; }
+  .favorites-tree { overflow: auto; scrollbar-color: #b6b6b6 #e9e9e9; }
+  .favorite-row { height: 18px; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .favorite-row div { min-width: 0; }
+  .favorite-row img { width: 16px; height: 16px; object-fit: contain; }
+  .favorite-item { margin-left: 8px; padding-left: 10px; border-left: 1px dotted #aaa; }
+  .splitter { background: #e4e4e4; border-inline: 1px solid #c8c8c8; }
+  .vertical-rail { display: flex; align-items: center; padding-left: 5px; justify-content: center;
+    writing-mode: vertical-rl; transform: rotate(180deg); }
+  .checked { background: #596261 !important; color: white; border-radius: 2px; line-height: 11px; text-align: center; }
+  .dropdown-indicator { font-size: 8px; opacity: .8; }
+  .emphasis { font-weight: bold !important; text-decoration: underline; }
+  .spin { display:flex; flex-direction:column; text-align:center; font-size:7px; background:#eee; border:1px solid #aaa; }
+  .spin span { display: grid; place-items: center; flex: 1; min-height: 0;
+    line-height: 1; background-size: 100% 100%; }
+  .spin.skinned-spin { border: 0; background: transparent; padding-block: 2px; }
+  .grid-header-indicator { flex: none; width: 16px; background-repeat: no-repeat; background-position: 3px -29px; }
+  .mdi-tab .tab-bar button { padding: 0 5px; }
+  .status { border-top: 1px solid #ccc; background: #ededed; padding: 4px; }
+  .shell-preview header { margin: 0 0 5px; }
+  details { margin-top: 10px; color: #444; max-width: 800px; }
+</style>
+</head>
+<body>
+<header><strong id="title"></strong><div id="selectors"></div></header>
+<div class="viewport"><div id="canvas"></div></div>
+<details><summary>Preview limitations</summary>
+<p>The default view uses decoded design metadata. Runtime state and native painting still require verification.</p>
+<ul id="issues"></ul></details>
+<script>
+"use strict";
+const layout = /*__WINDEV_LAYOUT__*/null;
+const canvas = document.querySelector("#canvas");
+const selectors = document.querySelector("#selectors");
+const controls = new Map(layout.controls.map(control => [control.path, control]));
+const selection = new Map();
+const labels = new Map();
+const scenarioModes = [];
+let modalOpen = Boolean(layout.modal?.initially_open);
+
+function setModal(open) {
+  modalOpen = open;
+  draw();
+  const path = open ? layout.modal.close_button : layout.modal.open_button;
+  [...canvas.children].find(node => node.dataset.control === path)?.focus();
+}
+
+if (layout.modal) {
+  document.addEventListener("keydown", event => {
+    if (modalOpen && event.key === "Escape") setModal(false);
+  });
+}
+if (layout.workspace_preview) document.body.classList.add("shell-preview");
+document.querySelector("#title").textContent = layout.window.title || layout.window.name;
+canvas.style.width = (layout.window.size?.width || 800) + "px";
+canvas.style.height = (controls.get(layout.render_ribbon)?.height || layout.window.size?.height || 600) + "px";
+
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text) node.textContent = text;
+  return node;
+}
+
+function caption(value) {
+  return (value || "").replace(/&&|&(?=\S)/g, match => match === "&&" ? "&" : "");
+}
+
+function visible(control) {
+  const modal = layout.modal;
+  if (modal && !modalOpen && (control.path === modal.shield || control.path === modal.frame ||
+      control.path.startsWith(modal.frame + "."))) return false;
+  if (layout.render_ribbon && control.path !== layout.render_ribbon
+      && !control.path.startsWith(layout.render_ribbon + ".") && control.path !== "BTN_pesquisa_gGest") return false;
+  if ((layout.active_plane && control.plane && control.plane !== layout.active_plane) || control.layer_unresolved ||
+      !Object.entries(control.panes).every(([key, value]) => selection.get(key) === value)) return false;
+  for (let current = control; current;) {
+    let shown = current.visible !== false;
+    for (const group of scenarioModes) shown = group.mode.visibility[current.path] ?? shown;
+    if (!shown) return false;
+    current = controls.get(current.path.slice(0, Math.max(current.path.lastIndexOf("."), 0)));
+  }
+  return true;
+}
+
+function makeImage(control) {
+  const asset = layout.assets_embedded[control.asset];
+  if (!asset) return null;
+  const img = element("img");
+  img.src = asset.data;
+  img.width = asset.width;
+  img.height = asset.height;
+  img.alt = "";
+  return img;
+}
+
+function applyStyle(node, control) {
+  const font = control.visual_font;
+  if (font?.face) node.style.fontFamily = JSON.stringify(font.face) + ', "Segoe UI", sans-serif';
+  if (font?.height) node.style.fontSize = Math.abs(font.height) + "px";
+  if (font?.weight) node.style.fontWeight = String(font.weight);
+  if (font?.colour) node.style.color = font.colour;
+  const frame = control.visual_frame;
+  if (frame?.border_colour) node.style.setProperty("--frame-border", frame.border_colour);
+  if (control.kind === "Button" && frame?.background) node.style.background = frame.background;
+  if (control.gradient_base) {
+    node.style.background = control.gradient_base.color;
+  } else if (control.kind === "Button" && font?.colour === "#ffffff" && !frame?.background && !control.skin_asset) {
+    node.style.background = "#656565";
+  }
+}
+
+function applyClip(node, control) {
+  const inset = [0, 0, 0, 0];
+  for (const tab of control.clip_tabs.map(path => controls.get(path))) {
+    if (!Number.isFinite(tab?.width) || !Number.isFinite(tab?.height)) continue;
+    const values = [
+      tab.y - control.y, control.x + control.width - tab.x - tab.width,
+      control.y + control.height - tab.y - tab.height, tab.x - control.x,
+    ];
+    values.forEach((value, edge) => { inset[edge] = Math.max(inset[edge], value); });
+  }
+  if (inset.some(value => value > 0)) node.style.clipPath = "inset(" + inset.map(n => n + "px").join(" ") + ")";
+}
+
+function applySkin(node, control) {
+  const skin = layout.assets_embedded[control.skin_asset];
+  if (!skin) return;
+  node.style.backgroundImage = 'url("' + skin.data + '")';
+  node.style.backgroundSize = "100% 100%";
+  if (["Edit control", "Button"].includes(control.kind)) {
+    node.style.backgroundImage = "none";
+    node.style.border = "3px solid transparent";
+    node.style.borderImage = 'url("' + skin.data + '") 3 fill stretch';
+  }
+  node.style.borderColor = "transparent";
+}
+
+function renderControl(control) {
+  const { kind, x, y, width, height } = control;
+  if (control.cell_control || ![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) return null;
+  const text = caption(control.caption);
+  const node = element("div", "control");
+  node.dataset.control = control.path;
+  node.title = [caption(control.tooltip), control.path].filter(Boolean).join(" · ");
+  Object.assign(node.style, { left: x + "px", top: y + "px", width: width + "px", height: height + "px" });
+  if (control.layer) node.style.zIndex = String(control.layer);
+  applyStyle(node, control);
+  applyClip(node, control);
+
+  if (kind === "Modal shield") {
+    node.setAttribute("aria-hidden", "true");
+  } else if (kind === "Modal frame") {
+    node.classList.add("dialog");
+    node.setAttribute("role", "dialog");
+    node.setAttribute("aria-modal", "true");
+    node.setAttribute("aria-label", text);
+    const title = element("div", "dialog-title");
+    title.style.height = control.title_height + "px";
+    const image = makeImage(control);
+    if (image) title.append(image);
+    title.append(element("span", "", text));
+    const close = element("button", "", "×");
+    close.type = "button";
+    close.setAttribute("aria-label", "Close");
+    close.addEventListener("click", () => setModal(false));
+    title.append(close);
+    node.append(title);
+  } else if (kind === "Workspace") {
+    node.classList.add("workspace");
+  } else if (kind === "Sidebar") {
+    node.classList.add("sidebar");
+    node.append(element("div", "side-heading", text));
+  } else if (kind === "Favorites tree") {
+    node.classList.add("favorites-tree");
+    for (const group of control.favorite_groups || []) {
+      function add(item, className) {
+        const row = element("div", "favorite-row " + className);
+        const img = makeImage(item);
+        if (img) row.append(img);
+        row.append(element("div", "", item.caption));
+        node.append(row);
+      }
+      add(group, "");
+      for (const item of group.items) add(item, "favorite-item");
+    }
+  } else if (kind === "Splitter" || kind === "Status") {
+    node.classList.add(kind.toLowerCase());
+    node.textContent = text;
+  } else if (kind === "Spin" && layout.workspace_preview) {
+    node.classList.add("spin");
+    const up = element("span", "", "▴");
+    const down = element("span", "", "▾");
+    const more = layout.assets_embedded[control.spin_more_asset];
+    const less = layout.assets_embedded[control.spin_less_asset];
+    if (more && less) {
+      node.classList.add("skinned-spin");
+      up.style.backgroundImage = 'url("' + more.data + '")';
+      down.style.backgroundImage = 'url("' + less.data + '")';
+    }
+    node.append(up, down);
+  } else if (kind === "Button") {
+    node.classList.add("button");
+    if (control.ribbon_button) {
+      node.classList.add("ribbon-button");
+      if (height >= 42) node.classList.add("large");
+    }
+    applySkin(node, control);
+    if (control.preview_emphasis) node.classList.add("emphasis");
+    if (control.preview_focus) node.classList.add("focus-button");
+    if (layout.modal && [layout.modal.open_button, layout.modal.close_button].includes(control.path)) {
+      const open = control.path === layout.modal.open_button;
+      const activate = () => { if (modalOpen !== open) setModal(open); };
+      node.classList.add("preview-action");
+      node.tabIndex = 0;
+      node.setAttribute("role", "button");
+      node.addEventListener("click", activate);
+      node.addEventListener("keydown", event => {
+        if (["Enter", " "].includes(event.key)) { event.preventDefault(); activate(); }
+      });
+    }
+    const img = makeImage(control);
+    if (img) node.append(img);
+    if (text) node.append(element("span", "", text));
+    if (control.preview_dropdown) node.append(element("small", "dropdown-indicator", "▾"));
+  } else if (kind === "Edit control" || kind === "Combo Box") {
+    node.classList.add("field");
+    if (kind === "Combo Box") node.classList.add("combo");
+    if (kind === "Edit control" && height >= 52) node.classList.add("memo");
+    if (text) {
+      const label = element("span", "", text);
+      const labelWidth = control.caption_width;
+      if (labelWidth > 0 && labelWidth < width) label.style.flex = "0 0 " + labelWidth + "px";
+      node.append(label);
+    }
+    const input = element("div", "input", control.preview_value);
+    if (control.preview_align) input.style.textAlign = control.preview_align;
+    if (control.preview_focus) input.classList.add("focus");
+    applySkin(input, control);
+    const combo = layout.assets_embedded[control.combo_asset];
+    if (combo) {
+      const bitmap = 'url("' + combo.data + '")';
+      input.style.setProperty("--combo-image", bitmap);
+      input.classList.add("skin-combo");
+      if (control.preview_value) {
+        input.classList.add("filled-combo");
+        input.style.borderImage = bitmap + " 3 16 3 3 fill stretch";
+        input.style.borderWidth = "1px 16px 1px 1px";
+        input.style.borderStyle = "solid";
+        input.style.paddingRight = "3px";
+      }
+    }
+    node.append(input);
+  } else if (kind === "Check Box" || kind === "RadioButton") {
+    node.classList.add("choice");
+    if (kind === "RadioButton") node.classList.add("radio");
+    const label = caption(control.options?.length === 1 ? control.options[0] : text);
+    const mark = element("i", control.preview_checked ? "checked" : "", control.preview_checked ? "✓" : "");
+    const icon = makeImage({ asset: control.check_asset });
+    if (icon) icon.alt = control.preview_checked ? "Checked" : "Unchecked";
+    node.append(icon || mark, element("span", "", label));
+  } else if (kind === "Table") {
+    node.classList.add("grid");
+    const inner = element("div", "grid-inner");
+    const header = element("div", "grid-row");
+    const body = element("div", "grid-body");
+    if (control.saved_grid?.cell_font_points) body.style.fontSize = control.saved_grid.cell_font_points + "pt";
+    const rowHeight = Number.parseInt(control.table_options?.row_height, 10);
+    if (rowHeight > 0) body.style.background =
+      "repeating-linear-gradient(#e9e9e9 0 " + rowHeight + "px, #f4f4f4 " + rowHeight + "px " + (rowHeight * 2) + "px)";
+    const columns = (control.columns || []).filter(col => col.flags?.Visible !== false && col.width > 0);
+    for (const col of columns) {
+      const label = element("span", "", caption(col.title));
+      label.style.width = col.width + "px";
+      const skin = layout.assets_embedded[control.skin_asset];
+      if (skin) {
+        label.style.border = "3px solid transparent";
+        label.style.borderImage = 'url("' + skin.data + '") 3 fill stretch';
+        label.style.padding = "1px 3px";
+        label.style.height = skin.height + "px";
+        label.style.textAlign = "center";
+      }
+      header.append(label);
+      const column = element("span");
+      column.style.width = col.width + "px";
+      body.append(column);
+    }
+    if (rowHeight > 0) for (const [index, row] of (control.preview_rows || []).entries()) {
+      const line = element("div", "grid-data-row" + (row.selected ? " selected" : ""));
+      line.dataset.selected = String(Boolean(row.selected));
+      line.style.top = index * rowHeight + "px";
+      line.style.height = rowHeight + "px";
+      const skin = layout.assets_embedded[control.selection_asset];
+      if (row.selected && skin) {
+        line.style.border = "1px solid transparent";
+        line.style.borderImage = 'url("' + skin.data + '") 4 fill stretch';
+      }
+      for (const col of columns) {
+        const cell = row.cells[col.name] || {};
+        const div = element("div", "grid-data-cell", cell.text);
+        div.style.width = col.width + "px";
+        div.style.justifyContent = col.h_align === "Center" ? "center" : col.h_align === "Right" ? "end" : "start";
+        const icon = makeImage({ asset: cell.checked ? control.grid_check_asset : cell.asset });
+        if (icon) div.append(icon);
+        line.append(div);
+      }
+      body.append(line);
+    }
+    const indicators = layout.assets_embedded[control.table_indicators];
+    if (control.preview_rows && indicators) {
+      const corner = element("div", "grid-header-indicator");
+      corner.style.backgroundImage = 'url("' + indicators.data + '")';
+      header.append(corner);
+    }
+    if (header.childElementCount) {
+      inner.append(header, body);
+      node.append(inner);
+      if (layout.active_plane || layout.workspace_preview) node.classList.add("scrollable");
+    }
+  } else if (kind === "Image") {
+    const img = makeImage(control);
+    if (!img) return null;
+    node.classList.add("image");
+    node.append(img);
+  } else if (kind === "Caption") {
+    if (!text) return null;
+    node.textContent = text;
+    if (control.vertical_rail) node.classList.add("vertical-rail");
+    node.style.textAlign = (control.h_align || control.visual_font?.h_align || "left").toLowerCase();
+  } else if (kind === "Ribbon group") {
+    node.classList.add("ribbon-group");
+    node.append(element("span", "", text));
+  } else if (["Tab", "Ribbon"].includes(kind) && layout.tabs[control.path]) {
+    node.classList.add(kind === "Ribbon" ? "ribbon" : "tab");
+    if (control.mdi_tab) node.classList.add("mdi-tab");
+    const headingHeight = control.rail ? 0 : control.ribbon_header || control.pane_top;
+    const ribbonBackground = kind === "Ribbon" && layout.assets_embedded[control.skin_asset];
+    if (ribbonBackground) {
+      node.style.background = 'url("' + ribbonBackground.data + '") 0 ' +
+        headingHeight + 'px / auto calc(100% - ' + headingHeight + 'px) repeat-x';
+    }
+    if (headingHeight) {
+      const bar = element("div", "tab-bar");
+      bar.style.height = headingHeight + "px";
+      bar.setAttribute("role", "tablist");
+      bar.setAttribute("aria-label", control.path);
+      for (const page of layout.tabs[control.path]) {
+        const button = element("button", "", caption(page.caption) || String(page.index));
+        button.type = "button";
+        if (control.mdi_tab) button.append(element("span", "", "  ×"));
+        button.setAttribute("role", "tab");
+        button.setAttribute("aria-selected", String(selection.get(control.path) === page.index));
+        const selected = selection.get(control.path) === page.index;
+        const skin = layout.assets_embedded[selected ? control.skin_asset : control.inactive_skin_asset];
+        if (skin) {
+          button.style.border = "3px solid transparent";
+          button.style.borderImage = 'url("' + skin.data + '") 3 fill stretch';
+          button.style.background = "transparent";
+        }
+        button.addEventListener("click", () => { selection.set(control.path, page.index); draw(); });
+        bar.append(button);
+      }
+      node.append(bar);
+    }
+  } else {
+    return null;
+  }
+  if (["Grayed", "Inactive"].includes(control.state)) node.classList.add("inactive");
+  return node;
+}
+
+for (const [owner, pages] of Object.entries(layout.tabs)) {
+  const label = element("label");
+  const select = element("select");
+  select.setAttribute("aria-label", owner);
+  for (const page of pages) select.add(new Option(caption(page.caption) || String(page.index), page.index));
+  if (layout.initial_selection?.[owner]) select.value = String(layout.initial_selection[owner]);
+  selection.set(owner, Number(select.value));
+  select.addEventListener("change", () => { selection.set(owner, Number(select.value)); draw(); });
+  label.append(select);
+  if (controls.get(owner)?.pane_top || controls.get(owner)?.ribbon_header) label.style.display = "none";
+  labels.set(owner, label);
+  selectors.append(label);
+}
+
+for (const scenario of layout.scenarios || []) {
+  const label = element("label");
+  const select = element("select");
+  select.setAttribute("aria-label", scenario.label);
+  for (const [index, mode] of scenario.modes.entries()) select.add(new Option(mode.label, index));
+  const group = { scenario, label, mode: scenario.modes[0] };
+  scenarioModes.push(group);
+  select.addEventListener("change", () => { group.mode = scenario.modes[Number(select.value)]; draw(); });
+  label.append(select);
+  selectors.append(label);
+}
+
+function draw() {
+  canvas.replaceChildren();
+  for (const [owner, label] of labels) label.hidden = !controls.has(owner) || !visible(controls.get(owner));
+  for (const group of scenarioModes) {
+    const { pane } = group.scenario;
+    group.label.hidden = pane && selection.get(pane.owner) !== pane.index;
+  }
+  const active = layout.controls.filter(visible);
+  const containers = new Set(["Tab", "Ribbon", "Ribbon group", "Sidebar", "Workspace"]);
+  for (const control of [...active.filter(c => containers.has(c.kind)), ...active.filter(c => !containers.has(c.kind))]) {
+    const node = renderControl(control);
+    if (node) canvas.append(node);
+  }
+}
+draw();
+const issues = document.querySelector("#issues");
+for (const issue of [...(layout.unknown || []), ...layout.warnings]) issues.append(element("li", "", issue));
+</script>
+</body>
+</html>
