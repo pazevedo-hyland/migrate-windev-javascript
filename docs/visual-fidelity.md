@@ -61,6 +61,15 @@ caption, class, id and box from the running program without clicking, and PrintW
 those boxes with the migrated app driven by a browser found that LAYOUT_ cells sit at boxes stored in each cell's record
 (and that a hidden cell gives its place to the next), which no designer image shows.
 
+`scripts/live_parity/windev_live_capture.py <pid> <out> --activate` captures every window of the running program;
+`live_compare.py` scores the migrated app's measured boxes against it. What made the comparison trustworthy:
+- the same client size on both sides (size the browser so the migrated tab content equals the MDI client: stretched
+  controls otherwise differ by their anchor rate times the size difference);
+- the same session state (a collapsed dashboard or panel changes the layout through code: reproduce it before measuring);
+- pairing by the drawn caption and comparing each axis from either side (left edge or distance to the right edge);
+- reading every remaining difference in the source before fixing it: many are the live session's settings or data.
+Keep the captures out of the repository: they show the open company's data.
+
 **Each window's frame.** The window's text source gives `width` / `height` and `widthClient` / `heightClient`; control
 coordinates are client-relative. The difference gives the border and the title bar: one project had 668 windows without
 a title bar (a 3 px raised dialog frame), 988 with a 30 px bar and 543 with a 23 px bar and an 8 px resizable border.

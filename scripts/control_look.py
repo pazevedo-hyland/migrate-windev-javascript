@@ -94,13 +94,20 @@ def look(data):
             text_colour = data[at + 12 + length - 4:at + 12 + length]
             if face.isprintable() and -400 < height < 400 and weight % 100 == 0 and 100 <= weight <= 900:
                 font = {'face': face, 'height': int(round(height)), 'weight': weight}
-                text, _ = colour(text_colour) if len(text_colour) == 4 else (None, False)
-                if text:
-                    font['colour'] = text
+                # only an explicit RGB: a system text colour is the font record's default (MS Shell Dlg placeholders)
+                if len(text_colour) == 4 and text_colour[3] == 0:
+                    font['colour'] = _rgb(text_colour)
                 found['font'] = font
             record_end = at + 12 + length
             if record_end + 28 <= len(data):
                 position, width = struct.unpack_from('<II', data, record_end + 20)
                 if position in CAPTION and width < 2000:
                     found['caption'] = {'position': CAPTION[position], 'width': width}
+    # a table: its column-title height, the u32 just before `96 2c 00 00` (24 on 561 tables, 22 on 275; the header
+    # separator is drawn at that row on the designer images)
+    at = data.find(TITLE_MARK)
+    if at >= 4:
+        height = struct.unpack_from('<I', data, at - 4)[0]
+        if 10 <= height <= 120:
+            found['header_height'] = height
     return found
