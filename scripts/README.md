@@ -227,6 +227,15 @@ python3 scripts/visual_compare.py docs/evidence/images/WIN_Table_Clientes.jpg ui
 
 Layout JSON from the evidence (positions, captions, icons and states, backgrounds, caption widths, columns); skin images as one PNG per state with magenta made transparent; a visual score (pixel similarity, edge overlap) plus a side-by-side image for the human. The last two need Pillow. It also reads the dossier's raw control tables: geometry of controls whose names the tables cut, table column widths and the kind of generically named controls (`geometry_source`, `width_source`, `source_kind`). It joins words the PDF wrapped when the dossier or source code attests the joined word (listed in `diagnostics`), and renames kinds to the RAD kit's spelling. What the tables do not state stays missing and is listed in `unknown`, never invented.
 
+## `skin_template.py`, `layout_frames.py` — the skin the application really draws, and the layout fields the dossier misses
+
+```sh
+python3 scripts/skin_template.py "<exe dir>/Estilos/<template>" --css src/ui/skin/template.generated.css   --images public/skin/template [--strips strips.json] [--substitute "LIB_:Trebuchet MS 11px=Segoe UI 12px"]
+python3 scripts/layout_frames.py --decoded analysis-local/decoded-<stamp> --legacy legacy src/generated/layouts/*.layout.json
+```
+
+`skin_template.py` decodes a skin template's style sheet (`.sty`, else the packed `.wdy`) into one CSS rule per style keyed by `data-wd-style` (font, LOGFONT size in px, weight, colour) and exports the images it names (magenta made transparent, state strips cut with `--strips`). Read the template the application switches to at run time (`ChangeSkinTemplate`), often from the delivered program folder rather than the project. `layout_frames.py` adds what the dossier does not give: each Tab's `pane_top` and `pane_captions`, each pane control's `tab_panes` and its `y` moved below the strip (`pane_offset`), check box option captions and radio `option_captions`; `screen_layout.py` applies it itself when `latest.json` names a `decoded` folder. Method and lessons: [docs/visual-fidelity.md](../docs/visual-fidelity.md).
+
 ## `dossier_extract.py` — WINDEV's project documentation as data
 
 ```sh
