@@ -28,6 +28,10 @@ class ControlLookTests(unittest.TestCase):
         self.assertNotIn('background', found)
         self.assertEqual((found['border'], found['h_align'], found['font']['height']), ('#b4b4b4', 'Left', -12))
 
+    def test_a_system_colour_is_its_windows_default(self):
+        found = look(record().replace(b'\x00\x00\x00\xff\xb4\xb4\xb4\x00', b'\x00\x00\x00\xf5\x00\x00\x00\xf1', 1))
+        self.assertEqual((found['background'], found['background_system'], found['border']), ('#0078d7', True, '#ffffff'))
+
     def test_an_edit_caption_left_of_its_input_and_one_not_drawn(self):
         left = record(tail=bytes(20) + struct.pack('<III', 4, 24, 2))
         self.assertEqual(look(left)['caption'], {'position': 'left', 'width': 24})

@@ -45,7 +45,21 @@ font record: position 4 = left / 0 = above, then the width in px, 0 = caption no
 designer images by looking for the input's border were wrong more often than not (19 for 24, 57 for 28, 184 for 42 px)
 and missed 7,000 controls; the record's value is exact. A frame type of 0x11 is a vertical gradient from near-white to
 the fill colour (the blue "title" buttons of windows without a title bar). Fonts named `MS Shell Dlg` are drawn by
-Windows with its FontSubstitutes (Microsoft Sans Serif; `MS Shell Dlg 2` = Tahoma).
+Windows with its FontSubstitutes (Microsoft Sans Serif; `MS Shell Dlg 2` = Tahoma). A stored colour whose
+high byte is 0xF1..0xF7 is a Windows system colour, read as the whole u32 (decompiled from the runtime: 0xF5000000 =
+COLOR_HIGHLIGHT, 0xF2000000 = COLOR_BTNFACE…; `control_look.SYSTEM_COLOURS`); a table's column-title height is the
+u32 just before `96 2c 00 00`.
+
+**Decompile the runtime for what is computed, not stored.** The WINDEV runtime libraries ship with the executable
+(`wd280obj.dll` draws the controls). REA with Ghidra recovered, for example, the radio button layout: 23 px option
+rows below a 16 px caption band, `pitch = max(19, floor((H - band - 23) / (n - 1)))`, glyph 13 px at (3, 5) — exact
+on every designer image. Static analysis only; Ghidra needs the analysis to run in one persistent REA session for a
+large DLL.
+
+**Check against the running application.** WINDEV controls are Win32 controls: Windows UI Automation reads their
+caption, class, id and box from the running program without clicking, and PrintWindow draws each MDI child. Comparing
+those boxes with the migrated app driven by a browser found that LAYOUT_ cells sit at boxes stored in each cell's record
+(and that a hidden cell gives its place to the next), which no designer image shows.
 
 **Each window's frame.** The window's text source gives `width` / `height` and `widthClient` / `heightClient`; control
 coordinates are client-relative. The difference gives the border and the title bar: one project had 668 windows without
