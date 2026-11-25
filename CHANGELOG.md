@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-25 — visual fidelity: the runtime skin, Tab frames and option captions
+
+- **`scripts/skin_template.py`**: a WINDEV skin template as CSS — one rule per style (font, size, weight, colour) keyed by `data-wd-style`, plus its images (magenta transparent, state strips cut on request) and measured font substitutions. On a 2,335-window project the application switched every control to a template delivered beside the executable (`ChangeSkinTemplate(AllComponents, …)`), absent from the project folder: 394 styles decoded.
+- **`scripts/layout_frames.py`**, applied by `screen_layout.py` when a decoded folder exists: Tab `pane_top` / `pane_captions`, pane membership (single-pane Tabs included) and controls moved below the strip; check box option captions and radio `option_captions`. On the same project: 400 Tabs (every pane 26 px too high before), 2,811 check box captions and 935 radio lists in 860 windows; checked equal to the project's own results on 281,000 fields.
+- **Window frames and exact captions**: `layout_frames.window_frame` reads each window's client size, border and title bar from its text source (on the project: 671 of 2,335 windows have no title bar, 988 a 30 px one, 543 a 23 px one with an 8 px border). `control_look.py` reads where an edit's caption ends and its input starts (15,828 controls; image measurements were often off by tens of px) and gradient fills (frame type 0x11, 4,714 buttons).
+- **`docs/visual-fidelity.md`**: where the real skin comes from, what the layouts need beyond the dossier, the engine rules that apply to every window, finding screens that bypass the layout, and measuring every window against its designer thumbnail.
+
 ## 2026-11-10 — a worked example of the porting patterns
 
 - `templates/porting.example.md`: the `docs/porting.md` the second migration ended with, made generic — where each kind of code goes, one line per WLanguage construct (data access, windows and dialogs, values, printing and files, evidence gaps) and the tests a slice adds. The mapping prompt (step 1b) points to it as a checklist.

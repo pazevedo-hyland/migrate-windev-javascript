@@ -382,6 +382,14 @@ def join_wrapped(text, words, known=3):
     return text
 
 
+def _sibling(name):
+    """A script of this folder as a module (the scripts are run directly, not installed)."""
+    spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(f'{name}.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def layout(unit, latest, language=None):
     inspect, dossier = Path(latest['inspect']), latest.get('dossier')
     if not PROJECT_FILES and latest.get('legacy') and Path(latest['legacy']).is_dir():
@@ -505,6 +513,15 @@ def layout(unit, latest, language=None):
         unknown.append('no dossier entry: captions, images and skin unknown')
     if not any(control.get('font') or control.get('fonts') for control in controls):
         unknown.append('fonts, font sizes and colors: not in this evidence (run windev_decode.py, or read them from the dossier image)')
+    # Tab frames (pane offsets and captions) and option captions from the decoded window (scripts/layout_frames.py)
+    decoded = latest.get('decoded') and Path(latest['decoded'], 'properties', f'{unit}.wdw.json')
+    if decoded and decoded.exists():
+        frames = _sibling('layout_frames')
+        text_path = Path(latest['legacy'], f'{unit}.wdw') if latest.get('legacy') else None
+        text = text_path.read_bytes().decode('utf-8', errors='replace') if text_path and text_path.exists() else ''
+        frames.enrich({'controls': controls}, load(decoded), text)
+    else:
+        unknown.append('Tab pane offsets and captions, check box option captions: no decoded window (run windev_decode.py)')
     return {'format_version': 1, 'window': window, 'controls': controls, 'assets': sorted(assets),
             'unknown': sorted(set(unknown)), 'diagnostics': sorted(set(diagnostics)),
             'source': source.get('path'), 'language': language,
